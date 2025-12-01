@@ -6,6 +6,8 @@ Orchestrates fetching, storing, analyzing, and reporting.
 import argparse
 import sys
 import configparser
+import time
+import csv
 from pathlib import Path
 from datetime import datetime
 
@@ -16,6 +18,80 @@ from api import CoinMarketCapAPI
 from database import CryptoDatabase
 from analysis import StatisticalAnalyzer
 from excel_reporter import ExcelReporter
+
+
+def import_csv_data(csv_path: str, symbol: str, db: CryptoDatabase,
+                    date_column: str = '0', price_column: str = '1',
+                    date_format: str = None, skip_header: bool = True) -> int:
+    """
+    Import historical data from CSV file.
+    
+    Args:
+        csv_path: Path to CSV file
+        symbol: Cryptocurrency symbol
+        db: Database instance
+        date_column: Date column name or index
+        price_column: Price column name or index
+        date_format: Date format string
+        skip_header: Skip first row
+    
+    Returns:
+        Number of quotes imported
+    """
+    with open(csv_path, 'r', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        
+        # Read header if present
+        if skip_header:
+            header = next(reader)
+            try:
+                date_idx = header.index(date_column)
+                price_idx = header.index(price_column)
+            except ValueError:
+                date_idx = int(date_column)
+                price_idx = int(price_column)
+        else:
+            date_idx = int(date_column)
+            price_idx = int(price_column)
+        
+        count = 0
+        for row_num, row in enumerate(reader, start=2 if skip_header else 1):
+            try:
+                date_str = row[date_idx].strip()
+                price_str = row[price_idx].strip()
+                
+                # Parse date
+                if date_format:
+                    date_obj = datetime.strptime(date_str, date_format)
+                else:
+                    # Try common formats
+                    for fmt in ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y/%m/%d']:
+                        try:
+                            date_obj = datetime.strptime(date_str, fmt)
+                            break
+                        except ValueError:
+                            continue
+                    else:
+                        date_obj = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                
+                # Parse price
+                price_val = float(price_str.replace(',', '').replace('€', '').replace('$', '').strip())
+                
+                quote = {
+                    'symbol': symbol,
+                    'name': symbol,
+                    'price_eur': price_val,
+                    'timestamp': date_obj
+                }
+                
+                if db.insert_or_update_quote(symbol, quote):
+                    count += 1
+                    
+            except (ValueError, IndexError) as e:
+                print(f"Warning: Skipping row {row_num}: {e}")
+                continue
+    
+    return count
 
 
 def main():
@@ -74,6 +150,33 @@ def main():
         action="store_true",
         help="Only generate report from existing data, don't fetch"
     )
+    parser.add_argument(
+        "--import-csv",
+        type=str,
+        help="Import historical data from CSV file (format: date,price)"
+    )
+    parser.add_argument(
+        "--csv-date-col",
+        type=str,
+        default="0",
+        help="Date column name or index in CSV (default: 0)"
+    )
+    parser.add_argument(
+        "--csv-price-col",
+        type=str,
+        default="1",
+        help="Price column name or index in CSV (default: 1)"
+    )
+    parser.add_argument(
+        "--csv-date-format",
+        type=str,
+        help="Date format for CSV (e.g., %%Y-%%m-%%d). Auto-detect if not specified"
+    )
+    parser.add_argument(
+        "--csv-no-header",
+        action="store_true",
+        help="CSV file has no header row"
+    )
     
     args = parser.parse_args()
     
@@ -99,6 +202,8 @@ def main():
     # Get fetch mode from args or config
     fetch_mode = args.fetch_mode or config.get("fetch", "mode", fallback="incremental")
     upsert = config.getboolean("fetch", "upsert_duplicates", fallback=True)
+    throttle_seconds = config.getfloat("fetch", "throttle_seconds", fallback=1.0)
+    retries = config.getint("fetch", "retries", fallback=2)
     
     # Get database path
     db_path = args.db_path or config.get("database", "path", fallback="data/crypto_prices.db")
@@ -111,7 +216,39 @@ def main():
         print("Initializing database...")
         db = CryptoDatabase(db_path)
         
-        if not args.report_only:
+        # Handle CSV import if requested
+        if args.import_csv:
+            print(f"Importing from CSV: {args.import_csv}")
+            if not Path(args.import_csv).exists():
+                print(f"Error: CSV file not found: {args.import_csv}")
+                return 1
+            
+            if not symbols or len(symbols) != 1:
+                print("Error: Specify exactly one symbol with --symbols when importing CSV")
+                return 1
+            
+            symbol = symbols[0]
+            count = import_csv_data(
+                args.import_csv,
+                symbol,
+                db,
+                args.csv_date_col,
+                args.csv_price_col,
+                args.csv_date_format,
+                skip_header=not args.csv_no_header
+            )
+            
+            if count == 0:
+                print("No data imported from CSV")
+                return 1
+            
+            print(f"✓ Imported {count} quotes from CSV")
+            
+            if args.fetch_only:
+                db.close()
+                return 0
+        
+        if not args.report_only and not args.import_csv:
             # Fetch and store data
             print(f"Fetching prices for: {', '.join(symbols)}")
             print(f"Fetch mode: {fetch_mode}")
@@ -119,10 +256,40 @@ def main():
                 api = CoinMarketCapAPI(args.api_key)
                 
                 # Determine fetch starting point based on mode
-                # If user requested an explicit days range, use the historical range fetch
+                # If user requested an explicit days range, fetch per-symbol with throttling and upsert
                 if args.days:
                     print(f"Fetching historical range: last {args.days} days")
-                    quotes = api.fetch_historical_range(symbols, days=args.days)
+                    total_count = 0
+                    for idx, sym in enumerate(symbols, start=1):
+                        print(f"[{idx}/{len(symbols)}] {sym} → OHLCV daily between-dates")
+                        attempt = 0
+                        while True:
+                            try:
+                                sym_quotes = api.fetch_historical_range([sym], days=args.days)
+                                break
+                            except Exception as e:
+                                attempt += 1
+                                if attempt > retries:
+                                    print(f"  ❌ Failed {sym} after {retries} retries: {e}")
+                                    sym_quotes = []
+                                    break
+                                sleep_s = min(throttle_seconds * (2 ** (attempt - 1)), 10)
+                                print(f"  Retry {attempt}/{retries} after {sleep_s:.1f}s due to: {e}")
+                                time.sleep(sleep_s)
+
+                        # Always upsert to avoid duplicates when refetching ranges
+                        inserted = 0
+                        for q in sym_quotes:
+                            if db.insert_or_update_quote(sym, q):
+                                inserted += 1
+                        total_count += inserted
+                        print(f"  ✓ Stored/updated {inserted} quotes for {sym}")
+
+                        # Throttle between symbols
+                        time.sleep(throttle_seconds)
+
+                    print(f"Successfully stored/updated {total_count} quotes in database")
+                    quotes = None  # downstream storage already handled
                 elif fetch_mode == "full":
                     # Will fetch from oldest date, don't use database info
                     print("Mode: Full (fetching from oldest available data)")
@@ -140,7 +307,10 @@ def main():
                             print(f"  {symbol}: no data in database yet")
                     quotes = api.fetch_and_parse(symbols, close_of_day=True)
                 
-                if quotes:
+                if quotes is None:
+                    # already stored in the --days branch
+                    pass
+                elif quotes:
                     # Insert or update quotes
                     if upsert and fetch_mode == "full":
                         count = 0

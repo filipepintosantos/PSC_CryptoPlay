@@ -60,20 +60,17 @@ class CryptoDatabase:
             )
         """)
         
-        # Table for price quotes
+        # Table for price quotes (simplified: only date and price)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS price_quotes (
                 id INTEGER PRIMARY KEY,
                 crypto_id TEXT NOT NULL,
                 price_eur REAL NOT NULL,
-                market_cap_eur REAL,
-                volume_24h_eur REAL,
-                percent_change_24h REAL,
-                percent_change_7d REAL,
-                percent_change_30d REAL,
-                timestamp TIMESTAMP NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                timestamp DATE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 -- crypto_id stores the cryptocurrency code (symbol), e.g. 'BTC'
+                -- timestamp is DATE only (YYYY-MM-DD) to identify unique days
+                UNIQUE(crypto_id, timestamp)
             )
         """)
         
@@ -127,21 +124,20 @@ class CryptoDatabase:
         self.add_cryptocurrency(symbol, quote_data.get("name", ""))
 
         try:
+            # Normalize timestamp to date only (YYYY-MM-DD)
+            ts = quote_data.get("timestamp", datetime.now())
+            date_only = ts.date() if hasattr(ts, 'date') else ts
+            
             cursor.execute("""
                 INSERT INTO price_quotes (
-                    crypto_id, price_eur, market_cap_eur, volume_24h_eur,
-                    percent_change_24h, percent_change_7d, percent_change_30d,
-                    timestamp
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    crypto_id, price_eur, timestamp
+                ) VALUES (?, ?, ?)
+                ON CONFLICT(crypto_id, timestamp) 
+                DO UPDATE SET price_eur = excluded.price_eur
             """, (
                 symbol,
                 quote_data.get("price_eur"),
-                quote_data.get("market_cap_eur"),
-                quote_data.get("volume_24h_eur"),
-                quote_data.get("percent_change_24h"),
-                quote_data.get("percent_change_7d"),
-                quote_data.get("percent_change_30d"),
-                quote_data.get("timestamp", datetime.now())
+                date_only
             ))
             self.conn.commit()
             return True
@@ -296,7 +292,9 @@ class CryptoDatabase:
         self.add_cryptocurrency(symbol, quote_data.get("name", ""))
         
         try:
-            timestamp = quote_data.get("timestamp", datetime.now())
+            # Normalize timestamp to date only (YYYY-MM-DD)
+            ts = quote_data.get("timestamp", datetime.now())
+            timestamp = ts.date() if hasattr(ts, 'date') else ts
             
             # Check if quote with same timestamp exists
             cursor.execute("""
@@ -310,38 +308,21 @@ class CryptoDatabase:
                 # Update existing quote
                 cursor.execute("""
                     UPDATE price_quotes SET
-                        price_eur = ?,
-                        market_cap_eur = ?,
-                        volume_24h_eur = ?,
-                        percent_change_24h = ?,
-                        percent_change_7d = ?,
-                        percent_change_30d = ?
+                        price_eur = ?
                     WHERE id = ?
                 """, (
                     quote_data.get("price_eur"),
-                    quote_data.get("market_cap_eur"),
-                    quote_data.get("volume_24h_eur"),
-                    quote_data.get("percent_change_24h"),
-                    quote_data.get("percent_change_7d"),
-                    quote_data.get("percent_change_30d"),
                     existing[0]
                 ))
             else:
                 # Insert new quote
                 cursor.execute("""
                     INSERT INTO price_quotes (
-                        crypto_id, price_eur, market_cap_eur, volume_24h_eur,
-                        percent_change_24h, percent_change_7d, percent_change_30d,
-                        timestamp
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        crypto_id, price_eur, timestamp
+                    ) VALUES (?, ?, ?)
                 """, (
                     symbol,
                     quote_data.get("price_eur"),
-                    quote_data.get("market_cap_eur"),
-                    quote_data.get("volume_24h_eur"),
-                    quote_data.get("percent_change_24h"),
-                    quote_data.get("percent_change_7d"),
-                    quote_data.get("percent_change_30d"),
                     timestamp
                 ))
             

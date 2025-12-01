@@ -11,11 +11,15 @@ echo PSC CryptoPlay - Test Runner
 echo ====================================================
 echo.
 
-REM Check if virtual environment is activated
+REM Ensure virtual environment is activated; if not, activate it automatically
 if not defined VIRTUAL_ENV (
-    echo WARNING: Virtual environment not activated
-    echo Please activate: venv\Scripts\activate.bat
-    echo.
+    if exist "venv\Scripts\activate.bat" (
+        call venv\Scripts\activate.bat
+    ) else (
+        echo ERROR: Virtual environment not found.
+        echo Create it first: python -m venv venv
+        exit /b 1
+    )
 )
 
 REM Parse arguments

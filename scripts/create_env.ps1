@@ -6,7 +6,7 @@ Usage (PowerShell):
 
 This script will prompt for the CoinMarketCap API key (input hidden).
 If you leave the prompt empty, it will copy `.env.example` to `.env` if present,
-otherwise it will create an empty `.env` with the `COINMARKETCAP_API_KEY=` line.
+otherwise it will create an empty `.env` with both `CMC_API_KEY=` and `COINMARKETCAP_API_KEY=` lines.
 #>
 
 param ()
@@ -31,10 +31,12 @@ if ([string]::IsNullOrEmpty($key)) {
         Copy-Item $envExample $envPath
         Write-Host "Copied .env.example -> .env"
     } else {
-        "COINMARKETCAP_API_KEY=" | Out-File -FilePath $envPath -Encoding ASCII
+        "CMC_API_KEY=" | Out-File -FilePath $envPath -Encoding ASCII
+        "COINMARKETCAP_API_KEY=" | Out-File -FilePath $envPath -Append -Encoding ASCII
         Write-Host "Created empty .env (no .env.example found)"
     }
 } else {
-    "COINMARKETCAP_API_KEY=$key" | Out-File -FilePath $envPath -Encoding ASCII
-    Write-Host ".env created at $envPath"
+    "CMC_API_KEY=$key" | Out-File -FilePath $envPath -Encoding ASCII
+    "COINMARKETCAP_API_KEY=$key" | Out-File -FilePath $envPath -Append -Encoding ASCII
+    Write-Host ".env created at $envPath (wrote CMC_API_KEY and COINMARKETCAP_API_KEY)"
 }

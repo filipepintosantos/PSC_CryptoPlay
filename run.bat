@@ -45,5 +45,5 @@ if not exist "venv" (
 REM Activate venv
 call venv\Scripts\activate.bat
 
-REM Run main.py with arguments
-"!PYTHON_PATH!" main.py %*
+REM Run main.py with arguments using the activated venv Python
+python main.py %*

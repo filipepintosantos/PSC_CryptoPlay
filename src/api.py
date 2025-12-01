@@ -33,9 +33,10 @@ class CoinMarketCapAPI:
         Args:
             api_key: CoinMarketCap API key. If None, reads from CMC_API_KEY env var.
         """
-        self.api_key = api_key or os.getenv("CMC_API_KEY")
+        # Accept both env var names for compatibility
+        self.api_key = api_key or os.getenv("CMC_API_KEY") or os.getenv("COINMARKETCAP_API_KEY")
         if not self.api_key:
-            raise ValueError("CMC_API_KEY not provided and not found in environment variables")
+            raise ValueError("API key not provided. Set CMC_API_KEY or COINMARKETCAP_API_KEY in environment/.env or pass --api-key")
         
         self.session = requests.Session()
         self.session.headers.update({
@@ -187,89 +188,100 @@ class CoinMarketCapAPI:
 
     def fetch_historical_range(self, symbols: List[str], days: int = 30) -> List[Dict]:
         """
-        Fetch historical close-of-day quotes for the last `days` days (including today).
+        Fetch historical close-of-day quotes for the last `days` days using a single
+        between-dates API call per symbol (OHLCV daily). Uses Europe/Lisbon day bounds
+        and stores the EUR close price as the quote value for each day.
 
-        This will query the historical endpoint once per (symbol, day). The method is
-        defensive about API response shape: it will look for time-series inside the
-        response and pick the last datapoint of the day (closest to end of day).
-
-        Note: This can be slow and is subject to API rate limits. Ensure your API plan
-        supports the historical endpoint and adjust request pacing if necessary.
+        Returns a list of quote dicts with `price_eur` set to OHLC close.
         """
         if days <= 0:
             return []
 
-        quotes = []
+        results: List[Dict] = []
         local_tz = _get_tz("Europe/Lisbon")
 
-        for day_offset in range(days):
-            # compute target day: today - day_offset
-            day = datetime.now(local_tz).date() - timedelta(days=day_offset)
-            time_start = datetime.combine(day, time(0, 0, 0)).replace(tzinfo=local_tz)
-            time_end = datetime.combine(day, time(23, 59, 59)).replace(tzinfo=local_tz)
+        # Compute date window in Europe/Lisbon with date-only bounds.
+        # End date is capped to yesterday to avoid partial "today" data.
+        today_local = datetime.now(local_tz).date()
+        end_date_local = today_local - timedelta(days=1)
+        start_date_local = end_date_local - timedelta(days=days - 1)
 
-            for symbol in symbols:
-                url = f"{self.BASE_URL}/cryptocurrency/quotes/historical"
-                params = {
+        # Date-only ISO strings (YYYY-MM-DD) as required by the API call
+        time_start_iso = start_date_local.isoformat()
+        time_end_iso = end_date_local.isoformat()
+
+        for symbol in symbols:
+            url = f"{self.BASE_URL}/cryptocurrency/ohlcv/historical"
+            params = {
+                "symbol": symbol,
+                "convert": "EUR",
+                "time_start": time_start_iso,
+                "time_end": time_end_iso,
+                "interval": "daily",
+            }
+
+            try:
+                resp = self.session.get(url, params=params, timeout=45)
+                resp.raise_for_status()
+                data = resp.json()
+            except requests.exceptions.RequestException as e:
+                print(f"Warning: OHLCV fetch failed for {symbol}: {e}. Falling back to quotes/historical.")
+                # Fallback to quotes/historical with interval=daily
+                url_q = f"{self.BASE_URL}/cryptocurrency/quotes/historical"
+                params_q = {
                     "symbol": symbol,
                     "convert": "EUR",
-                    "time_start": time_start.isoformat(),
-                    "time_end": time_end.isoformat(),
+                    "time_start": time_start_iso,
+                    "time_end": time_end_iso,
+                    "interval": "daily",
                 }
-
                 try:
-                    resp = self.session.get(url, params=params, timeout=30)
+                    resp = self.session.get(url_q, params=params_q, timeout=45)
                     resp.raise_for_status()
                     data = resp.json()
-                except requests.exceptions.RequestException:
-                    # Fallback to latest single point if historical fails
-                    try:
-                        data = self.get_latest_quotes([symbol])
-                    except Exception:
-                        print(f"Warning: failed fetching historical for {symbol} on {day}")
-                        continue
-
-                # Try to extract time-series points from response
-                symbol_block = data.get("data", {}).get(symbol) or {}
-
-                # Some historical responses include a 'quotes' list or 'data' list
-                points = []
-                if isinstance(symbol_block.get("quotes"), list):
-                    points = symbol_block.get("quotes")
-                elif isinstance(symbol_block.get("data"), list):
-                    points = symbol_block.get("data")
-                else:
-                    # Try to see if the structure matches latest-quote style
-                    eur = symbol_block.get("quote", {}).get("EUR")
-                    if eur:
-                        points = [{"quote": {"EUR": eur}, "timestamp": time_end.isoformat()}]
-
-                if not points:
-                    print(f"No data points for {symbol} on {day}")
+                except requests.exceptions.RequestException as e2:
+                    print(f"Warning: quotes/historical fallback also failed for {symbol}: {e2}")
                     continue
 
-                # Pick last point (closest to end of day)
-                last_point = points[-1]
-                eur_data = last_point.get("quote", {}).get("EUR", {})
-                ts_raw = last_point.get("timestamp") or last_point.get("time") or time_end.isoformat()
+            sym_block = (data.get("data") or {}).get(symbol) or {}
+            name = sym_block.get("name", "")
 
-                # Build quote dict
+            # Prefer OHLCV structure: list under 'quotes' with quote.EUR.close
+            points = []
+            if isinstance(sym_block.get("quotes"), list):
+                points = sym_block.get("quotes")
+            elif isinstance(sym_block.get("data"), list):
+                # alternative historical payloads
+                points = sym_block.get("data")
+
+            if not points:
+                print(f"No historical points returned for {symbol} in range {start_date_local}..{end_date_local}")
+                continue
+
+            for p in points:
+                # Try OHLCV close first
+                eur_q = ((p.get("quote") or {}).get("EUR") or {})
+                close_val = eur_q.get("close")
+                price_val = eur_q.get("price")
+                price_eur = close_val if close_val is not None else price_val
+
+                ts = p.get("time_close") or p.get("timestamp") or p.get("time")
                 try:
-                    q_ts = datetime.fromisoformat(ts_raw)
+                    # Parse timestamp if provided; otherwise synthesize as end-of-day UTC for the date
+                    ts_dt = datetime.fromisoformat(ts) if isinstance(ts, str) else datetime.combine(end_date_local, time(23, 59, 59))
                 except Exception:
-                    q_ts = time_end
+                    ts_dt = datetime.combine(end_date_local, time(23, 59, 59))
 
-                quote = {
+                results.append({
                     "symbol": symbol,
-                    "name": symbol_block.get("name", ""),
-                    "price_eur": eur_data.get("price"),
-                    "market_cap_eur": eur_data.get("market_cap"),
-                    "volume_24h_eur": eur_data.get("volume_24h"),
-                    "percent_change_24h": eur_data.get("percent_change_24h"),
-                    "percent_change_7d": eur_data.get("percent_change_7d"),
-                    "percent_change_30d": eur_data.get("percent_change_30d"),
-                    "timestamp": q_ts,
-                }
-                quotes.append(quote)
+                    "name": name,
+                    "price_eur": price_eur,
+                    "market_cap_eur": None,
+                    "volume_24h_eur": None,
+                    "percent_change_24h": None,
+                    "percent_change_7d": None,
+                    "percent_change_30d": None,
+                    "timestamp": ts_dt,
+                })
 
-        return quotes
+        return results
