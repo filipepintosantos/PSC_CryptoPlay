@@ -60,6 +60,11 @@ def main():
         help="Fetch mode: 'incremental' (from last date) or 'full' (from oldest date)"
     )
     parser.add_argument(
+        "--days",
+        type=int,
+        help="Fetch historical quotes for the last N days (e.g. 365)"
+    )
+    parser.add_argument(
         "--fetch-only",
         action="store_true",
         help="Only fetch and store data, don't generate report"
@@ -114,10 +119,14 @@ def main():
                 api = CoinMarketCapAPI(args.api_key)
                 
                 # Determine fetch starting point based on mode
-                if fetch_mode == "full":
+                # If user requested an explicit days range, use the historical range fetch
+                if args.days:
+                    print(f"Fetching historical range: last {args.days} days")
+                    quotes = api.fetch_historical_range(symbols, days=args.days)
+                elif fetch_mode == "full":
                     # Will fetch from oldest date, don't use database info
                     print("Mode: Full (fetching from oldest available data)")
-                    quotes = api.fetch_and_parse(symbols)
+                    quotes = api.fetch_and_parse(symbols, close_of_day=True)
                 else:
                     # Incremental mode: fetch from last date in database
                     print("Mode: Incremental (fetching from last recorded date)")
@@ -129,7 +138,7 @@ def main():
                             print(f"  {symbol}: last date = {last_date}")
                         else:
                             print(f"  {symbol}: no data in database yet")
-                    quotes = api.fetch_and_parse(symbols)
+                    quotes = api.fetch_and_parse(symbols, close_of_day=True)
                 
                 if quotes:
                     # Insert or update quotes

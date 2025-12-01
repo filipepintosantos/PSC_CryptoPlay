@@ -120,7 +120,7 @@ class ExcelReporter:
                 col_letter = get_column_letter(col_idx)
                 cell = ws[f'{col_letter}{row}']
                 cell.value = stats.get("min")
-                cell.number_format = '0.00000000'
+                cell.number_format = '0.000'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
                 
@@ -128,7 +128,7 @@ class ExcelReporter:
                 col_letter = get_column_letter(col_idx + 1)
                 cell = ws[f'{col_letter}{row}']
                 cell.value = stats.get("max")
-                cell.number_format = '0.00000000'
+                cell.number_format = '0.000'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
                 
@@ -136,7 +136,7 @@ class ExcelReporter:
                 col_letter = get_column_letter(col_idx + 2)
                 cell = ws[f'{col_letter}{row}']
                 cell.value = stats.get("mean")
-                cell.number_format = '0.00000000'
+                cell.number_format = '0.000'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
                 
@@ -144,7 +144,7 @@ class ExcelReporter:
                 col_letter = get_column_letter(col_idx + 3)
                 cell = ws[f'{col_letter}{row}']
                 cell.value = stats.get("std")
-                cell.number_format = '0.00000000'
+                cell.number_format = '0.000'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
                 
@@ -152,7 +152,7 @@ class ExcelReporter:
                 col_letter = get_column_letter(col_idx + 4)
                 cell = ws[f'{col_letter}{row}']
                 cell.value = stats.get("mean_minus_std")
-                cell.number_format = '0.00000000'
+                cell.number_format = '0.000'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
                 
@@ -160,7 +160,7 @@ class ExcelReporter:
                 col_letter = get_column_letter(col_idx + 5)
                 cell = ws[f'{col_letter}{row}']
                 cell.value = period_data.get("latest_quote")
-                cell.number_format = '0.00000000'
+                cell.number_format = '0.000'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
                 fill_color = "C6EFCE" if period_data.get("latest_deviation_from_mean", 0) >= 0 else "FFC7CE"
@@ -170,7 +170,7 @@ class ExcelReporter:
                 col_letter = get_column_letter(col_idx + 6)
                 cell = ws[f'{col_letter}{row}']
                 cell.value = period_data.get("latest_deviation_from_mean")
-                cell.number_format = '0.00000000'
+                cell.number_format = '0.000'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
                 

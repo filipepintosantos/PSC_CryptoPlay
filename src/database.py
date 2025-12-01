@@ -64,7 +64,7 @@ class CryptoDatabase:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS price_quotes (
                 id INTEGER PRIMARY KEY,
-                crypto_id INTEGER NOT NULL,
+                crypto_id TEXT NOT NULL,
                 price_eur REAL NOT NULL,
                 market_cap_eur REAL,
                 volume_24h_eur REAL,
@@ -72,8 +72,8 @@ class CryptoDatabase:
                 percent_change_7d REAL,
                 percent_change_30d REAL,
                 timestamp TIMESTAMP NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (crypto_id) REFERENCES cryptocurrencies(id)
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                -- crypto_id stores the cryptocurrency code (symbol), e.g. 'BTC'
             )
         """)
         
@@ -123,12 +123,9 @@ class CryptoDatabase:
         """
         cursor = self.conn.cursor()
         
-        # Get or create cryptocurrency
-        crypto_id = self.add_cryptocurrency(symbol, quote_data.get("name", ""))
-        
-        if not crypto_id:
-            return False
-        
+        # Ensure cryptocurrency metadata exists (store symbol/name)
+        self.add_cryptocurrency(symbol, quote_data.get("name", ""))
+
         try:
             cursor.execute("""
                 INSERT INTO price_quotes (
@@ -137,7 +134,7 @@ class CryptoDatabase:
                     timestamp
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                crypto_id,
+                symbol,
                 quote_data.get("price_eur"),
                 quote_data.get("market_cap_eur"),
                 quote_data.get("volume_24h_eur"),
@@ -184,7 +181,7 @@ class CryptoDatabase:
         query = """
             SELECT pq.*, c.symbol, c.name
             FROM price_quotes pq
-            JOIN cryptocurrencies c ON pq.crypto_id = c.id
+            JOIN cryptocurrencies c ON pq.crypto_id = c.symbol
             WHERE c.symbol = ?
         """
         
@@ -216,7 +213,7 @@ class CryptoDatabase:
         cursor.execute("""
             SELECT pq.*, c.symbol, c.name
             FROM price_quotes pq
-            JOIN cryptocurrencies c ON pq.crypto_id = c.id
+            JOIN cryptocurrencies c ON pq.crypto_id = c.symbol
             WHERE c.symbol = ?
             ORDER BY pq.timestamp DESC
             LIMIT 1
@@ -250,7 +247,7 @@ class CryptoDatabase:
         cursor.execute("""
             SELECT MAX(pq.timestamp)
             FROM price_quotes pq
-            JOIN cryptocurrencies c ON pq.crypto_id = c.id
+            JOIN cryptocurrencies c ON pq.crypto_id = c.symbol
             WHERE c.symbol = ?
         """, (symbol,))
         
@@ -273,7 +270,7 @@ class CryptoDatabase:
         cursor.execute("""
             SELECT MIN(pq.timestamp)
             FROM price_quotes pq
-            JOIN cryptocurrencies c ON pq.crypto_id = c.id
+            JOIN cryptocurrencies c ON pq.crypto_id = c.symbol
             WHERE c.symbol = ?
         """, (symbol,))
         
@@ -295,11 +292,8 @@ class CryptoDatabase:
         """
         cursor = self.conn.cursor()
         
-        # Get or create cryptocurrency
-        crypto_id = self.add_cryptocurrency(symbol, quote_data.get("name", ""))
-        
-        if not crypto_id:
-            return False
+        # Ensure cryptocurrency metadata exists (store symbol/name)
+        self.add_cryptocurrency(symbol, quote_data.get("name", ""))
         
         try:
             timestamp = quote_data.get("timestamp", datetime.now())
@@ -308,7 +302,7 @@ class CryptoDatabase:
             cursor.execute("""
                 SELECT id FROM price_quotes
                 WHERE crypto_id = ? AND timestamp = ?
-            """, (crypto_id, timestamp))
+            """, (symbol, timestamp))
             
             existing = cursor.fetchone()
             
@@ -341,7 +335,7 @@ class CryptoDatabase:
                         timestamp
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    crypto_id,
+                    symbol,
                     quote_data.get("price_eur"),
                     quote_data.get("market_cap_eur"),
                     quote_data.get("volume_24h_eur"),
