@@ -93,6 +93,13 @@ echo.
 echo Virtual environment is activated. You can now run:
 echo   python main.py
 echo.
+echo Optional: Install development tools (pytest, pylint, black, etc):
+echo   pip install -r requirements-dev.txt
+echo.
+echo Then run tests with:
+echo   run_tests.bat
+echo   python -m unittest discover -s tests -p "test_*.py" -v
+echo.
 echo To deactivate the environment later, type:
 echo   deactivate
 echo.

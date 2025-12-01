@@ -19,7 +19,10 @@ class CryptoDatabase:
             db_path: Path to SQLite database file
         """
         self.db_path = db_path
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        # Only create parent directory if a directory component exists (e.g. not ':memory:')
+        dir_name = os.path.dirname(db_path)
+        if dir_name:
+            os.makedirs(dir_name, exist_ok=True)
         self.conn = None
         self.connect()
     

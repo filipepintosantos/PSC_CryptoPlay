@@ -5,15 +5,18 @@ This script is called during setup.bat to create the database structure.
 """
 
 import sys
+import subprocess
+import argparse
 from datetime import datetime
 from src.database import CryptoDatabase
 
-def init_database():
+
+def init_database(db_path: str = "data/crypto_prices.db"):
     """Initialize the database with default cryptocurrency information."""
     try:
         print("Initializing database...")
-        db = CryptoDatabase("data/crypto_prices.db")
-        
+        db = CryptoDatabase(db_path)
+
         # List of default cryptocurrencies with their market entry dates
         default_cryptos = [
             ("BTC", "Bitcoin", datetime(2009, 1, 3), None, True),
@@ -30,19 +33,45 @@ def init_database():
             ("ATOM", "Cosmos", datetime(2019, 3, 13), None, True),
             ("XTZ", "Tezos", datetime(2018, 6, 30), None, False),
         ]
-        
+
         # Add cryptocurrencies to database
         for code, name, market_entry, market_cap, favorite in default_cryptos:
             db.add_crypto_info(code, name, market_entry, market_cap, favorite)
             print(f"  ✓ Added {code} ({name})")
-        
+
         db.close()
         print("Database initialized successfully!")
         return 0
-        
+
     except Exception as e:
         print(f"ERROR: Failed to initialize database: {e}")
         return 1
 
+
+def run_seed_large(db_path: str):
+    """Run the `scripts/seed_large_cryptos.py` script using the same Python interpreter."""
+    cmd = [sys.executable, "scripts\\seed_large_cryptos.py", "--db-path", db_path]
+    print("Running seed script:", " ".join(cmd))
+    try:
+        result = subprocess.run(cmd, check=False)
+        return result.returncode
+    except Exception as e:
+        print(f"ERROR: Failed to execute seed script: {e}")
+        return 1
+
+
 if __name__ == "__main__":
-    sys.exit(init_database())
+    parser = argparse.ArgumentParser(description="Initialize DB and optionally seed large cryptos")
+    parser.add_argument("--db-path", default="data/crypto_prices.db", help="Path to SQLite DB file")
+    parser.add_argument("--seed-large", action="store_true", help="Run seed script to add large, older cryptos from CoinMarketCap")
+    args = parser.parse_args()
+
+    rc = init_database(db_path=args.db_path)
+    if rc != 0:
+        sys.exit(rc)
+
+    if args.seed_large:
+        rc2 = run_seed_large(args.db_path)
+        sys.exit(rc2)
+
+    sys.exit(0)

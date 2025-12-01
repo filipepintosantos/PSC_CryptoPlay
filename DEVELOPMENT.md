@@ -102,15 +102,38 @@ tests/
 
 ### Executar Testes
 
+**Opção 1: Unittest (padrão, sem dependências adicionais)**
+
 ```bash
 # Todos os testes
-python -m pytest tests/ -v
+python -m unittest discover -s tests -p "test_*.py" -v
 
 # Testes específicos
-python -m pytest tests/test_project.py::TestDatabase -v
+python -m unittest tests.test_project.TestDatabase -v
+```
+
+**Opção 2: Pytest (recomendado com coverage)**
+
+```bash
+# Instalar ferramentas de desenvolvimento
+pip install -r requirements-dev.txt
+
+# Todos os testes
+pytest tests/ -v
+
+# Testes específicos
+pytest tests/test_project.py::TestDatabase -v
 
 # Com cobertura
 pytest tests/ --cov=src --cov-report=html
+```
+
+**Opção 3: Usar script preparado**
+
+```bash
+run_tests.bat        # Executa com pytest
+run_tests.bat -u     # Executa com unittest
+run_tests.bat -c     # Executa com coverage
 ```
 
 ### Exemplo de Teste

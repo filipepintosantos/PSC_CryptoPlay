@@ -241,8 +241,9 @@ python main.py --favorites --report-only
 Arquivo: `data/crypto_prices.db`
 
 **Tabelas**:
-- `cryptocurrencies`: Metadados das criptomoedas
+- `cryptocurrencies`: Metadados das criptomoedas (id, symbol, name, created_at)
 - `price_quotes`: Histórico de quotações com timestamp
+- `crypto_info`: Informações de criptomoedas (code, name, market_entry, market_cap, favorite)
 
 ### Relatório Excel
 
@@ -305,6 +306,73 @@ python main.py --symbols BTC,ETH
 
 Ou use o ficheiro `schedule_windows.bat` como base.
 
+## Testes
+
+### Executar Testes com Unittest (recomendado)
+
+```bash
+# Todos os testes
+python -m unittest discover -s tests -p "test_*.py" -v
+
+# Testes específicos
+python -m unittest tests.test_project.TestDatabase -v
+```
+
+### Executar Testes com Pytest (opcional)
+
+Instale as dependências de desenvolvimento:
+```bash
+pip install -r requirements-dev.txt
+```
+
+Execute os testes:
+```bash
+# Todos os testes
+pytest tests/ -v
+
+# Com cobertura
+pytest tests/ -v --cov=src --cov-report=html
+
+# Ou use o script preparado
+run_tests.bat        # Executa com pytest
+run_tests.bat -u     # Executa com unittest
+run_tests.bat -c     # Executa com coverage
+```
+
+### Testes Disponíveis
+
+- **TestDatabase**: Testa operações de base de dados (criar tabelas, adicionar criptomoedas, inserir quotas)
+- **TestStatisticalAnalyzer**: Testa cálculos estatísticos e análises de períodos rolantes
+
+## Desenvolvimento
+
+### Instalar Ferramentas de Desenvolvimento
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+Isso instala:
+- pytest (testes)
+- pytest-cov (cobertura)
+- pylint (linting)
+- black (formatação)
+- isort (organização de imports)
+- mypy (type checking)
+
+### Formatação de Código
+
+```bash
+# Formatar com black
+black src/ main.py
+
+# Organizar imports
+isort src/ main.py
+
+# Lint com pylint
+pylint src/ main.py
+```
+
 ## Troubleshooting
 
 ### Erro: "CMC_API_KEY not provided"
@@ -349,5 +417,5 @@ Para problemas ou sugestões, verifique:
 
 ---
 
-**Versão**: 1.0.0  
+**Versão**: 1.1.0  
 **Última atualização**: Dezembro 2024
