@@ -130,10 +130,11 @@ class CryptoDatabase:
             
             cursor.execute("""
                 INSERT INTO price_quotes (
-                    crypto_id, price_eur, timestamp
-                ) VALUES (?, ?, ?)
+                    crypto_id, price_eur, timestamp, created_at
+                ) VALUES (?, ?, ?, CURRENT_TIMESTAMP)
                 ON CONFLICT(crypto_id, timestamp) 
                 DO UPDATE SET price_eur = excluded.price_eur
+                    -- created_at is NOT updated, preserves original insert time
             """, (
                 symbol,
                 quote_data.get("price_eur"),
@@ -335,7 +336,8 @@ class CryptoDatabase:
     def add_crypto_info(self, code: str, name: str, market_entry: Optional[datetime] = None, 
                        market_cap: Optional[float] = None, favorite: bool = False) -> Optional[int]:
         """
-        Add cryptocurrency information to crypto_info table.
+        Add or update cryptocurrency information to crypto_info table.
+        Uses UPSERT to update if code already exists.
         
         Args:
             code: Cryptocurrency code (e.g., 'BTC')
@@ -350,12 +352,20 @@ class CryptoDatabase:
         cursor = self.conn.cursor()
         try:
             cursor.execute("""
-                INSERT OR IGNORE INTO crypto_info (code, name, market_entry, market_cap, favorite)
+                INSERT INTO crypto_info (code, name, market_entry, market_cap, favorite)
                 VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(code) 
+                DO UPDATE SET 
+                    name = excluded.name,
+                    market_entry = excluded.market_entry,
+                    market_cap = excluded.market_cap,
+                    favorite = excluded.favorite,
+                    updated_at = CURRENT_TIMESTAMP
             """, (code, name, market_entry, market_cap, favorite))
             self.conn.commit()
-        except sqlite3.IntegrityError:
-            pass  # Already exists
+        except Exception as e:
+            print(f"Error adding/updating crypto_info for {code}: {e}")
+            return None
         
         cursor.execute("SELECT id FROM crypto_info WHERE code = ?", (code,))
         result = cursor.fetchone()

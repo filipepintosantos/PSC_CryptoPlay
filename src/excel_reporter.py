@@ -31,12 +31,13 @@ class ExcelReporter:
         self.workbook = openpyxl.Workbook()
         self.workbook.remove(self.workbook.active)  # Remove default sheet
     
-    def create_summary_sheet(self, reports: Dict[str, Dict]):
+    def create_summary_sheet(self, reports: Dict[str, Dict], market_caps: Dict[str, float] = None):
         """
         Create a summary sheet with all cryptocurrencies and periods.
         
         Args:
             reports: Dictionary with analysis reports from StatisticalAnalyzer
+            market_caps: Dictionary with market cap values for sorting
         """
         ws = self.workbook.create_sheet("Resumo", 0)
         
@@ -50,13 +51,14 @@ class ExcelReporter:
             bottom=Side(style='thin')
         )
         
-        # Set column widths
-        ws.column_dimensions['A'].width = 12
+        # Set column widths (70 pixels ≈ 10 Excel width units)
+        ws.column_dimensions['A'].width = 10
+        ws.column_dimensions['B'].width = 10  # Latest Quote column
         for i, period in enumerate(self.PERIODS):
-            col_offset = i * 7
+            col_offset = i * 7  # Changed back to 7 (removed absolute difference columns)
             for j in range(7):
-                col_letter = get_column_letter(2 + col_offset + j)
-                ws.column_dimensions[col_letter].width = 14
+                col_letter = get_column_letter(3 + col_offset + j)
+                ws.column_dimensions[col_letter].width = 10
         
         # Title row
         ws['A1'] = "Análise de Criptomoedas em EUR"
@@ -73,13 +75,23 @@ class ExcelReporter:
         ws[f'A{row}'].fill = header_fill
         ws[f'A{row}'].font = header_font
         
-        col_idx = 2
+        ws[f'B{row}'] = "Última Cotação"
+        ws[f'B{row}'].fill = header_fill
+        ws[f'B{row}'].font = header_font
+        ws[f'B{row}'].alignment = Alignment(horizontal='center')
+        ws[f'B{row+1}'] = "EUR"
+        ws[f'B{row+1}'].fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+        ws[f'B{row+1}'].font = Font(bold=True, size=9)
+        ws[f'B{row+1}'].alignment = Alignment(horizontal='center')
+        ws[f'B{row+1}'].border = border
+        
+        col_idx = 3
         for period in self.PERIODS:
             period_display = self.PERIOD_DISPLAY[period]
             
             # Merge cells for period header
             start_col = get_column_letter(col_idx)
-            end_col = get_column_letter(col_idx + 6)
+            end_col = get_column_letter(col_idx + 6)  # Changed to 6 (7 columns - 1)
             ws.merge_cells(f'{start_col}{row}:{end_col}{row}')
             
             cell = ws[f'{start_col}{row}']
@@ -88,8 +100,8 @@ class ExcelReporter:
             cell.font = header_font
             cell.alignment = Alignment(horizontal='center')
             
-            # Sub-headers
-            sub_headers = ["Mínimo", "Máximo", "Média", "Desvio", "Média-Desvio", "Última Quot.", "Desvio Média"]
+            # Sub-headers (removed absolute difference columns)
+            sub_headers = ["Mínimo", "Máximo", "Média", "Desvio", "Média-Desvio", "Dif. Média %", "Dif. M-D %"]
             for j, sub_header in enumerate(sub_headers):
                 col_letter = get_column_letter(col_idx + j)
                 cell = ws[f'{col_letter}{row + 1}']
@@ -99,11 +111,18 @@ class ExcelReporter:
                 cell.alignment = Alignment(horizontal='center', wrap_text=True)
                 cell.border = border
             
-            col_idx += 7
+            col_idx += 7  # Changed back to 7
+        
+        # Sort by market cap (descending)
+        if market_caps:
+            sorted_symbols = sorted(reports.keys(), key=lambda s: market_caps.get(s, 0), reverse=True)
+        else:
+            sorted_symbols = sorted(reports.keys())
         
         # Data rows
         row = 6
-        for symbol, report in sorted(reports.items()):
+        for symbol in sorted_symbols:
+            report = reports[symbol]
             if "error" in report:
                 continue
             
@@ -111,7 +130,15 @@ class ExcelReporter:
             ws[f'A{row}'].font = Font(bold=True)
             ws[f'A{row}'].border = border
             
-            col_idx = 2
+            # Latest Quote in column B (only once)
+            latest_quote = report.get("periods", {}).get("12_months", {}).get("latest_quote")
+            ws[f'B{row}'] = latest_quote
+            ws[f'B{row}'].number_format = '#,##0.00'
+            ws[f'B{row}'].border = border
+            ws[f'B{row}'].alignment = Alignment(horizontal='right')
+            ws[f'B{row}'].font = Font(bold=True)
+            
+            col_idx = 3
             for period in self.PERIODS:
                 period_data = report.get("periods", {}).get(period, {})
                 stats = period_data.get("stats", {})
@@ -120,7 +147,7 @@ class ExcelReporter:
                 col_letter = get_column_letter(col_idx)
                 cell = ws[f'{col_letter}{row}']
                 cell.value = stats.get("min")
-                cell.number_format = '0.000'
+                cell.number_format = '#,##0.00'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
                 
@@ -128,7 +155,7 @@ class ExcelReporter:
                 col_letter = get_column_letter(col_idx + 1)
                 cell = ws[f'{col_letter}{row}']
                 cell.value = stats.get("max")
-                cell.number_format = '0.000'
+                cell.number_format = '#,##0.00'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
                 
@@ -136,7 +163,7 @@ class ExcelReporter:
                 col_letter = get_column_letter(col_idx + 2)
                 cell = ws[f'{col_letter}{row}']
                 cell.value = stats.get("mean")
-                cell.number_format = '0.000'
+                cell.number_format = '#,##0.00'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
                 
@@ -144,7 +171,7 @@ class ExcelReporter:
                 col_letter = get_column_letter(col_idx + 3)
                 cell = ws[f'{col_letter}{row}']
                 cell.value = stats.get("std")
-                cell.number_format = '0.000'
+                cell.number_format = '#,##0.00'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
                 
@@ -152,35 +179,42 @@ class ExcelReporter:
                 col_letter = get_column_letter(col_idx + 4)
                 cell = ws[f'{col_letter}{row}']
                 cell.value = stats.get("mean_minus_std")
-                cell.number_format = '0.000'
+                cell.number_format = '#,##0.00'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
                 
-                # Latest Quote
+                # Deviation from Mean (%) - removed absolute column
                 col_letter = get_column_letter(col_idx + 5)
                 cell = ws[f'{col_letter}{row}']
-                cell.value = period_data.get("latest_quote")
-                cell.number_format = '0.000'
+                dev_mean_pct = period_data.get("latest_deviation_from_mean_pct")
+                cell.value = dev_mean_pct / 100 if dev_mean_pct else None
+                cell.number_format = '0.00%'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
-                fill_color = "C6EFCE" if period_data.get("latest_deviation_from_mean", 0) >= 0 else "FFC7CE"
+                fill_color = "C6EFCE" if dev_mean_pct and dev_mean_pct >= 0 else "FFC7CE"
                 cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
                 
-                # Deviation from Mean
+                # Deviation from Mean-StdDev (%) - removed absolute column
                 col_letter = get_column_letter(col_idx + 6)
                 cell = ws[f'{col_letter}{row}']
-                cell.value = period_data.get("latest_deviation_from_mean")
-                cell.number_format = '0.000'
+                dev_mean_std_pct = period_data.get("latest_deviation_from_mean_minus_std_pct")
+                cell.value = dev_mean_std_pct / 100 if dev_mean_std_pct else None
+                cell.number_format = '0.00%'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
+                fill_color = "C6EFCE" if dev_mean_std_pct and dev_mean_std_pct >= 0 else "FFC7CE"
+                cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
                 
                 col_idx += 7
             
             row += 1
         
+        # Freeze panes at row 6 (after headers), column C (after Symbol and Latest Quote)
+        ws.freeze_panes = 'C6'
+        
         # Add AutoFilter to the summary sheet
-        last_col = get_column_letter(1 + len(self.PERIODS) * 7)
-        ws.auto_filter.ref = f"A4:{last_col}{row - 1}"
+        last_col = get_column_letter(2 + len(self.PERIODS) * 7)
+        ws.auto_filter.ref = f"A5:{last_col}{row - 1}"
     
     def create_detailed_sheet(self, symbol: str, report: Dict):
         """
@@ -264,15 +298,16 @@ class ExcelReporter:
         self.workbook.save(self.filename)
         print(f"Excel report saved to: {self.filename}")
     
-    def generate_report(self, reports: Dict[str, Dict]):
+    def generate_report(self, reports: Dict[str, Dict], market_caps: Dict[str, float] = None):
         """
         Generate complete Excel report.
         
         Args:
             reports: Dictionary with analysis reports from StatisticalAnalyzer
+            market_caps: Dictionary with market cap values for sorting
         """
         # Create summary sheet
-        self.create_summary_sheet(reports)
+        self.create_summary_sheet(reports, market_caps)
         
         # Create detailed sheets for each cryptocurrency
         for symbol, report in sorted(reports.items()):

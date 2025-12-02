@@ -14,7 +14,7 @@ from datetime import datetime
 # Add src directory to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from api import CoinMarketCapAPI
+from api_yfinance import YFinanceCryptoAPI
 from database import CryptoDatabase
 from analysis import StatisticalAnalyzer
 from excel_reporter import ExcelReporter
@@ -115,9 +115,9 @@ def main():
         help="Use favorite symbols from config file (favorites section)"
     )
     parser.add_argument(
-        "--api-key",
-        type=str,
-        help="CoinMarketCap API key (or set CMC_API_KEY env variable)"
+        "--all-from-db",
+        action="store_true",
+        help="Use all symbols from crypto_info table in database"
     )
     parser.add_argument(
         "--db-path",
@@ -186,8 +186,21 @@ def main():
     if config_path.exists():
         config.read(config_path)
     
+    # Initialize database early if needed for --all-from-db
+    db_path = args.db_path or config.get("database", "path", fallback="data/crypto_prices.db")
+    
     # Determine symbols to use
-    if args.symbols:
+    if args.all_from_db:
+        # Get all symbols from crypto_info table
+        from database import CryptoDatabase
+        temp_db = CryptoDatabase(db_path)
+        result = temp_db.conn.execute('SELECT code FROM crypto_info ORDER BY market_cap DESC').fetchall()
+        temp_db.close()
+        symbols = [row[0] for row in result]
+        if not symbols:
+            print("No cryptocurrencies found in crypto_info table")
+            return 1
+    elif args.symbols:
         symbols = [s.strip().upper() for s in args.symbols.split(",")]
     elif args.all_symbols:
         symbols_str = config.get("symbols", "all", fallback="BTC,ETH,ADA,XRP,SOL")
@@ -204,9 +217,6 @@ def main():
     upsert = config.getboolean("fetch", "upsert_duplicates", fallback=True)
     throttle_seconds = config.getfloat("fetch", "throttle_seconds", fallback=1.0)
     retries = config.getint("fetch", "retries", fallback=2)
-    
-    # Get database path
-    db_path = args.db_path or config.get("database", "path", fallback="data/crypto_prices.db")
     
     # Get report path
     report_path = args.report_path or config.get("report", "output_path", fallback="reports/crypto_analysis.xlsx")
@@ -253,7 +263,7 @@ def main():
             print(f"Fetching prices for: {', '.join(symbols)}")
             print(f"Fetch mode: {fetch_mode}")
             try:
-                api = CoinMarketCapAPI(args.api_key)
+                api = YFinanceCryptoAPI()
                 
                 # Determine fetch starting point based on mode
                 # If user requested an explicit days range, fetch per-symbol with throttling and upsert
@@ -326,8 +336,7 @@ def main():
                     return 1
             
             except Exception as e:
-                print(f"Error fetching from CoinMarketCap: {e}")
-                print("Make sure you have a valid CMC_API_KEY set in your .env file or passed via --api-key")
+                print(f"Error fetching from Yahoo Finance: {e}")
                 return 1
         
         if args.fetch_only:
@@ -349,10 +358,19 @@ def main():
             db.close()
             return 1
         
+        # Get market caps for sorting
+        market_caps = {}
+        for symbol in symbols:
+            crypto_info = db.get_crypto_info(symbol)
+            if crypto_info and crypto_info.get('market_cap'):
+                market_caps[symbol] = crypto_info.get('market_cap', 0) or 0
+            else:
+                market_caps[symbol] = 0
+        
         # Generate Excel report
         print(f"Generating Excel report: {report_path}")
         reporter = ExcelReporter(report_path)
-        reporter.generate_report(reports)
+        reporter.generate_report(reports, market_caps)
         
         print("✓ Analysis complete!")
         print(f"  Symbols analyzed: {', '.join(symbols)}")

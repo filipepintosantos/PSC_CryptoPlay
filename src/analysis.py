@@ -85,7 +85,9 @@ class StatisticalAnalyzer:
                     },
                     "latest_quote": None,
                     "latest_deviation_from_mean": None,
+                    "latest_deviation_from_mean_pct": None,
                     "latest_deviation_from_mean_minus_std": None,
+                    "latest_deviation_from_mean_minus_std_pct": None,
                 }
             else:
                 prices = period_data['price_eur'].tolist()
@@ -93,13 +95,17 @@ class StatisticalAnalyzer:
                 
                 latest_price = period_data.iloc[0]['price_eur']
                 latest_deviation_mean = latest_price - stats['mean'] if stats['mean'] else None
+                latest_deviation_mean_pct = ((latest_price - stats['mean']) / stats['mean'] * 100) if stats['mean'] else None
                 latest_deviation_mean_std = latest_price - stats['mean_minus_std'] if stats['mean_minus_std'] else None
+                latest_deviation_mean_std_pct = ((latest_price - stats['mean_minus_std']) / stats['mean_minus_std'] * 100) if stats['mean_minus_std'] else None
                 
                 results[period_name] = {
                     "stats": stats,
                     "latest_quote": float(latest_price),
                     "latest_deviation_from_mean": latest_deviation_mean,
+                    "latest_deviation_from_mean_pct": latest_deviation_mean_pct,
                     "latest_deviation_from_mean_minus_std": latest_deviation_mean_std,
+                    "latest_deviation_from_mean_minus_std_pct": latest_deviation_mean_std_pct,
                 }
         
         return results

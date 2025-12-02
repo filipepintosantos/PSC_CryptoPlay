@@ -1,6 +1,30 @@
 # PSC CryptoPlay - Cryptocurrency Price Tracker & Analysis
 
+**Versão: 2.1.0**
+
 Ferramenta Python para rastreamento de quotações de criptomoedas em EUR, armazenamento em SQLite e geração de relatórios em Excel com análises estatísticas.
+
+## 🚀 Características Principais
+
+### 📊 Recolha de Dados
+- **Yahoo Finance API gratuito** (yfinance) - Sem necessidade de chave API
+- **Descoberta automática** de criptomoedas via CoinGecko API
+- **Filtragem inteligente**: Market cap > $250M USD, idade > 3 meses, dados EUR disponíveis
+- **700+ dias de histórico** por criptomoeda
+- **Atualização incremental** - Busca apenas dados novos
+- **Gestão UPSERT** - Sem entradas duplicadas
+
+### 📈 Análise e Relatórios
+- **Análise multi-período**: 12 meses, 6 meses, 3 meses, 1 mês
+- **Métricas estatísticas**: Mínimo, Máximo, Média, Desvio Padrão, Média-Desvio
+- **Tracking de desvios**: Percentagens de desvio da Média e Média-Desvio
+- **Ordenação por capitalização** de mercado
+- **Relatórios Excel** com freeze panes, cores e formatação profissional
+
+### 🔄 Automação
+- **Script de atualização** (`update_quotes.bat`) - Atualiza todas as moedas com 3 dias de dados
+- **Script de seeding** - Popula automaticamente a base de dados com moedas qualificadas
+- **Importação CSV** - Importa histórico de exports do CoinMarketCap
 
 ## 🚀 Começar Rapidamente (5 minutos)
 
@@ -8,44 +32,57 @@ Ferramenta Python para rastreamento de quotações de criptomoedas em EUR, armaz
 setup.bat
 ```
 
-Depois configure a API key em `.env` e execute:
+Depois execute:
 
 ```bash
-python main.py
+python main.py --all-from-db --days 700
+```
+
+Para atualizar quotações regularmente:
+
+```bash
+update_quotes.bat
 ```
 
 Para mais informações, consulte [QUICKSTART.md](QUICKSTART.md)
 
-## Funcionalidades
+## Funcionalidades Detalhadas
 
-- 📊 **Fetch de Quotações**: Busca preços em EUR do CoinMarketCap
-- 💾 **Banco de Dados SQLite**: Armazena histórico de quotações
+- 📊 **Fetch de Quotações**: Busca preços em EUR do Yahoo Finance (gratuito)
+- 🔍 **Auto-discovery**: Encontra automaticamente criptomoedas com market cap > $250M
+- 💾 **Banco de Dados SQLite**: Armazena histórico de quotações com gestão UPSERT
 - 📈 **Análise Estatística**: Calcula min, máximo, média, desvio padrão e média-desvio padrão
 - 📅 **Períodos Rolantes**: Análises para 12 meses, 6 meses, 3 meses e 1 mês
 - 📑 **Relatórios Excel**: Gera folhas de cálculo com:
-  - Resumo geral de todas as criptomoedas
+  - Resumo geral de todas as criptomoedas ordenadas por market cap
+  - Última cotação em coluna dedicada (coluna B)
+  - Desvios percentuais da Média e Média-Desvio
+  - Formatação profissional com cores e freeze panes
   - Análises detalhadas por símbolo
-  - Desvio da última quotação em relação às médias
-  - Formatação profissional com cores
+- 🤖 **Automação**: Scripts batch para atualização diária e seeding inicial
 
 ## Estrutura do Projeto
 
 ```
 PSC_CryptoPlay/
 ├── src/
-│   ├── api.py                 # Interface com CoinMarketCap API
-│   ├── database.py            # Gerenciador SQLite
+│   ├── api_yfinance.py        # Interface com Yahoo Finance API
+│   ├── database.py            # Gerenciador SQLite com UPSERT
 │   ├── analysis.py            # Análise estatística
 │   └── excel_reporter.py      # Geração de relatórios Excel
+├── scripts/
+│   ├── seed_large_cryptos_yfinance.py  # Auto-discovery de criptomoedas
+│   └── import_coinmarketcap_csv.py     # Import de CSV
 ├── data/
 │   └── crypto_prices.db       # Banco de dados (criado automaticamente)
 ├── reports/
 │   └── crypto_analysis.xlsx   # Relatório Excel (criado automaticamente)
-├── config/                    # Configurações
-├── tests/                     # Testes
+├── config/
+│   └── config.ini            # Configurações (favoritas, períodos, etc)
+├── tests/                     # Testes unitários
 ├── main.py                    # Script principal
+├── update_quotes.bat          # Atualização rápida (3 dias)
 ├── requirements.txt           # Dependências Python
-├── .env.example              # Exemplo de arquivo .env
 └── README.md                 # Este arquivo
 ```
 
