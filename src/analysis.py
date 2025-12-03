@@ -84,28 +84,51 @@ class StatisticalAnalyzer:
                         "count": 0,
                     },
                     "latest_quote": None,
+                    "latest_date": None,
+                    "second_latest_quote": None,
+                    "second_latest_date": None,
                     "latest_deviation_from_mean": None,
                     "latest_deviation_from_mean_pct": None,
                     "latest_deviation_from_mean_minus_std": None,
                     "latest_deviation_from_mean_minus_std_pct": None,
+                    "second_deviation_from_mean": None,
+                    "second_deviation_from_mean_pct": None,
+                    "second_deviation_from_mean_minus_std": None,
+                    "second_deviation_from_mean_minus_std_pct": None,
                 }
             else:
                 prices = period_data['price_eur'].tolist()
                 stats = StatisticalAnalyzer.calculate_statistics(prices)
                 
                 latest_price = period_data.iloc[0]['price_eur']
+                latest_date = period_data.iloc[0]['timestamp']
+                second_latest_price = period_data.iloc[1]['price_eur'] if len(period_data) > 1 else None
+                second_latest_date = period_data.iloc[1]['timestamp'] if len(period_data) > 1 else None
+                
                 latest_deviation_mean = latest_price - stats['mean'] if stats['mean'] else None
                 latest_deviation_mean_pct = ((latest_price - stats['mean']) / stats['mean'] * 100) if stats['mean'] else None
                 latest_deviation_mean_std = latest_price - stats['mean_minus_std'] if stats['mean_minus_std'] else None
                 latest_deviation_mean_std_pct = ((latest_price - stats['mean_minus_std']) / stats['mean_minus_std'] * 100) if stats['mean_minus_std'] else None
                 
+                second_deviation_mean = (second_latest_price - stats['mean']) if (second_latest_price and stats['mean']) else None
+                second_deviation_mean_pct = ((second_latest_price - stats['mean']) / stats['mean'] * 100) if (second_latest_price and stats['mean']) else None
+                second_deviation_mean_std = (second_latest_price - stats['mean_minus_std']) if (second_latest_price and stats['mean_minus_std']) else None
+                second_deviation_mean_std_pct = ((second_latest_price - stats['mean_minus_std']) / stats['mean_minus_std'] * 100) if (second_latest_price and stats['mean_minus_std']) else None
+                
                 results[period_name] = {
                     "stats": stats,
                     "latest_quote": float(latest_price),
+                    "latest_date": latest_date.strftime('%d/%m/%Y'),
+                    "second_latest_quote": float(second_latest_price) if second_latest_price else None,
+                    "second_latest_date": second_latest_date.strftime('%d/%m/%Y') if second_latest_date else None,
                     "latest_deviation_from_mean": latest_deviation_mean,
                     "latest_deviation_from_mean_pct": latest_deviation_mean_pct,
                     "latest_deviation_from_mean_minus_std": latest_deviation_mean_std,
                     "latest_deviation_from_mean_minus_std_pct": latest_deviation_mean_std_pct,
+                    "second_deviation_from_mean": second_deviation_mean,
+                    "second_deviation_from_mean_pct": second_deviation_mean_pct,
+                    "second_deviation_from_mean_minus_std": second_deviation_mean_std,
+                    "second_deviation_from_mean_minus_std_pct": second_deviation_mean_std_pct,
                 }
         
         return results

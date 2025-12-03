@@ -54,10 +54,11 @@ class ExcelReporter:
         # Set column widths (70 pixels ≈ 10 Excel width units)
         ws.column_dimensions['A'].width = 10
         ws.column_dimensions['B'].width = 10  # Latest Quote column
+        ws.column_dimensions['C'].width = 10  # Second Latest Quote column
         for i, period in enumerate(self.PERIODS):
-            col_offset = i * 7  # Changed back to 7 (removed absolute difference columns)
-            for j in range(7):
-                col_letter = get_column_letter(3 + col_offset + j)
+            col_offset = i * 11  # 11 columns per period (5 stats + 6 deviations)
+            for j in range(11):
+                col_letter = get_column_letter(4 + col_offset + j)
                 ws.column_dimensions[col_letter].width = 10
         
         # Title row
@@ -75,23 +76,42 @@ class ExcelReporter:
         ws[f'A{row}'].fill = header_fill
         ws[f'A{row}'].font = header_font
         
-        ws[f'B{row}'] = "Última Cotação"
+        # Get dates from first report's 12_months period for headers
+        latest_date = None
+        second_latest_date = None
+        if reports:
+            first_report = next(iter(reports.values()))
+            if "periods" in first_report and "12_months" in first_report["periods"]:
+                latest_date = first_report["periods"]["12_months"].get("latest_date")
+                second_latest_date = first_report["periods"]["12_months"].get("second_latest_date")
+        
+        ws[f'B{row}'] = f"Última Cotação\n{latest_date if latest_date else ''}"
         ws[f'B{row}'].fill = header_fill
         ws[f'B{row}'].font = header_font
-        ws[f'B{row}'].alignment = Alignment(horizontal='center')
+        ws[f'B{row}'].alignment = Alignment(horizontal='center', wrap_text=True)
         ws[f'B{row+1}'] = "EUR"
         ws[f'B{row+1}'].fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
         ws[f'B{row+1}'].font = Font(bold=True, size=9)
         ws[f'B{row+1}'].alignment = Alignment(horizontal='center')
         ws[f'B{row+1}'].border = border
         
-        col_idx = 3
+        ws[f'C{row}'] = f"Penúltima Cotação\n{second_latest_date if second_latest_date else ''}"
+        ws[f'C{row}'].fill = header_fill
+        ws[f'C{row}'].font = header_font
+        ws[f'C{row}'].alignment = Alignment(horizontal='center', wrap_text=True)
+        ws[f'C{row+1}'] = "EUR"
+        ws[f'C{row+1}'].fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+        ws[f'C{row+1}'].font = Font(bold=True, size=9)
+        ws[f'C{row+1}'].alignment = Alignment(horizontal='center')
+        ws[f'C{row+1}'].border = border
+        
+        col_idx = 4
         for period in self.PERIODS:
             period_display = self.PERIOD_DISPLAY[period]
             
             # Merge cells for period header
             start_col = get_column_letter(col_idx)
-            end_col = get_column_letter(col_idx + 6)  # Changed to 6 (7 columns - 1)
+            end_col = get_column_letter(col_idx + 10)  # 11 columns (5 stats + 6 deviations)
             ws.merge_cells(f'{start_col}{row}:{end_col}{row}')
             
             cell = ws[f'{start_col}{row}']
@@ -100,8 +120,11 @@ class ExcelReporter:
             cell.font = header_font
             cell.alignment = Alignment(horizontal='center')
             
-            # Sub-headers (removed absolute difference columns)
-            sub_headers = ["Mínimo", "Máximo", "Média", "Desvio", "Média-Desvio", "Dif. Média %", "Dif. M-D %"]
+            # Sub-headers with both latest and second-to-last deviations
+            sub_headers = ["Mínimo", "Máximo", "Média", "Desvio", "Média-Desvio", 
+                          "Últ. Dif. Média %", "Últ. Dif. M-D %", 
+                          "Penúlt. Dif. Média %", "Penúlt. Dif. M-D %", 
+                          "Var. Dif. Média %", "Var. Dif. M-D %"]
             for j, sub_header in enumerate(sub_headers):
                 col_letter = get_column_letter(col_idx + j)
                 cell = ws[f'{col_letter}{row + 1}']
@@ -111,7 +134,7 @@ class ExcelReporter:
                 cell.alignment = Alignment(horizontal='center', wrap_text=True)
                 cell.border = border
             
-            col_idx += 7  # Changed back to 7
+            col_idx += 11
         
         # Sort by market cap (descending)
         if market_caps:
@@ -138,7 +161,15 @@ class ExcelReporter:
             ws[f'B{row}'].alignment = Alignment(horizontal='right')
             ws[f'B{row}'].font = Font(bold=True)
             
-            col_idx = 3
+            # Second Latest Quote in column C (only once)
+            second_latest_quote = report.get("periods", {}).get("12_months", {}).get("second_latest_quote")
+            ws[f'C{row}'] = second_latest_quote
+            ws[f'C{row}'].number_format = '#,##0.00'
+            ws[f'C{row}'].border = border
+            ws[f'C{row}'].alignment = Alignment(horizontal='right')
+            ws[f'C{row}'].font = Font(bold=True)
+            
+            col_idx = 4
             for period in self.PERIODS:
                 period_data = report.get("periods", {}).get(period, {})
                 stats = period_data.get("stats", {})
@@ -183,7 +214,7 @@ class ExcelReporter:
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
                 
-                # Deviation from Mean (%) - removed absolute column
+                # Latest Deviation from Mean (%)
                 col_letter = get_column_letter(col_idx + 5)
                 cell = ws[f'{col_letter}{row}']
                 dev_mean_pct = period_data.get("latest_deviation_from_mean_pct")
@@ -194,7 +225,7 @@ class ExcelReporter:
                 fill_color = "C6EFCE" if dev_mean_pct and dev_mean_pct >= 0 else "FFC7CE"
                 cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
                 
-                # Deviation from Mean-StdDev (%) - removed absolute column
+                # Latest Deviation from Mean-StdDev (%)
                 col_letter = get_column_letter(col_idx + 6)
                 cell = ws[f'{col_letter}{row}']
                 dev_mean_std_pct = period_data.get("latest_deviation_from_mean_minus_std_pct")
@@ -205,15 +236,67 @@ class ExcelReporter:
                 fill_color = "C6EFCE" if dev_mean_std_pct and dev_mean_std_pct >= 0 else "FFC7CE"
                 cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
                 
-                col_idx += 7
+                # Second Latest Deviation from Mean (%)
+                col_letter = get_column_letter(col_idx + 7)
+                cell = ws[f'{col_letter}{row}']
+                second_dev_mean_pct = period_data.get("second_deviation_from_mean_pct")
+                cell.value = second_dev_mean_pct / 100 if second_dev_mean_pct else None
+                cell.number_format = '0.00%'
+                cell.border = border
+                cell.alignment = Alignment(horizontal='right')
+                fill_color = "C6EFCE" if second_dev_mean_pct and second_dev_mean_pct >= 0 else "FFC7CE"
+                cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+                
+                # Second Latest Deviation from Mean-StdDev (%)
+                col_letter = get_column_letter(col_idx + 8)
+                cell = ws[f'{col_letter}{row}']
+                second_dev_mean_std_pct = period_data.get("second_deviation_from_mean_minus_std_pct")
+                cell.value = second_dev_mean_std_pct / 100 if second_dev_mean_std_pct else None
+                cell.number_format = '0.00%'
+                cell.border = border
+                cell.alignment = Alignment(horizontal='right')
+                fill_color = "C6EFCE" if second_dev_mean_std_pct and second_dev_mean_std_pct >= 0 else "FFC7CE"
+                cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+                
+                # Variation in Deviation from Mean (%)
+                col_letter = get_column_letter(col_idx + 9)
+                cell = ws[f'{col_letter}{row}']
+                if dev_mean_pct is not None and second_dev_mean_pct is not None:
+                    variation = dev_mean_pct - second_dev_mean_pct
+                    cell.value = variation / 100
+                else:
+                    cell.value = None
+                cell.number_format = '0.00%'
+                cell.border = border
+                cell.alignment = Alignment(horizontal='right')
+                if cell.value is not None:
+                    fill_color = "C6EFCE" if cell.value >= 0 else "FFC7CE"
+                    cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+                
+                # Variation in Deviation from Mean-StdDev (%)
+                col_letter = get_column_letter(col_idx + 10)
+                cell = ws[f'{col_letter}{row}']
+                if dev_mean_std_pct is not None and second_dev_mean_std_pct is not None:
+                    variation_std = dev_mean_std_pct - second_dev_mean_std_pct
+                    cell.value = variation_std / 100
+                else:
+                    cell.value = None
+                cell.number_format = '0.00%'
+                cell.border = border
+                cell.alignment = Alignment(horizontal='right')
+                if cell.value is not None:
+                    fill_color = "C6EFCE" if cell.value >= 0 else "FFC7CE"
+                    cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+                
+                col_idx += 11
             
             row += 1
         
-        # Freeze panes at row 6 (after headers), column C (after Symbol and Latest Quote)
-        ws.freeze_panes = 'C6'
+        # Freeze panes at row 6 (after headers), column D (after Symbol, Latest Quote, and Second Latest Quote)
+        ws.freeze_panes = 'D6'
         
         # Add AutoFilter to the summary sheet
-        last_col = get_column_letter(2 + len(self.PERIODS) * 7)
+        last_col = get_column_letter(3 + len(self.PERIODS) * 11)
         ws.auto_filter.ref = f"A5:{last_col}{row - 1}"
     
     def create_detailed_sheet(self, symbol: str, report: Dict):

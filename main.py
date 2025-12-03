@@ -222,6 +222,10 @@ def main():
     report_path = args.report_path or config.get("report", "output_path", fallback="reports/crypto_analysis.xlsx")
     
     try:
+        # Import CryptoDatabase if not already imported
+        if 'CryptoDatabase' not in dir():
+            from database import CryptoDatabase
+        
         # Initialize database
         print("Initializing database...")
         db = CryptoDatabase(db_path)
