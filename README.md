@@ -1,6 +1,6 @@
 # PSC CryptoPlay - Cryptocurrency Price Tracker & Analysis
 
-**Versão: 2.1.0**
+**Versão: 2.3.0**
 
 Ferramenta Python para rastreamento de quotações de criptomoedas em EUR, armazenamento em SQLite e geração de relatórios em Excel com análises estatísticas.
 
@@ -9,8 +9,8 @@ Ferramenta Python para rastreamento de quotações de criptomoedas em EUR, armaz
 ### 📊 Recolha de Dados
 - **Yahoo Finance API gratuito** (yfinance) - Sem necessidade de chave API
 - **Descoberta automática** de criptomoedas via CoinGecko API
-- **Filtragem inteligente**: Market cap > $250M USD, idade > 3 meses, dados EUR disponíveis
-- **700+ dias de histórico** por criptomoeda
+- **Filtragem inteligente**: Market cap > $100M USD, idade > 3 meses, dados EUR disponíveis
+- **400+ dias de histórico** por criptomoeda
 - **Atualização incremental** - Busca apenas dados novos
 - **Gestão UPSERT** - Sem entradas duplicadas
 
@@ -18,6 +18,8 @@ Ferramenta Python para rastreamento de quotações de criptomoedas em EUR, armaz
 - **Análise multi-período**: 12 meses, 6 meses, 3 meses, 1 mês
 - **Métricas estatísticas**: Mínimo, Máximo, Média, Desvio Padrão, Média-Desvio
 - **Tracking de desvios**: Percentagens de desvio da Média e Média-Desvio
+- **Coluna de favoritos**: Destaque visual com marcação dourada
+- **Fórmulas Excel**: Cálculos dinâmicos para médias e desvios
 - **Ordenação por capitalização** de mercado
 - **Relatórios Excel** com freeze panes, cores e formatação profissional
 
@@ -435,7 +437,8 @@ pylint src/ main.py
 
 ## Dependências
 
-- **requests**: HTTP library para CoinMarketCap API
+- **yfinance**: API gratuita do Yahoo Finance para cotações de criptomoedas
+- **requests**: HTTP library para CoinGecko API
 - **pandas**: Análise e manipulação de dados
 - **openpyxl**: Criação de arquivos Excel
 - **python-dotenv**: Carregamento de variáveis de ambiente
@@ -448,11 +451,11 @@ Este projeto é fornecido como está.
 
 Para problemas ou sugestões, verifique:
 - Logs de execução
-- Conteúdo de `.env`
+- Conteúdo de `config/config.ini`
 - Permissões de arquivo e diretório
-- Disponibilidade da API do CoinMarketCap
+- Disponibilidade das APIs (Yahoo Finance, CoinGecko)
 
 ---
 
-**Versão**: 1.1.0  
-**Última atualização**: Dezembro 2024
+**Versão**: 2.3.0  
+**Última atualização**: Dezembro 2025
