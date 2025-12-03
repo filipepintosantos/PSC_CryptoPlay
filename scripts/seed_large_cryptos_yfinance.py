@@ -17,7 +17,7 @@ from database import CryptoDatabase
 import yfinance as yf
 
 
-def get_all_cryptos_from_coingecko(min_market_cap_usd: float = 250_000_000):
+def get_all_cryptos_from_coingecko(min_market_cap_usd: float = 100_000_000):
     """
     Get all cryptocurrencies from CoinGecko with market cap > threshold.
     Returns list of (symbol, name, market_cap_usd) tuples.

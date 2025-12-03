@@ -65,6 +65,8 @@ Thumbs.db
 # Project specific
 data/crypto_prices.db
 data/*.db
+crypto_prices.db
+*.db
 reports/*.xlsx
 reports/*.xls
 *.db-journal

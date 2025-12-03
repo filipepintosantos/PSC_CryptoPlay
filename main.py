@@ -371,10 +371,15 @@ def main():
             else:
                 market_caps[symbol] = 0
         
+        # Get favorites list from database
+        favorites = []
+        result = db.conn.execute('SELECT code FROM crypto_info WHERE favorite = 1').fetchall()
+        favorites = [row[0] for row in result]
+        
         # Generate Excel report
         print(f"Generating Excel report: {report_path}")
         reporter = ExcelReporter(report_path)
-        reporter.generate_report(reports, market_caps)
+        reporter.generate_report(reports, market_caps, favorites)
         
         print("✓ Analysis complete!")
         print(f"  Symbols analyzed: {', '.join(symbols)}")
