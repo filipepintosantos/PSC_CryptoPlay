@@ -177,7 +177,7 @@ class ExcelReporter:
             ws[f'C{row}'].alignment = Alignment(horizontal='right')
             ws[f'C{row}'].font = Font(bold=True)
             
-            # Second Latest Quote in column D (only once)
+            # Second Latest Quote in column D (only once) - keep as value for now
             second_latest_quote = report.get("periods", {}).get("12_months", {}).get("second_latest_quote")
             ws[f'D{row}'] = second_latest_quote
             ws[f'D{row}'].number_format = '#,##0.00'
@@ -206,15 +206,17 @@ class ExcelReporter:
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
                 
-                # Mean
+                # Mean - Formula: AVERAGE of min and max
                 col_letter = get_column_letter(col_idx + 2)
+                min_col = get_column_letter(col_idx)
+                max_col = get_column_letter(col_idx + 1)
                 cell = ws[f'{col_letter}{row}']
-                cell.value = stats.get("mean")
+                cell.value = f"=({min_col}{row}+{max_col}{row})/2"
                 cell.number_format = '#,##0.00'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
                 
-                # Standard Deviation
+                # Standard Deviation - keep as value (needs historical data range)
                 col_letter = get_column_letter(col_idx + 3)
                 cell = ws[f'{col_letter}{row}']
                 cell.value = stats.get("std")
@@ -222,55 +224,62 @@ class ExcelReporter:
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
                 
-                # Mean - Std
+                # Mean - Std - Formula
                 col_letter = get_column_letter(col_idx + 4)
+                mean_col = get_column_letter(col_idx + 2)
+                std_col = get_column_letter(col_idx + 3)
                 cell = ws[f'{col_letter}{row}']
-                cell.value = stats.get("mean_minus_std")
+                cell.value = f"={mean_col}{row}-{std_col}{row}"
                 cell.number_format = '#,##0.00'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
                 
-                # Latest Deviation from Mean (%)
+                # Latest Deviation from Mean (%) - Formula
                 col_letter = get_column_letter(col_idx + 5)
+                mean_col = get_column_letter(col_idx + 2)
                 cell = ws[f'{col_letter}{row}']
-                dev_mean_pct = period_data.get("latest_deviation_from_mean_pct")
-                cell.value = dev_mean_pct / 100 if dev_mean_pct else None
+                cell.value = f"=(C{row}-{mean_col}{row})/{mean_col}{row}"
                 cell.number_format = '0.00%'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
+                # Conditional formatting will be applied based on formula result
+                dev_mean_pct = period_data.get("latest_deviation_from_mean_pct")
                 fill_color = "C6EFCE" if dev_mean_pct and dev_mean_pct >= 0 else "FFC7CE"
                 cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
                 
-                # Latest Deviation from Mean-StdDev (%)
+                # Latest Deviation from Mean-StdDev (%) - Formula
                 col_letter = get_column_letter(col_idx + 6)
+                mean_std_col = get_column_letter(col_idx + 4)
                 cell = ws[f'{col_letter}{row}']
-                dev_mean_std_pct = period_data.get("latest_deviation_from_mean_minus_std_pct")
-                cell.value = dev_mean_std_pct / 100 if dev_mean_std_pct else None
+                cell.value = f"=(C{row}-{mean_std_col}{row})/{mean_std_col}{row}"
                 cell.number_format = '0.00%'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
+                dev_mean_std_pct = period_data.get("latest_deviation_from_mean_minus_std_pct")
                 fill_color = "C6EFCE" if dev_mean_std_pct and dev_mean_std_pct >= 0 else "FFC7CE"
                 cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
                 
-                # Second Latest Deviation from Mean (%)
+                # Second Latest Deviation from Mean (%) - Formula
                 col_letter = get_column_letter(col_idx + 7)
+                mean_col = get_column_letter(col_idx + 2)
                 cell = ws[f'{col_letter}{row}']
-                second_dev_mean_pct = period_data.get("second_deviation_from_mean_pct")
-                cell.value = second_dev_mean_pct / 100 if second_dev_mean_pct else None
+                cell.value = f"=(D{row}-{mean_col}{row})/{mean_col}{row}"
                 cell.number_format = '0.00%'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
+                second_dev_mean_pct = period_data.get("second_deviation_from_mean_pct")
                 fill_color = "C6EFCE" if second_dev_mean_pct and second_dev_mean_pct >= 0 else "FFC7CE"
                 cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
                 
-                # Second Latest Deviation from Mean-StdDev (%)
+                # Second Latest Deviation from Mean-StdDev (%) - Formula
                 col_letter = get_column_letter(col_idx + 8)
+                mean_std_col = get_column_letter(col_idx + 4)
                 cell = ws[f'{col_letter}{row}']
-                second_dev_mean_std_pct = period_data.get("second_deviation_from_mean_minus_std_pct")
-                cell.value = second_dev_mean_std_pct / 100 if second_dev_mean_std_pct else None
+                cell.value = f"=(D{row}-{mean_std_col}{row})/{mean_std_col}{row}"
                 cell.number_format = '0.00%'
                 cell.border = border
                 cell.alignment = Alignment(horizontal='right')
+                second_dev_mean_std_pct = period_data.get("second_deviation_from_mean_minus_std_pct")
                 fill_color = "C6EFCE" if second_dev_mean_std_pct and second_dev_mean_std_pct >= 0 else "FFC7CE"
                 cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
                 
