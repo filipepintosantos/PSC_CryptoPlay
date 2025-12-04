@@ -74,11 +74,11 @@ def get_all_cryptos_from_coingecko(min_market_cap_usd: float = 100_000_000):
 
 def get_large_established_cryptos():
     """
-    Get list of cryptocurrencies with market cap > $250M and > 3 months old.
+    Get list of cryptocurrencies with market cap > $100M and > 3 months old.
     Returns list of dicts with symbol, name, market_cap, market_entry.
     """
-    # Get all cryptos from CoinGecko with market cap > $250M
-    min_market_cap = 250_000_000
+    # Get all cryptos from CoinGecko with market cap > $100M
+    min_market_cap = 100_000_000
     candidates = get_all_cryptos_from_coingecko(min_market_cap)
     
     if not candidates:

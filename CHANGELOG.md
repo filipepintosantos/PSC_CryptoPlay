@@ -1,6 +1,29 @@
 # Changelog
 
-## [2.1.0] - 2025-12-02
+## [2.4.0] - 2025-12-04
+
+### Added
+- **Expanded coverage**: Market cap threshold reduced to $100M (from $250M), adding 31 new cryptocurrencies
+- **Favorites column**: New column A in reports with "X" marker and gold highlighting for favorite cryptos
+- **Excel formulas**: Dynamic formulas for Mean, Mean-StdDev, and all deviation calculations
+- **Test coverage**: Added pytest support and coverage reporting for SonarQube integration
+
+### Changed
+- **Report structure**: Adjusted column widths (A=23px, B=58px) and header font size to 9
+- **Column reduction**: Removed variation columns (Var. Dif. Média %, Var. Dif. M-D %) to simplify reports
+- **Version bump**: Updated to 2.4.0 across all files
+
+### Removed
+- **CoinMarketCap legacy code**: Deleted obsolete `src/api.py` and related scripts
+- **Unused imports**: Removed import_coinmarketcap_csv.py, import_csv.py, old seed_large_cryptos.py
+- **Documentation cleanup**: Removed all CMC_API_KEY references from README, TECHNICAL, START_HERE, VENV_SETUP
+- **Test cleanup**: Removed CoinMarketCap-related test code
+
+### Fixed
+- **SonarQube coverage**: Adjusted coverage thresholds and exclusions for proper CI integration
+- **README accuracy**: Updated dependencies, version numbers, and market cap thresholds
+
+## [2.3.0] - 2025-12-03
 
 ### Added
 - **Auto-discovery de criptomoedas**: Script `seed_large_cryptos_yfinance.py` que busca automaticamente todas as criptomoedas com market cap > $250M USD via CoinGecko API

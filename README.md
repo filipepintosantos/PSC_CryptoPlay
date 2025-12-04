@@ -1,6 +1,6 @@
 # PSC CryptoPlay - Cryptocurrency Price Tracker & Analysis
 
-**Versão: 2.3.0**
+**Versão: 2.4.0**
 
 Ferramenta Python para rastreamento de quotações de criptomoedas em EUR, armazenamento em SQLite e geração de relatórios em Excel com análises estatísticas.
 
@@ -26,7 +26,6 @@ Ferramenta Python para rastreamento de quotações de criptomoedas em EUR, armaz
 ### 🔄 Automação
 - **Script de atualização** (`update_quotes.bat`) - Atualiza todas as moedas com 3 dias de dados
 - **Script de seeding** - Popula automaticamente a base de dados com moedas qualificadas
-- **Importação CSV** - Importa histórico de exports do CoinMarketCap
 
 ## 🚀 Começar Rapidamente (5 minutos)
 
@@ -73,8 +72,7 @@ PSC_CryptoPlay/
 │   ├── analysis.py            # Análise estatística
 │   └── excel_reporter.py      # Geração de relatórios Excel
 ├── scripts/
-│   ├── seed_large_cryptos_yfinance.py  # Auto-discovery de criptomoedas
-│   └── import_coinmarketcap_csv.py     # Import de CSV
+│   └── seed_large_cryptos_yfinance.py  # Auto-discovery de criptomoedas
 ├── data/
 │   └── crypto_prices.db       # Banco de dados (criado automaticamente)
 ├── reports/
@@ -127,24 +125,7 @@ PSC_CryptoPlay/
    pip install -r requirements.txt
    ```
 
-4. **Configure a API key**:
-   
-   Copie `.env.example` para `.env`:
-   ```bash
-   copy .env.example .env
-   ```
-   
-   Edite `.env` e adicione sua chave da API do CoinMarketCap:
-   ```
-   CMC_API_KEY=your_actual_api_key_here
-   ```
-   
-   **Obtendo a API Key**:
-   - Acesse https://coinmarketcap.com/api/
-   - Crie uma conta gratuita
-   - Copie sua API Key
-
-5. **Configure o arquivo `config/config.ini`** (opcional):
+4. **Configure o arquivo `config/config.ini`** (opcional):
    
    Edite a seção `[symbols]` para adicionar/remover criptomoedas:
    ```ini
@@ -414,26 +395,22 @@ pylint src/ main.py
 
 ## Troubleshooting
 
-### Erro: "CMC_API_KEY not provided"
-
-- Certifique-se de que `.env` existe e contém `CMC_API_KEY`
-- Ou passe via linha de comando: `--api-key YOUR_KEY`
-
-### Erro: "Error fetching from CoinMarketCap"
-
-- Verifique sua conexão de internet
-- Verifique se a API key é válida
-- Verifique limite de requisições da API (plano gratuito tem limites)
-
 ### Banco de dados vazio
 
 - Certifique-se de executar sem `--fetch-only` na primeira vez
 - Verifique permissões de escrita no diretório `data/`
+- Execute `python scripts\seed_large_cryptos_yfinance.py` para popular com criptomoedas
 
 ### Excel não abre
 
 - Use `--report-only` para regenerar
 - Certifique-se de que não há outro programa com o arquivo aberto
+
+### Erro ao buscar dados
+
+- Verifique sua conexão de internet
+- Verifique se o Yahoo Finance está acessível
+- Algumas criptomoedas podem não ter pares EUR disponíveis
 
 ## Dependências
 
