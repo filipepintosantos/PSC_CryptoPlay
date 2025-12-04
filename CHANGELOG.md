@@ -7,6 +7,7 @@
 - **Favorites column**: New column A in reports with "X" marker and gold highlighting for favorite cryptos
 - **Excel formulas**: Dynamic formulas for Mean, Mean-StdDev, and all deviation calculations
 - **Test coverage**: Added pytest support and coverage reporting for SonarQube integration
+- **Shell integration**: VS Code settings configured for improved terminal command detection
 
 ### Changed
 - **Report structure**: Adjusted column widths (A=23px, B=58px) and header font size to 9
@@ -20,7 +21,8 @@
 - **Test cleanup**: Removed CoinMarketCap-related test code
 
 ### Fixed
-- **SonarQube coverage**: Adjusted coverage thresholds and exclusions for proper CI integration
+- **SonarQube coverage**: Added Python test execution to GitHub Actions workflow for proper coverage reporting
+- **Test suite**: Updated `test_seed_large_cryptos_unittest.py` to match refactored yfinance-based seeding
 - **README accuracy**: Updated dependencies, version numbers, and market cap thresholds
 
 ## [2.3.0] - 2025-12-03

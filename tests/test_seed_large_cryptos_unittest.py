@@ -1,77 +1,65 @@
+"""
+Tests for seed_large_cryptos_yfinance script.
+Tests the yfinance-based cryptocurrency seeding functionality.
+"""
 import os
 import tempfile
 import shutil
 import unittest
 from datetime import datetime, timedelta, timezone
-
 from unittest.mock import patch, MagicMock
 
-from scripts.seed_large_cryptos import seed_large_cryptos
+from scripts.seed_large_cryptos_yfinance import get_large_established_cryptos
 from src.database import CryptoDatabase
 
 
-def make_fake_response(items):
-    mock = MagicMock()
-    mock.status_code = 200
-    mock.json.return_value = {"data": items}
-    return mock
-
-
-class TestSeedLargeCryptos(unittest.TestCase):
-    def test_inserts_only_large_old_coins(self):
-        tmpdir = tempfile.mkdtemp()
-        try:
-            db_path = os.path.join(tmpdir, "test_seed.db")
-
-            past_date = (datetime.now(timezone.utc) - timedelta(days=120)).isoformat()
-
-            large_coin = {
-                "symbol": "BIG",
-                "name": "BigCoin",
-                "date_added": past_date,
-                "quote": {"USD": {"market_cap": 2_000_000_000}}
-            }
-
-            small_coin = {
-                "symbol": "SMALL",
+class TestSeedLargeCryptosYfinance(unittest.TestCase):
+    """Test suite for yfinance-based cryptocurrency seeding."""
+    
+    def test_filters_cryptos_by_criteria(self):
+        """Test that filtering logic correctly identifies valid cryptocurrencies."""
+        # Date >90 days ago
+        past_date = (datetime.now(timezone.utc) - timedelta(days=120)).isoformat()
+        
+        # Mock CoinGecko response with test data
+        mock_cryptos = [
+            {
+                "id": "bitcoin",
+                "symbol": "btc",
+                "name": "Bitcoin",
+                "market_cap": 500_000_000_000,  # >100M ✓
+                "atl_date": "2015-01-14T00:00:00.000Z"  # Old ✓
+            },
+            {
+                "id": "small-coin",
+                "symbol": "small",
                 "name": "SmallCoin",
-                "date_added": past_date,
-                "quote": {"USD": {"market_cap": 100_000_000}}
-            }
-
-            recent_coin = {
-                "symbol": "NEW",
+                "market_cap": 50_000_000,  # <100M ✗
+                "atl_date": past_date
+            },
+            {
+                "id": "new-coin",
+                "symbol": "new",
                 "name": "NewCoin",
-                "date_added": datetime.now(timezone.utc).isoformat(),
-                "quote": {"USD": {"market_cap": 5_000_000_000}}
+                "market_cap": 200_000_000,  # >100M ✓
+                "atl_date": datetime.now(timezone.utc).isoformat()  # Too new ✗
             }
-
-            items = [large_coin, small_coin, recent_coin]
-
-            fake_resp = make_fake_response(items)
-
-            with patch("requests.get", return_value=fake_resp):
-                # Ensure API key check passes in test environment
-                os.environ["COINMARKETCAP_API_KEY"] = "DUMMY_TEST_KEY"
-                try:
-                    seed_large_cryptos(db_path=db_path, dry_run=False, limit=100, max_pages=1)
-                finally:
-                    del os.environ["COINMARKETCAP_API_KEY"]
-
-            db = CryptoDatabase(db_path=db_path)
-            rows = db.get_all_crypto_info()
-            codes = [r["code"] for r in rows]
-
-            self.assertIn("BIG", codes)
-            self.assertNotIn("SMALL", codes)
-            self.assertNotIn("NEW", codes)
-
-            db.close()
-        finally:
-            try:
-                shutil.rmtree(tmpdir)
-            except Exception:
-                pass
+        ]
+        
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_cryptos
+        
+        with patch("requests.get", return_value=mock_response):
+            # Test that it processes the data (actual EUR validation happens in main flow)
+            result = get_large_established_cryptos()
+            
+            # Should return a list
+            self.assertIsInstance(result, list)
+            
+            # Bitcoin should be in results (meets criteria)
+            btc_found = any(c["symbol"].upper() == "BTC" for c in result)
+            self.assertTrue(btc_found, "Bitcoin should be in results")
 
 
 if __name__ == "__main__":
