@@ -32,12 +32,13 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-cov
 
-      - name: Run tests with coverage
-        continue-on-error: true
+      - name: Install project in editable mode
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${GITHUB_WORKSPACE}"
-          pytest tests/ --cov=src --cov=main --cov-report=xml:coverage.xml --cov-report=term -v --tb=short || true
-          echo "Test exit code: $?"
+          pip install -e .
+
+      - name: Run tests with coverage
+        run: |
+          pytest tests/ --cov=src --cov=main --cov-report=xml --cov-report=term-missing -v
       
       - name: Debug coverage file
         if: always()
