@@ -8,6 +8,7 @@ import shutil
 import unittest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch, MagicMock
+import pandas as pd
 
 from scripts.seed_large_cryptos_yfinance import get_large_established_cryptos
 from src.database import CryptoDatabase
@@ -16,49 +17,43 @@ from src.database import CryptoDatabase
 class TestSeedLargeCryptosYfinance(unittest.TestCase):
     """Test suite for yfinance-based cryptocurrency seeding."""
     
-    def test_filters_cryptos_by_criteria(self):
+    @patch('scripts.seed_large_cryptos_yfinance.get_all_cryptos_from_coingecko')
+    def test_filters_cryptos_by_criteria(self, mock_get_cryptos):
         """Test that filtering logic correctly identifies valid cryptocurrencies."""
-        # Date >90 days ago
-        past_date = (datetime.now(timezone.utc) - timedelta(days=120)).isoformat()
-        
-        # Mock CoinGecko response with test data
-        mock_cryptos = [
+        # Mock the CoinGecko API call to return test data directly
+        mock_get_cryptos.return_value = [
             {
-                "id": "bitcoin",
-                "symbol": "btc",
+                "symbol": "BTC",
                 "name": "Bitcoin",
-                "market_cap": 500_000_000_000,  # >100M ✓
-                "atl_date": "2015-01-14T00:00:00.000Z"  # Old ✓
+                "market_cap": 500_000_000_000  # >100M ✓
             },
             {
-                "id": "small-coin",
-                "symbol": "small",
-                "name": "SmallCoin",
-                "market_cap": 50_000_000,  # <100M ✗
-                "atl_date": past_date
-            },
-            {
-                "id": "new-coin",
-                "symbol": "new",
-                "name": "NewCoin",
-                "market_cap": 200_000_000,  # >100M ✓
-                "atl_date": datetime.now(timezone.utc).isoformat()  # Too new ✗
+                "symbol": "ETH",
+                "name": "Ethereum",
+                "market_cap": 200_000_000_000  # >100M ✓
             }
         ]
         
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = mock_cryptos
+        # Create proper pandas DataFrame for yfinance history
+        old_date = datetime.now(timezone.utc) - timedelta(days=365)
+        mock_hist = pd.DataFrame(
+            {'Close': [50000.0]},
+            index=pd.DatetimeIndex([old_date])
+        )
         
-        with patch("requests.get", return_value=mock_response):
-            # Test that it processes the data (actual EUR validation happens in main flow)
+        # Mock yfinance Ticker
+        mock_ticker = MagicMock()
+        mock_ticker.history.return_value = mock_hist
+        
+        with patch('yfinance.Ticker', return_value=mock_ticker):
             result = get_large_established_cryptos()
             
-            # Should return a list
+            # Should return a list with our test cryptos
             self.assertIsInstance(result, list)
+            self.assertGreater(len(result), 0, "Should return at least one crypto")
             
-            # Bitcoin should be in results (meets criteria)
-            btc_found = any(c["symbol"].upper() == "BTC" for c in result)
+            # Bitcoin should be in results
+            btc_found = any(c["code"] == "BTC" for c in result)
             self.assertTrue(btc_found, "Bitcoin should be in results")
 
 
