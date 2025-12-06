@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.5.1] - 2025-12-06
+
+### Changed
+- Renamed Excel report from `crypto_analysis.xlsx` to `AnaliseCrypto.xlsx`
+
+### Fixed
+- Fixed missing `NUMBER_FORMAT_DECIMAL` constant in ExcelReporter class
+- Fixed method name typo: `create_detailed_sheet` → `create_detail_sheet`
+
+### Added
+- Comprehensive test suite for ExcelReporter (7 new tests)
+- Tests now validate class constants, method names, and actual report generation
+- All 22 tests pass in ~7s
+
 ## [2.5.0] - 2025-12-06
 
 ### Added

@@ -76,7 +76,7 @@ PSC_CryptoPlay/
 ├── data/
 │   └── crypto_prices.db       # Banco de dados (criado automaticamente)
 ├── reports/
-│   └── crypto_analysis.xlsx   # Relatório Excel (criado automaticamente)
+│   └── AnaliseCrypto.xlsx     # Relatório Excel (criado automaticamente)
 ├── config/
 │   └── config.ini            # Configurações (favoritas, períodos, etc)
 ├── tests/                     # Testes unitários
@@ -198,7 +198,7 @@ python main.py --report-only
 ### Especificar Caminhos Personalizados
 
 ```bash
-python main.py --db-path data/my_crypto.db --report-path reports/my_analysis.xlsx
+python main.py --db-path data/my_crypto.db --report-path reports/MinhaAnalise.xlsx
 ```
 
 ### Usar API Key via Linha de Comando
@@ -267,7 +267,7 @@ Arquivo: `data/crypto_prices.db`
 
 ### Relatório Excel
 
-Arquivo: `reports/crypto_analysis.xlsx`
+Arquivo: `reports/AnaliseCrypto.xlsx`
 
 **Sheets**:
 1. **Resumo**: Tabela geral com todas as criptomoedas
@@ -308,10 +308,10 @@ python main.py --symbols BTC,ETH
 # Fetching prices for: BTC, ETH
 # Successfully stored 2 quotes in database
 # Generating statistical analysis...
-# Generating Excel report: reports/crypto_analysis.xlsx
+# Generating Excel report: reports/AnaliseCrypto.xlsx
 # ✓ Analysis complete!
 #   Database: data/crypto_prices.db
-#   Report: reports/crypto_analysis.xlsx
+#   Report: reports/AnaliseCrypto.xlsx
 ```
 
 ## Agendamento Automático (Opcional)
