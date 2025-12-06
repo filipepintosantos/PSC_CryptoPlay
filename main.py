@@ -344,7 +344,7 @@ def main():
     upsert = config.getboolean("fetch", "upsert_duplicates", fallback=True)
     throttle_seconds = config.getfloat("fetch", "throttle_seconds", fallback=1.0)
     retries = config.getint("fetch", "retries", fallback=2)
-    report_path = args.report_path or config.get("report", "output_path", fallback="reports/crypto_analysis.xlsx")
+    report_path = args.report_path or config.get("report", "output_path", fallback="reports/AnaliseCrypto.xlsx")
     
     try:
         # Initialize database

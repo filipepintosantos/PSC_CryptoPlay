@@ -12,6 +12,7 @@ from typing import Dict, List, Optional
 class ExcelReporter:
     """Generates Excel reports from statistical analysis data."""
     
+    NUMBER_FORMAT_DECIMAL = '#,##0.00'
     PERIODS = ["12_months", "6_months", "3_months", "1_month"]
     PERIOD_DISPLAY = {
         "12_months": "12 Meses",
@@ -20,7 +21,7 @@ class ExcelReporter:
         "1_month": "1 Mês",
     }
     
-    def __init__(self, filename: str = "reports/crypto_analysis.xlsx"):
+    def __init__(self, filename: str = "reports/AnaliseCrypto.xlsx"):
         """
         Initialize the Excel reporter.
         
@@ -367,7 +368,7 @@ class ExcelReporter:
         # Create detailed sheets for each cryptocurrency
         for symbol, report in sorted(reports.items()):
             if "error" not in report:
-                self.create_detailed_sheet(symbol, report)
+                self.create_detail_sheet(symbol, report)
         
         # Save the workbook
         self.save()
