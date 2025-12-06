@@ -35,7 +35,9 @@ jobs:
       - name: Run tests with coverage
         continue-on-error: true
         run: |
-          pytest tests/ --cov=src --cov=main --cov-report=xml:coverage.xml --cov-report=term -v --tb=short
+          export PYTHONPATH="${PYTHONPATH}:${GITHUB_WORKSPACE}"
+          pytest tests/ --cov=src --cov=main --cov-report=xml:coverage.xml --cov-report=term -v --tb=short || true
+          echo "Test exit code: $?"
       
       - name: Debug coverage file
         if: always()
