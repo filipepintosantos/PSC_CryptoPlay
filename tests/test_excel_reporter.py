@@ -66,7 +66,6 @@ class TestExcelReporter(unittest.TestCase):
     
     def test_generate_simple_report(self):
         """Test generating report with minimal valid data."""
-        now = datetime.now()
         reports = {
             "BTC": {
                 "12_months": {
