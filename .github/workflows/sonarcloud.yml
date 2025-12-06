@@ -33,7 +33,6 @@ jobs:
           pip install pytest pytest-cov
 
       - name: Run tests with coverage
-        continue-on-error: true
         run: |
           pytest tests/ --cov=src --cov=main --cov-report=xml --cov-report=term -v
       
@@ -42,9 +41,10 @@ jobs:
           if [ -f coverage.xml ]; then
             echo "✓ coverage.xml generated successfully"
             ls -lh coverage.xml
+            head -20 coverage.xml
           else
-            echo "⚠ coverage.xml not found, creating empty one"
-            echo '<?xml version="1.0" ?><coverage version="1.0"><packages/></coverage>' > coverage.xml
+            echo "⚠ coverage.xml not found - tests may have failed"
+            exit 1
           fi
 
       - name: Set up Java
