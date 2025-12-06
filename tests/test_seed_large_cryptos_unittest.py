@@ -3,12 +3,17 @@ Tests for seed_large_cryptos_yfinance script.
 Tests the yfinance-based cryptocurrency seeding functionality.
 """
 import os
+import sys
 import tempfile
 import shutil
 import unittest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch, MagicMock
 import pandas as pd
+from pathlib import Path
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from scripts.seed_large_cryptos_yfinance import get_large_established_cryptos
 from src.database import CryptoDatabase
