@@ -40,19 +40,17 @@ jobs:
         run: |
           pytest tests/ --cov=src --cov=main --cov-report=xml --cov-report=term-missing -v
       
-      - name: Debug coverage file
-        if: always()
+      - name: Fix coverage.xml paths for SonarCloud
         run: |
-          echo "=== Checking coverage.xml ==="
           if [ -f coverage.xml ]; then
-            echo "✓ coverage.xml exists"
-            ls -lh coverage.xml
-            echo "=== First 30 lines of coverage.xml ==="
-            head -30 coverage.xml
-          else
-            echo "✗ coverage.xml NOT FOUND"
-            echo "Creating minimal coverage.xml as fallback"
-            echo '<?xml version="1.0" encoding="UTF-8"?><coverage version="7.0" timestamp="'$(date +%s)'" lines-valid="0" lines-covered="0" line-rate="0" branches-covered="0" branches-valid="0" branch-rate="0" complexity="0"><sources><source>src</source></sources><packages></packages></coverage>' > coverage.xml
+            echo "Original coverage.xml paths:"
+            grep -o 'filename="[^"]*"' coverage.xml | head -5
+            # Replace absolute paths with relative paths for SonarCloud
+            sed -i 's|<source>.*</source>|<source>.</source>|g' coverage.xml
+            sed -i "s|filename=\"${GITHUB_WORKSPACE}/||g" coverage.xml
+            sed -i 's|filename="/home/runner/work/PSC_CryptoPlay/PSC_CryptoPlay/||g' coverage.xml
+            echo "Fixed coverage.xml paths:"
+            grep -o 'filename="[^"]*"' coverage.xml | head -5
           fi
 
       - name: Set up Java
