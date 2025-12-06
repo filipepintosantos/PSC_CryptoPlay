@@ -146,13 +146,12 @@ class YFinanceCryptoAPI:
         
         return results
     
-    def fetch_and_parse(self, symbols: List[str], close_of_day: bool = False) -> List[Dict]:
+    def fetch_and_parse(self, symbols: List[str]) -> List[Dict]:
         """
         Fetch quotes and parse them (compatibility method).
         
         Args:
             symbols: List of cryptocurrency symbols
-            close_of_day: Not used (yfinance always returns close prices)
         
         Returns:
             List of parsed quote dictionaries

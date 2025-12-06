@@ -7,5 +7,6 @@ here to ensure unittest discovery can import the module without pytest.
 
 
 def test_smoke():
-    # Trivial smoke test — real tests are in the unittest file.
-    assert True
+    """Trivial smoke test - real tests are in the unittest file."""
+    # Simple verification that imports work
+    pass

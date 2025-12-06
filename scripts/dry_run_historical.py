@@ -6,7 +6,7 @@ Usage:
 
 import argparse
 import random
-from datetime import datetime, timedelta, time as dtime
+from datetime import datetime, timedelta, time as dtime, timezone
 import sys
 from pathlib import Path
 
@@ -85,7 +85,7 @@ def main():
             time_end = params.get("time_end") or params.get("time_end")
             if not time_end:
                 # fallback to end of today
-                time_end = datetime.utcnow().replace(hour=23, minute=59, second=59, microsecond=0).isoformat()
+                time_end = datetime.now(timezone.utc).replace(hour=23, minute=59, second=59, microsecond=0).isoformat()
             payload = make_historical_payload(symbol, time_end)
             return FakeResponse(payload)
         else:

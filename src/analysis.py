@@ -53,6 +53,88 @@ class StatisticalAnalyzer:
         }
     
     @staticmethod
+    def _create_empty_period_result() -> Dict:
+        """Create an empty result structure for a period with no data."""
+        return {
+            "stats": {
+                "min": None,
+                "max": None,
+                "mean": None,
+                "std": None,
+                "mean_minus_std": None,
+                "count": 0,
+            },
+            "latest_quote": None,
+            "latest_date": None,
+            "second_latest_quote": None,
+            "second_latest_date": None,
+            "latest_deviation_from_mean": None,
+            "latest_deviation_from_mean_pct": None,
+            "latest_deviation_from_mean_minus_std": None,
+            "latest_deviation_from_mean_minus_std_pct": None,
+            "second_deviation_from_mean": None,
+            "second_deviation_from_mean_pct": None,
+            "second_deviation_from_mean_minus_std": None,
+            "second_deviation_from_mean_minus_std_pct": None,
+        }
+    
+    @staticmethod
+    def _calculate_deviation(price: float, baseline: float) -> tuple:
+        """Calculate absolute and percentage deviation from baseline."""
+        if not baseline:
+            return None, None
+        deviation = price - baseline
+        deviation_pct = (deviation / baseline) * 100
+        return deviation, deviation_pct
+    
+    @staticmethod
+    def _analyze_period_data(period_data: pd.DataFrame) -> Dict:
+        """Analyze data for a specific period and calculate all metrics."""
+        prices = period_data['price_eur'].tolist()
+        stats = StatisticalAnalyzer.calculate_statistics(prices)
+        
+        # Extract latest and second latest prices
+        latest_price = period_data.iloc[0]['price_eur']
+        latest_date = period_data.iloc[0]['timestamp']
+        second_latest_price = period_data.iloc[1]['price_eur'] if len(period_data) > 1 else None
+        second_latest_date = period_data.iloc[1]['timestamp'] if len(period_data) > 1 else None
+        
+        # Calculate deviations for latest price
+        latest_dev_mean, latest_dev_mean_pct = StatisticalAnalyzer._calculate_deviation(
+            latest_price, stats['mean']
+        )
+        latest_dev_mean_std, latest_dev_mean_std_pct = StatisticalAnalyzer._calculate_deviation(
+            latest_price, stats['mean_minus_std']
+        )
+        
+        # Calculate deviations for second latest price
+        second_dev_mean, second_dev_mean_pct = (None, None)
+        second_dev_mean_std, second_dev_mean_std_pct = (None, None)
+        if second_latest_price:
+            second_dev_mean, second_dev_mean_pct = StatisticalAnalyzer._calculate_deviation(
+                second_latest_price, stats['mean']
+            )
+            second_dev_mean_std, second_dev_mean_std_pct = StatisticalAnalyzer._calculate_deviation(
+                second_latest_price, stats['mean_minus_std']
+            )
+        
+        return {
+            "stats": stats,
+            "latest_quote": float(latest_price),
+            "latest_date": latest_date.strftime('%d/%m/%Y'),
+            "second_latest_quote": float(second_latest_price) if second_latest_price else None,
+            "second_latest_date": second_latest_date.strftime('%d/%m/%Y') if second_latest_date else None,
+            "latest_deviation_from_mean": latest_dev_mean,
+            "latest_deviation_from_mean_pct": latest_dev_mean_pct,
+            "latest_deviation_from_mean_minus_std": latest_dev_mean_std,
+            "latest_deviation_from_mean_minus_std_pct": latest_dev_mean_std_pct,
+            "second_deviation_from_mean": second_dev_mean,
+            "second_deviation_from_mean_pct": second_dev_mean_pct,
+            "second_deviation_from_mean_minus_std": second_dev_mean_std,
+            "second_deviation_from_mean_minus_std_pct": second_dev_mean_std_pct,
+        }
+    
+    @staticmethod
     def analyze_rolling_periods(quotes_df: pd.DataFrame) -> Dict[str, Dict]:
         """
         Analyze prices for rolling periods (12m, 6m, 3m, 1m).
@@ -74,62 +156,9 @@ class StatisticalAnalyzer:
             period_data = quotes_df[quotes_df['timestamp'] >= cutoff_date]
             
             if period_data.empty:
-                results[period_name] = {
-                    "stats": {
-                        "min": None,
-                        "max": None,
-                        "mean": None,
-                        "std": None,
-                        "mean_minus_std": None,
-                        "count": 0,
-                    },
-                    "latest_quote": None,
-                    "latest_date": None,
-                    "second_latest_quote": None,
-                    "second_latest_date": None,
-                    "latest_deviation_from_mean": None,
-                    "latest_deviation_from_mean_pct": None,
-                    "latest_deviation_from_mean_minus_std": None,
-                    "latest_deviation_from_mean_minus_std_pct": None,
-                    "second_deviation_from_mean": None,
-                    "second_deviation_from_mean_pct": None,
-                    "second_deviation_from_mean_minus_std": None,
-                    "second_deviation_from_mean_minus_std_pct": None,
-                }
+                results[period_name] = StatisticalAnalyzer._create_empty_period_result()
             else:
-                prices = period_data['price_eur'].tolist()
-                stats = StatisticalAnalyzer.calculate_statistics(prices)
-                
-                latest_price = period_data.iloc[0]['price_eur']
-                latest_date = period_data.iloc[0]['timestamp']
-                second_latest_price = period_data.iloc[1]['price_eur'] if len(period_data) > 1 else None
-                second_latest_date = period_data.iloc[1]['timestamp'] if len(period_data) > 1 else None
-                
-                latest_deviation_mean = latest_price - stats['mean'] if stats['mean'] else None
-                latest_deviation_mean_pct = ((latest_price - stats['mean']) / stats['mean'] * 100) if stats['mean'] else None
-                latest_deviation_mean_std = latest_price - stats['mean_minus_std'] if stats['mean_minus_std'] else None
-                latest_deviation_mean_std_pct = ((latest_price - stats['mean_minus_std']) / stats['mean_minus_std'] * 100) if stats['mean_minus_std'] else None
-                
-                second_deviation_mean = (second_latest_price - stats['mean']) if (second_latest_price and stats['mean']) else None
-                second_deviation_mean_pct = ((second_latest_price - stats['mean']) / stats['mean'] * 100) if (second_latest_price and stats['mean']) else None
-                second_deviation_mean_std = (second_latest_price - stats['mean_minus_std']) if (second_latest_price and stats['mean_minus_std']) else None
-                second_deviation_mean_std_pct = ((second_latest_price - stats['mean_minus_std']) / stats['mean_minus_std'] * 100) if (second_latest_price and stats['mean_minus_std']) else None
-                
-                results[period_name] = {
-                    "stats": stats,
-                    "latest_quote": float(latest_price),
-                    "latest_date": latest_date.strftime('%d/%m/%Y'),
-                    "second_latest_quote": float(second_latest_price) if second_latest_price else None,
-                    "second_latest_date": second_latest_date.strftime('%d/%m/%Y') if second_latest_date else None,
-                    "latest_deviation_from_mean": latest_deviation_mean,
-                    "latest_deviation_from_mean_pct": latest_deviation_mean_pct,
-                    "latest_deviation_from_mean_minus_std": latest_deviation_mean_std,
-                    "latest_deviation_from_mean_minus_std_pct": latest_deviation_mean_std_pct,
-                    "second_deviation_from_mean": second_deviation_mean,
-                    "second_deviation_from_mean_pct": second_deviation_mean_pct,
-                    "second_deviation_from_mean_minus_std": second_deviation_mean_std,
-                    "second_deviation_from_mean_minus_std_pct": second_deviation_mean_std_pct,
-                }
+                results[period_name] = StatisticalAnalyzer._analyze_period_data(period_data)
         
         return results
     

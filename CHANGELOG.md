@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.5.0] - 2025-12-06
+
+### Added
+- **SonarLint integration**: Configured SonarLint with Java 25 for real-time code analysis
+- **Code quality constants**: Added NUMBER_FORMAT_DECIMAL and DEFAULT_SYMBOLS to reduce duplication
+
+### Changed
+- **Code quality improvements**: Fixed all SonarQube warnings for duplicated literals, unused variables, and deprecated methods
+- **Timezone handling**: Replaced deprecated `datetime.utcnow()` with `datetime.now(timezone.utc)`
+- **API cleanup**: Removed unused `close_of_day` parameter from `fetch_and_parse` method
+
+### Fixed
+- **SonarQube issues**: Resolved 15+ code quality issues including:
+  - Duplicate string literals replaced with constants
+  - Unused local variables removed
+  - Unnecessary f-strings corrected
+  - Identical branches consolidated
+  - Deprecated datetime methods updated
+
 ## [2.4.0] - 2025-12-04
 
 ### Added

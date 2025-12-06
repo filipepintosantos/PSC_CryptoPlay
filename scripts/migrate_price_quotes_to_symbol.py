@@ -144,7 +144,7 @@ def migrate(db_path: str, do_backup: bool = True, vacuum: bool = False):
             print("Running VACUUM to reclaim space...")
             cur.execute("VACUUM")
 
-    except Exception as e:
+    except Exception:
         conn.rollback()
         raise
     finally:

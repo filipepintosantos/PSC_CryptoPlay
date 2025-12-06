@@ -37,7 +37,7 @@ print()
 
 # Show current favorites
 result = db.conn.execute('SELECT code, name FROM crypto_info WHERE favorite = 1 ORDER BY code').fetchall()
-print(f'Current favorites in database:')
+print('Current favorites in database:')
 for code, name in result:
     print(f'  ⭐ {code} - {name}')
 

@@ -11,6 +11,8 @@ import csv
 from pathlib import Path
 from datetime import datetime
 
+from typing import Optional
+
 # Add src directory to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
@@ -18,6 +20,9 @@ from api_yfinance import YFinanceCryptoAPI
 from database import CryptoDatabase
 from analysis import StatisticalAnalyzer
 from excel_reporter import ExcelReporter
+
+# Constants
+DEFAULT_SYMBOLS = "BTC,ETH,ADA,XRP,SOL"
 
 
 def import_csv_data(csv_path: str, symbol: str, db: CryptoDatabase,
@@ -92,6 +97,149 @@ def import_csv_data(csv_path: str, symbol: str, db: CryptoDatabase,
                 continue
     
     return count
+
+
+def load_config() -> configparser.ConfigParser:
+    """Load configuration from config.ini file."""
+    config = configparser.ConfigParser()
+    config_path = Path(__file__).parent / "config" / "config.ini"
+    if config_path.exists():
+        config.read(config_path)
+    return config
+
+
+def determine_symbols(args, config: configparser.ConfigParser, db_path: str) -> Optional[list]:
+    """Determine which cryptocurrency symbols to process based on arguments."""
+    if args.all_from_db:
+        # Get all symbols from crypto_info table
+        from database import CryptoDatabase
+        temp_db = CryptoDatabase(db_path)
+        result = temp_db.conn.execute('SELECT code FROM crypto_info ORDER BY market_cap DESC').fetchall()
+        temp_db.close()
+        symbols = [row[0] for row in result]
+        if not symbols:
+            print("No cryptocurrencies found in crypto_info table")
+            return None
+        return symbols
+    elif args.symbols:
+        return [s.strip().upper() for s in args.symbols.split(",")]
+    elif args.all_symbols:
+        symbols_str = config.get("symbols", "all", fallback=DEFAULT_SYMBOLS)
+        return [s.strip().upper() for s in symbols_str.split(",")]
+    else:
+        # Both args.favorites and default case use favorites
+        symbols_str = config.get("symbols", "favorites", fallback=DEFAULT_SYMBOLS)
+        return [s.strip().upper() for s in symbols_str.split(",")]
+
+
+def fetch_historical_range(api, symbols: list, days: int, db, throttle_seconds: float, retries: int) -> int:
+    """Fetch historical data for a specific number of days."""
+    print(f"Fetching historical range: last {days} days")
+    total_count = 0
+    for idx, sym in enumerate(symbols, start=1):
+        print(f"[{idx}/{len(symbols)}] {sym} → OHLCV daily between-dates")
+        attempt = 0
+        while True:
+            try:
+                sym_quotes = api.fetch_historical_range([sym], days=days)
+                break
+            except Exception as e:
+                attempt += 1
+                if attempt > retries:
+                    print(f"  ❌ Failed {sym} after {retries} retries: {e}")
+                    sym_quotes = []
+                    break
+                sleep_s = min(throttle_seconds * (2 ** (attempt - 1)), 10)
+                print(f"  Retry {attempt}/{retries} after {sleep_s:.1f}s due to: {e}")
+                time.sleep(sleep_s)
+
+        # Always upsert to avoid duplicates when refetching ranges
+        inserted = 0
+        for q in sym_quotes:
+            if db.insert_or_update_quote(sym, q):
+                inserted += 1
+        total_count += inserted
+        print(f"  ✓ Stored/updated {inserted} quotes for {sym}")
+
+        # Throttle between symbols
+        time.sleep(throttle_seconds)
+
+    print(f"Successfully stored/updated {total_count} quotes in database")
+    return total_count
+
+
+def fetch_quotes_incremental(api, symbols: list, db, fetch_mode: str) -> list:
+    """Fetch quotes based on fetch mode (incremental or full)."""
+    if fetch_mode == "full":
+        print("Mode: Full (fetching from oldest available data)")
+        return api.fetch_and_parse(symbols)
+    else:
+        # Incremental mode: fetch from last date in database
+        print("Mode: Incremental (fetching from last recorded date)")
+        last_dates = {}
+        for symbol in symbols:
+            last_date = db.get_latest_timestamp(symbol)
+            if last_date:
+                last_dates[symbol] = last_date
+                print(f"  {symbol}: last date = {last_date}")
+            else:
+                print(f"  {symbol}: no data in database yet")
+        return api.fetch_and_parse(symbols)
+
+
+def store_quotes(db, quotes: list, upsert: bool, fetch_mode: str) -> int:
+    """Store fetched quotes in database."""
+    if upsert and fetch_mode == "full":
+        count = 0
+        for quote in quotes:
+            if db.insert_or_update_quote(quote.get("symbol"), quote):
+                count += 1
+        print(f"Successfully stored/updated {count} quotes in database")
+        return count
+    else:
+        count = db.insert_quotes_batch(quotes)
+        print(f"Successfully stored {count} quotes in database")
+        return count
+
+
+def generate_report(db, symbols: list, report_path: str, db_path: str) -> int:
+    """Generate statistical analysis and Excel report."""
+    print("Generating statistical analysis...")
+    reports = StatisticalAnalyzer.batch_generate_reports(
+        symbols,
+        lambda sym: db.get_quotes(sym)
+    )
+    
+    # Check if any reports were generated successfully
+    valid_reports = {k: v for k, v in reports.items() if "error" not in v}
+    if not valid_reports:
+        print("No valid data available for report generation")
+        return 1
+    
+    # Get market caps for sorting
+    market_caps = {}
+    for symbol in symbols:
+        crypto_info = db.get_crypto_info(symbol)
+        if crypto_info and crypto_info.get('market_cap'):
+            market_caps[symbol] = crypto_info.get('market_cap', 0) or 0
+        else:
+            market_caps[symbol] = 0
+    
+    # Get favorites list from database
+    result = db.conn.execute('SELECT code FROM crypto_info WHERE favorite = 1').fetchall()
+    favorites = [row[0] for row in result]
+    
+    # Generate Excel report
+    print(f"Generating Excel report: {report_path}")
+    reporter = ExcelReporter(report_path)
+    reporter.generate_report(reports, market_caps, favorites)
+    
+    print("✓ Analysis complete!")
+    print(f"  Symbols analyzed: {', '.join(symbols)}")
+    print(f"  Database: {db_path}")
+    print(f"  Report: {report_path}")
+    
+    return 0
 
 
 def main():
@@ -181,51 +329,24 @@ def main():
     args = parser.parse_args()
     
     # Load configuration
-    config = configparser.ConfigParser()
-    config_path = Path(__file__).parent / "config" / "config.ini"
-    if config_path.exists():
-        config.read(config_path)
+    config = load_config()
     
-    # Initialize database early if needed for --all-from-db
+    # Initialize database path
     db_path = args.db_path or config.get("database", "path", fallback="data/crypto_prices.db")
     
     # Determine symbols to use
-    if args.all_from_db:
-        # Get all symbols from crypto_info table
-        from database import CryptoDatabase
-        temp_db = CryptoDatabase(db_path)
-        result = temp_db.conn.execute('SELECT code FROM crypto_info ORDER BY market_cap DESC').fetchall()
-        temp_db.close()
-        symbols = [row[0] for row in result]
-        if not symbols:
-            print("No cryptocurrencies found in crypto_info table")
-            return 1
-    elif args.symbols:
-        symbols = [s.strip().upper() for s in args.symbols.split(",")]
-    elif args.all_symbols:
-        symbols_str = config.get("symbols", "all", fallback="BTC,ETH,ADA,XRP,SOL")
-        symbols = [s.strip().upper() for s in symbols_str.split(",")]
-    elif args.favorites:
-        symbols_str = config.get("symbols", "favorites", fallback="BTC,ETH,ADA,XRP,SOL")
-        symbols = [s.strip().upper() for s in symbols_str.split(",")]
-    else:
-        symbols_str = config.get("symbols", "favorites", fallback="BTC,ETH,ADA,XRP,SOL")
-        symbols = [s.strip().upper() for s in symbols_str.split(",")]
+    symbols = determine_symbols(args, config, db_path)
+    if symbols is None:
+        return 1
     
-    # Get fetch mode from args or config
+    # Get configuration parameters
     fetch_mode = args.fetch_mode or config.get("fetch", "mode", fallback="incremental")
     upsert = config.getboolean("fetch", "upsert_duplicates", fallback=True)
     throttle_seconds = config.getfloat("fetch", "throttle_seconds", fallback=1.0)
     retries = config.getint("fetch", "retries", fallback=2)
-    
-    # Get report path
     report_path = args.report_path or config.get("report", "output_path", fallback="reports/crypto_analysis.xlsx")
     
     try:
-        # Import CryptoDatabase if not already imported
-        if 'CryptoDatabase' not in dir():
-            from database import CryptoDatabase
-        
         # Initialize database
         print("Initializing database...")
         db = CryptoDatabase(db_path)
@@ -262,82 +383,25 @@ def main():
                 db.close()
                 return 0
         
+        # Fetch data if not report-only mode
         if not args.report_only and not args.import_csv:
-            # Fetch and store data
             print(f"Fetching prices for: {', '.join(symbols)}")
             print(f"Fetch mode: {fetch_mode}")
             try:
                 api = YFinanceCryptoAPI()
                 
-                # Determine fetch starting point based on mode
-                # If user requested an explicit days range, fetch per-symbol with throttling and upsert
                 if args.days:
-                    print(f"Fetching historical range: last {args.days} days")
-                    total_count = 0
-                    for idx, sym in enumerate(symbols, start=1):
-                        print(f"[{idx}/{len(symbols)}] {sym} → OHLCV daily between-dates")
-                        attempt = 0
-                        while True:
-                            try:
-                                sym_quotes = api.fetch_historical_range([sym], days=args.days)
-                                break
-                            except Exception as e:
-                                attempt += 1
-                                if attempt > retries:
-                                    print(f"  ❌ Failed {sym} after {retries} retries: {e}")
-                                    sym_quotes = []
-                                    break
-                                sleep_s = min(throttle_seconds * (2 ** (attempt - 1)), 10)
-                                print(f"  Retry {attempt}/{retries} after {sleep_s:.1f}s due to: {e}")
-                                time.sleep(sleep_s)
-
-                        # Always upsert to avoid duplicates when refetching ranges
-                        inserted = 0
-                        for q in sym_quotes:
-                            if db.insert_or_update_quote(sym, q):
-                                inserted += 1
-                        total_count += inserted
-                        print(f"  ✓ Stored/updated {inserted} quotes for {sym}")
-
-                        # Throttle between symbols
-                        time.sleep(throttle_seconds)
-
-                    print(f"Successfully stored/updated {total_count} quotes in database")
-                    quotes = None  # downstream storage already handled
-                elif fetch_mode == "full":
-                    # Will fetch from oldest date, don't use database info
-                    print("Mode: Full (fetching from oldest available data)")
-                    quotes = api.fetch_and_parse(symbols, close_of_day=True)
+                    # Fetch specific historical range
+                    fetch_historical_range(api, symbols, args.days, db, throttle_seconds, retries)
                 else:
-                    # Incremental mode: fetch from last date in database
-                    print("Mode: Incremental (fetching from last recorded date)")
-                    last_dates = {}
-                    for symbol in symbols:
-                        last_date = db.get_latest_timestamp(symbol)
-                        if last_date:
-                            last_dates[symbol] = last_date
-                            print(f"  {symbol}: last date = {last_date}")
-                        else:
-                            print(f"  {symbol}: no data in database yet")
-                    quotes = api.fetch_and_parse(symbols, close_of_day=True)
-                
-                if quotes is None:
-                    # already stored in the --days branch
-                    pass
-                elif quotes:
-                    # Insert or update quotes
-                    if upsert and fetch_mode == "full":
-                        count = 0
-                        for quote in quotes:
-                            if db.insert_or_update_quote(quote.get("symbol"), quote):
-                                count += 1
-                        print(f"Successfully stored/updated {count} quotes in database")
+                    # Fetch incremental or full
+                    quotes = fetch_quotes_incremental(api, symbols, db, fetch_mode)
+                    
+                    if quotes:
+                        store_quotes(db, quotes, upsert, fetch_mode)
                     else:
-                        count = db.insert_quotes_batch(quotes)
-                        print(f"Successfully stored {count} quotes in database")
-                else:
-                    print("No quotes retrieved from API")
-                    return 1
+                        print("No quotes retrieved from API")
+                        return 1
             
             except Exception as e:
                 print(f"Error fetching from Yahoo Finance: {e}")
@@ -348,46 +412,10 @@ def main():
             db.close()
             return 0
         
-        # Generate analysis report
-        print("Generating statistical analysis...")
-        reports = StatisticalAnalyzer.batch_generate_reports(
-            symbols,
-            lambda sym: db.get_quotes(sym)
-        )
-        
-        # Check if any reports were generated successfully
-        valid_reports = {k: v for k, v in reports.items() if "error" not in v}
-        if not valid_reports:
-            print("No valid data available for report generation")
-            db.close()
-            return 1
-        
-        # Get market caps for sorting
-        market_caps = {}
-        for symbol in symbols:
-            crypto_info = db.get_crypto_info(symbol)
-            if crypto_info and crypto_info.get('market_cap'):
-                market_caps[symbol] = crypto_info.get('market_cap', 0) or 0
-            else:
-                market_caps[symbol] = 0
-        
-        # Get favorites list from database
-        favorites = []
-        result = db.conn.execute('SELECT code FROM crypto_info WHERE favorite = 1').fetchall()
-        favorites = [row[0] for row in result]
-        
-        # Generate Excel report
-        print(f"Generating Excel report: {report_path}")
-        reporter = ExcelReporter(report_path)
-        reporter.generate_report(reports, market_caps, favorites)
-        
-        print("✓ Analysis complete!")
-        print(f"  Symbols analyzed: {', '.join(symbols)}")
-        print(f"  Database: {db_path}")
-        print(f"  Report: {report_path}")
-        
+        # Generate report
+        result = generate_report(db, symbols, report_path, db_path)
         db.close()
-        return 0
+        return result
     
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
