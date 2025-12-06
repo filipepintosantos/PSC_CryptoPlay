@@ -2,5 +2,5 @@
 PSC CryptoPlay - Cryptocurrency Price Tracking and Analysis Tool
 """
 
-__version__ = "2.5.1"
+__version__ = "2.5.2"
 __author__ = "Pinto Santos Consulting"
