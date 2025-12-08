@@ -308,6 +308,55 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
             db.add_cryptocurrency("BTC", "Bitcoin")
             symbols = db.get_all_symbols()
             self.assertIn("BTC", symbols)
+    
+    def test_insert_or_update_quote(self):
+        """Test insert_or_update_quote method."""
+        now = datetime.now()
+        quote = {
+            "symbol": "BTC",
+            "name": "Bitcoin",
+            "price_eur": 45000.0,
+            "timestamp": now
+        }
+        
+        # Insert new quote
+        success = self.db.insert_or_update_quote("BTC", quote)
+        self.assertTrue(success)
+        
+        # Update existing quote
+        quote["price_eur"] = 46000.0
+        success = self.db.insert_or_update_quote("BTC", quote)
+        self.assertTrue(success)
+        
+        # Verify only one quote exists
+        quotes = self.db.get_quotes("BTC")
+        self.assertEqual(len(quotes), 1)
+        self.assertEqual(quotes[0]["price_eur"], 46000.0)
+    
+    def test_get_all_crypto_info_favorites_only(self):
+        """Test getting only favorite cryptocurrencies."""
+        self.db.add_crypto_info("BTC", "Bitcoin", favorite=True)
+        self.db.add_crypto_info("ETH", "Ethereum", favorite=False)
+        self.db.add_crypto_info("SOL", "Solana", favorite=True)
+        
+        all_info = self.db.get_all_crypto_info(favorites_only=False)
+        self.assertEqual(len(all_info), 3)
+        
+        favorites = self.db.get_all_crypto_info(favorites_only=True)
+        self.assertEqual(len(favorites), 2)
+        codes = [f["code"] for f in favorites]
+        self.assertIn("BTC", codes)
+        self.assertIn("SOL", codes)
+    
+    def test_get_oldest_timestamp_no_data(self):
+        """Test getting oldest timestamp when no data exists."""
+        oldest = self.db.get_oldest_timestamp("NOTEXIST")
+        self.assertIsNone(oldest)
+    
+    def test_get_latest_timestamp_no_data(self):
+        """Test getting latest timestamp when no data exists."""
+        latest = self.db.get_latest_timestamp("NOTEXIST")
+        self.assertIsNone(latest)
 
 
 if __name__ == "__main__":

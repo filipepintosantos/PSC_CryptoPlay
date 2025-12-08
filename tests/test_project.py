@@ -1,18 +1,23 @@
 """
-Test suite for PSC CryptoPlay project.
-Provides basic tests for all modules.
+Comprehensive test suite for PSC CryptoPlay project.
+Tests for database, analysis, API, and main modules.
 """
 
 import unittest
 import sys
+import tempfile
+import os
 from pathlib import Path
 from datetime import datetime, timedelta
 
 # Add src directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from database import CryptoDatabase
 from analysis import StatisticalAnalyzer
+from api_yfinance import YFinanceCryptoAPI
+import main
 import pandas as pd
 
 
@@ -135,6 +140,90 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         self.assertIn("6_months", results)
         self.assertIn("3_months", results)
         self.assertIn("1_month", results)
+    
+    def test_batch_generate_reports(self):
+        """Test batch report generation."""
+        def mock_get_quotes(symbol):
+            quotes = []
+            for i in range(100):
+                quotes.append({
+                    'price_eur': 100.0 + i,
+                    'timestamp': datetime.now() - timedelta(days=i)
+                })
+            return quotes
+        
+        symbols = ['BTC', 'ETH', 'SOL']
+        reports = StatisticalAnalyzer.batch_generate_reports(symbols, mock_get_quotes)
+        
+        self.assertEqual(len(reports), 3)
+        for symbol in symbols:
+            self.assertIn(symbol, reports)
+            self.assertIn('data_points', reports[symbol])
+    
+    def test_generate_report_empty_data(self):
+        """Test generating report with empty quotes."""
+        report = StatisticalAnalyzer.generate_report('BTC', [])
+        self.assertEqual(report['symbol'], 'BTC')
+        self.assertEqual(report['data_points'], 0)
+        self.assertIsNone(report['date_range'])
+
+
+class TestYFinanceAPI(unittest.TestCase):
+    """Tests for YFinance API module."""
+    
+    def setUp(self):
+        """Set up test environment."""
+        self.api = YFinanceCryptoAPI()
+    
+    def test_get_ticker_format(self):
+        """Test ticker format conversion."""
+        self.assertEqual(self.api.get_ticker('BTC'), 'BTC-EUR')
+        self.assertEqual(self.api.get_ticker('ETH'), 'ETH-EUR')
+    
+    def test_get_latest_quotes_empty_list(self):
+        """Test get_latest_quotes with empty symbol list."""
+        quotes = self.api.get_latest_quotes([])
+        self.assertEqual(quotes, [])
+    
+    def test_fetch_and_parse_compatibility(self):
+        """Test fetch_and_parse compatibility method."""
+        quotes = self.api.fetch_and_parse(['BTC'])
+        self.assertIsInstance(quotes, list)
+
+
+class TestMainModule(unittest.TestCase):
+    """Tests for main module."""
+    
+    def test_import_csv_data(self):
+        """Test CSV import functionality."""
+        csv_content = """Date,Price
+2024-01-01,45000.00
+2024-01-02,46000.00"""
+        
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.csv', encoding='utf-8') as f:
+            f.write(csv_content)
+            csv_path = f.name
+        
+        try:
+            db = CryptoDatabase(":memory:")
+            count = main.import_csv_data(
+                csv_path=csv_path,
+                symbol='BTC',
+                db=db,
+                date_column='Date',
+                price_column='Price',
+                skip_header=True
+            )
+            
+            self.assertEqual(count, 2)
+            db.close()
+        finally:
+            os.unlink(csv_path)
+    
+    def test_default_symbols_constant(self):
+        """Test DEFAULT_SYMBOLS is defined."""
+        self.assertIsNotNone(main.DEFAULT_SYMBOLS)
+        self.assertIn('BTC', main.DEFAULT_SYMBOLS)
 
 
 if __name__ == "__main__":
