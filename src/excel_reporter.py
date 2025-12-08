@@ -67,6 +67,7 @@ class ExcelReporter:
         cell.fill = header_fill
         cell.font = header_font
         cell.alignment = Alignment(horizontal='center')
+        cell.border = border
         
         # Sub-headers
         sub_headers = ["Mínimo", "Máximo", "Média", "Desvio", "Média-Desvio", 
@@ -76,8 +77,8 @@ class ExcelReporter:
             col_letter = get_column_letter(col_idx + j)
             cell = ws[f'{col_letter}{row + 1}']
             cell.value = sub_header
-            cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
-            cell.font = Font(bold=True, size=9)
+            cell.fill = header_fill
+            cell.font = Font(color="FFFFFF", bold=True, size=8)
             cell.alignment = Alignment(horizontal='center', wrap_text=True)
             cell.border = border
     
@@ -216,7 +217,7 @@ class ExcelReporter:
         
         # Style definitions
         header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-        header_font = Font(color="FFFFFF", bold=True)
+        header_font = Font(color="FFFFFF", bold=True, size=8)
         border = Border(
             left=Side(style='thin'),
             right=Side(style='thin'),
@@ -224,23 +225,23 @@ class ExcelReporter:
             bottom=Side(style='thin')
         )
         
-        # Create column headers
-        ws['A4'] = "Fav"
-        ws['B4'] = "Símbolo"
-        ws['C4'] = "Última Cotação"
-        ws['D4'] = "Penúltima Cotação"
-        
-        for col in ['A4', 'B4', 'C4', 'D4']:
-            ws[col].fill = header_fill
-            ws[col].font = header_font
-            ws[col].border = border
-            ws[col].alignment = Alignment(horizontal='center', wrap_text=True)
-        
-        # Create period headers
+        # Create period headers (row 4)
         col_idx = 5
         for period in self.PERIODS:
             self._create_period_headers(ws, 4, col_idx, period, header_fill, header_font, border)
             col_idx += 9
+        
+        # Create column headers (row 5)
+        ws['A5'] = "Fav"
+        ws['B5'] = "Símbolo"
+        ws['C5'] = "Última Cotação"
+        ws['D5'] = "Penúltima Cotação"
+        
+        for col in ['A5', 'B5', 'C5', 'D5']:
+            ws[col].fill = header_fill
+            ws[col].font = header_font
+            ws[col].border = border
+            ws[col].alignment = Alignment(horizontal='center', wrap_text=True)
         
         # Sort symbols by market cap
         symbols = list(reports.keys())
@@ -267,6 +268,11 @@ class ExcelReporter:
                 col_idx += 9
             
             row += 1
+        
+        # Add auto filter to the table (from A5 to last column and last row)
+        last_col_idx = 4 + (len(self.PERIODS) * 9)  # A-D + 9 cols per period
+        last_col = chr(64 + last_col_idx) if last_col_idx <= 26 else f"A{chr(64 + last_col_idx - 26)}"
+        ws.auto_filter.ref = f"A5:{last_col}{row - 1}"
         
         # Freeze panes
         ws.freeze_panes = ws['E6']

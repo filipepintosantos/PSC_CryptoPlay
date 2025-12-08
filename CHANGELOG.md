@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.5.2] - 2025-12-08
+
+### Changed
+- Reorganized Excel report headers: moved main column headers (Fav, Símbolo, Última Cotação, Penúltima Cotação) from row 4 to row 5
+- Unified header formatting: both header rows (4 and 5) now use consistent blue background (4472C4) with white text
+- Applied auto_filter to row 5 for better data filtering
+
+### Fixed
+- Fixed mean calculation to use actual computed values instead of Excel formula `=(MIN+MAX)/2`
+- Reduced header font size from 9 to 8 for better readability
+- Added borders to merged period header cells
+
 ## [2.5.1] - 2025-12-06
 
 ### Changed
