@@ -58,7 +58,7 @@ class TestYFinanceAPIExtended(unittest.TestCase):
             # Verify types
             self.assertIsInstance(quote['symbol'], str)
             self.assertIsInstance(quote['name'], str)
-            self.assertTrue(isinstance(quote['price_eur'], (int, float)))
+            self.assertIsInstance(quote['price_eur'], (int, float))
     
     def test_get_latest_quote_single(self):
         """Test getting latest quote for single symbol."""
@@ -93,7 +93,7 @@ class TestYFinanceAPIErrorHandling(unittest.TestCase):
     def test_api_resilience(self):
         """Test that API handles multiple rapid calls."""
         # Make several quick calls
-        for i in range(3):
+        for _ in range(3):
             quotes = self.api.get_latest_quotes(['BTC'])
             self.assertIsInstance(quotes, list)
 

@@ -126,8 +126,8 @@ class TestStatisticalAnalyzerExtended(unittest.TestCase):
         
         self.assertFalse(df.empty)
         self.assertEqual(len(df), 3)
-        self.assertTrue('timestamp' in df.columns)
-        self.assertTrue('price_eur' in df.columns)
+        self.assertIn('timestamp', df.columns)
+        self.assertIn('price_eur', df.columns)
     
     def test_analyze_rolling_periods_insufficient_data(self):
         """Test rolling period analysis with insufficient data for some periods."""
