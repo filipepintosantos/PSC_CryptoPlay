@@ -129,11 +129,9 @@ class ExcelReporter:
         ws[f'{col_letter}{row}'].border = border
         ws[f'{col_letter}{row}'].alignment = Alignment(horizontal='right')
         
-        # Mean formula
+        # Mean (use actual calculated value, not formula)
         mean_col = get_column_letter(col_idx + 2)
-        min_col = get_column_letter(col_idx)
-        max_col = get_column_letter(col_idx + 1)
-        ws[f'{mean_col}{row}'].value = f"=({min_col}{row}+{max_col}{row})/2"
+        ws[f'{mean_col}{row}'].value = stats.get("mean")
         ws[f'{mean_col}{row}'].number_format = self.NUMBER_FORMAT_DECIMAL
         ws[f'{mean_col}{row}'].border = border
         ws[f'{mean_col}{row}'].alignment = Alignment(horizontal='right')
