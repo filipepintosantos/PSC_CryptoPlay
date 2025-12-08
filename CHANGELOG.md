@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.5.3] - 2025-12-08
+
+### Added
+- Git support in virtual environment activation scripts (both PowerShell and CMD)
+  - Modified `venv\Scripts\Activate.ps1` to include Git in PATH
+  - Modified `venv\Scripts\activate.bat` to include Git in PATH
+  - Git now available automatically when activating venv
+
+### Removed
+- Cleaned up redundant documentation files:
+  - `VENV_GUIDE.md` (covered by setup.cmd and README)
+  - `VENV_SETUP.md` (covered by setup.cmd and README)
+  - `START_HERE.md` (covered by QUICKSTART.md)
+  - `IMPROVEMENTS.md` (covered by CHANGELOG.md)
+  - `INDEX.md` (README serves as entry point)
+  - `migrate_to_yfinance.cmd` (migration completed long ago)
+  - `import_btc_history.cmd` (file was already deleted)
+
+### Fixed
+- Restored project to last GitHub commit state (removed incomplete Binance integration)
+- Git PATH configuration for Windows environment
+
 ## [2.5.2] - 2025-12-08
 
 ### Changed
