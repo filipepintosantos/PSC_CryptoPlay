@@ -1,6 +1,6 @@
 # PSC CryptoPlay - Cryptocurrency Price Tracker & Analysis
 
-**Versão: 2.5.3**
+**Versão: 2.5.4**
 
 Ferramenta Python para rastreamento de quotações de criptomoedas em EUR, armazenamento em SQLite e geração de relatórios em Excel com análises estatísticas.
 

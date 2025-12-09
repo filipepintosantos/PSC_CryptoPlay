@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.5.4] - 2025-12-09
+
+### Changed
+- **Excel Report Layout**: Redesigned summary sheet to display 4 analysis periods (1M, 3M, 6M, 12M) in separate rows per cryptocurrency instead of columns
+  - Each cryptocurrency now occupies 4 consecutive rows, one for each time period
+  - Period column added to identify the analysis timeframe (1M, 3M, 6M, 12M)
+  - Simplified horizontal structure: 14 columns instead of 40+
+  - Improved readability: Direct vertical comparison of periods
+  - Symbol and favorite marker only displayed on first row (1M period) to reduce visual clutter
+  - Maintained all statistical metrics: Min, Max, Mean, Std Dev, Mean-Std, and deviation percentages
+  - Auto-filter and freeze panes adjusted for new layout
+  - Period order changed to ascending: 1 month → 3 months → 6 months → 12 months
+
+### Benefits
+- More direct observation and comparison of different time periods
+- Easier to spot trends across periods for a single cryptocurrency
+- Better use of screen width, reduced horizontal scrolling
+- More compact and organized presentation
+
 ## [2.5.3] - 2025-12-08
 
 ### Added
