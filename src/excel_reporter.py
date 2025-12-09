@@ -72,7 +72,7 @@ class ExcelReporter:
             cell.alignment = Alignment(horizontal='center', wrap_text=True)
     
     def _write_symbol_period_row(self, ws, row: int, symbol: str, period: str, report: Dict, 
-                                  favorites: List[str], border, is_first_period: bool):
+                                  favorites: List[str], border):
         """Write data for a single cryptocurrency symbol and period combination."""
         period_data = report.get("periods", {}).get(period, {})
         
@@ -188,25 +188,12 @@ class ExcelReporter:
     def create_summary_sheet(self, reports: Dict[str, Dict], market_caps: Dict[str, float] = None, favorites: List[str] = None):
         """
         Create a summary sheet with all cryptocurrencies and periods.
-        
-        Args:
-            reports: Dictionary with analysis reports from StatisticalAnalyzer
-            market_caps: Dictionary with market cap values for sorting
-            favorites: List of favorite cryptocurrency symbols
-        """
-        ws = self.workbook.create_sheet(title="Resumo")
-        
-        # Setup basic structure
-        self._setup_column_widths(ws)
-    def create_summary_sheet(self, reports: Dict[str, Dict], market_caps: Dict[str, float] = None, favorites: List[str] = None):
-        """
-        Create a summary sheet with all cryptocurrencies and periods.
         Each cryptocurrency has 4 rows (one per period).
         
         Args:
             reports: Dictionary with analysis reports from StatisticalAnalyzer
-            market_caps: Dictionary with market cap values for sorting
-            favorites: List of favorite cryptocurrency symbols
+            market_caps: Dictionary with market cap values for sorting (used for sorting)
+            favorites: List of favorite cryptocurrency symbols (used for highlighting)
         """
         ws = self.workbook.create_sheet(title="Resumo")
         
@@ -240,13 +227,11 @@ class ExcelReporter:
         for symbol in symbols:
             report = reports[symbol]
             
-            start_row = row
             # Write 4 rows for this symbol (one per period)
-            for period_idx, period in enumerate(self.PERIODS):
-                is_first_period = (period_idx == 0)
+            for period in self.PERIODS:
                 
                 # Write symbol, period, and quotes
-                self._write_symbol_period_row(ws, row, symbol, period, report, favorites, border, is_first_period)
+                self._write_symbol_period_row(ws, row, symbol, period, report, favorites, border)
                 
                 # Write period statistics
                 period_data = report.get("periods", {}).get(period, {})
