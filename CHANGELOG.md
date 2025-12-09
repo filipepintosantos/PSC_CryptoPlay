@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.5.5] - 2025-12-09
+
+### Fixed
+- **Report Layout Corrections**: Fixed column alignment issues from v2.5.4
+  - Última Cotação correctly placed in column C
+  - Penúltima Cotação correctly placed in column D
+  - Período moved to column E (after quotes)
+  - All deviation formulas (columns K-N) now reference correct quote columns
+  - Removed duplicate and incomplete code
+
+### Changed
+- **Period Order**: Inverted to descending order - 12M → 6M → 3M → 1M (12 months first)
+- **Data Repetition**: Favorite marker and Symbol now filled in all 4 rows per cryptocurrency
+  - Enables proper filtering without cell merging
+  - Maintains Excel auto-filter functionality
+- **Title Formatting**: 
+  - Title merge adjusted to match report width (A1:N1)
+  - Row heights adjusted: title row = 25, date row = 18
+
+### Removed
+- Cell merging for columns A and B (broke auto-filter functionality)
+
 ## [2.5.4] - 2025-12-09
 
 ### Changed

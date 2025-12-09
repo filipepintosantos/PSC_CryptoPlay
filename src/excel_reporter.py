@@ -13,7 +13,7 @@ class ExcelReporter:
     """Generates Excel reports from statistical analysis data."""
     
     NUMBER_FORMAT_DECIMAL = '#,##0.00'
-    PERIODS = ["1_month", "3_months", "6_months", "12_months"]
+    PERIODS = ["12_months", "6_months", "3_months", "1_month"]
     PERIOD_DISPLAY = {
         "12_months": "12M",
         "6_months": "6M",
@@ -48,10 +48,12 @@ class ExcelReporter:
         """Create title and date rows."""
         ws['A1'] = "Análise de Criptomoedas em EUR"
         ws['A1'].font = Font(bold=True, size=14)
-        ws.merge_cells('A1:O1')
+        ws.merge_cells('A1:N1')
+        ws.row_dimensions[1].height = 25
         
         ws['A2'] = f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
         ws['A2'].font = Font(size=10, italic=True)
+        ws.row_dimensions[2].height = 18
     
     def _create_headers(self, ws, row: int, header_fill, header_font, border):
         """Create column headers for the new row-based layout."""
@@ -69,49 +71,45 @@ class ExcelReporter:
             cell.border = border
             cell.alignment = Alignment(horizontal='center', wrap_text=True)
     
-    def _write_symbol_row(self, ws, row: int, symbol: str, report: Dict, favorites: List[str], border):
-        """Write data for a single cryptocurrency symbol."""
-        # Favorite marker
-        ws[f'A{row}'] = "X" if symbol in favorites else ""
-        ws[f'A{row}'].font = Font(bold=True, size=12)
-        ws[f'A{row}'].border = border
-        ws[f'A{row}'].alignment = Alignment(horizontal='center')
-        if symbol in favorites:
-            ws[f'A{row}'].fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")
-        
-        # Symbol
-        ws[f'B{row}'] = symbol
-        ws[f'B{row}'].font = Font(bold=True)
     def _write_symbol_period_row(self, ws, row: int, symbol: str, period: str, report: Dict, 
                                   favorites: List[str], border, is_first_period: bool):
         """Write data for a single cryptocurrency symbol and period combination."""
         period_data = report.get("periods", {}).get(period, {})
         
-        # Favorite marker (only on first period row)
-        if is_first_period:
-            ws[f'A{row}'] = "X" if symbol in favorites else ""
-            ws[f'A{row}'].font = Font(bold=True, size=12)
-            if symbol in favorites:
-                ws[f'A{row}'].fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")
+        # Favorite marker (in all rows)
+        ws[f'A{row}'] = "X" if symbol in favorites else ""
+        ws[f'A{row}'].font = Font(bold=True, size=12)
+        if symbol in favorites:
+            ws[f'A{row}'].fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")
         ws[f'A{row}'].border = border
         ws[f'A{row}'].alignment = Alignment(horizontal='center')
         
-        # Symbol (only on first period row)
-        if is_first_period:
-            ws[f'B{row}'] = symbol
-            ws[f'B{row}'].font = Font(bold=True)
+        # Symbol (in all rows)
+        ws[f'B{row}'] = symbol
+        ws[f'B{row}'].font = Font(bold=True)
         ws[f'B{row}'].border = border
         
-        # Period
-        ws[f'C{row}'] = self.PERIOD_DISPLAY[period]
-        ws[f'C{row}'].font = Font(bold=True, size=9)
-        ws[f'C{row}'].border = border
-        ws[f'C{row}'].alignment = Alignment(horizontal='center')
-        
-        # Latest quote
+        # Latest quote (column C)
         latest_quote = period_data.get("latest_quote")
-        ws[f'D{row}'] = latest_quote
+        ws[f'C{row}'] = latest_quote
+        ws[f'C{row}'].number_format = self.NUMBER_FORMAT_DECIMAL
+        ws[f'C{row}'].border = border
+        ws[f'C{row}'].alignment = Alignment(horizontal='right')
+        ws[f'C{row}'].font = Font(bold=True)
+        
+        # Second latest quote (column D)
+        second_latest_quote = period_data.get("second_latest_quote")
+        ws[f'D{row}'] = second_latest_quote
         ws[f'D{row}'].number_format = self.NUMBER_FORMAT_DECIMAL
+        ws[f'D{row}'].border = border
+        ws[f'D{row}'].alignment = Alignment(horizontal='right')
+        ws[f'D{row}'].font = Font(bold=True)
+        
+        # Period (column E)
+        ws[f'E{row}'] = self.PERIOD_DISPLAY[period]
+        ws[f'E{row}'].font = Font(bold=True, size=9)
+        ws[f'E{row}'].border = border
+        ws[f'E{row}'].alignment = Alignment(horizontal='center')
     def _write_period_stats(self, ws, row: int, period_data: Dict, border):
         """Write statistics for a specific period in the new row layout."""
         stats = period_data.get("stats", {})
@@ -142,6 +140,13 @@ class ExcelReporter:
         
         # Mean - Std formula (column J)
         ws[f'J{row}'].value = f"=H{row}-I{row}"
+        ws[f'J{row}'].number_format = self.NUMBER_FORMAT_DECIMAL
+        ws[f'J{row}'].border = border
+        ws[f'J{row}'].alignment = Alignment(horizontal='right')
+        
+        # Deviation formulas with conditional formatting
+        self._write_deviation_formulas(ws, row, period_data, border)
+    
     def _write_deviation_formulas(self, ws, row: int, period_data: Dict, border):
         """Write deviation formulas with conditional formatting in the new row layout."""
         # Latest deviation from mean (column K) - uses column C (latest quote)
@@ -235,6 +240,7 @@ class ExcelReporter:
         for symbol in symbols:
             report = reports[symbol]
             
+            start_row = row
             # Write 4 rows for this symbol (one per period)
             for period_idx, period in enumerate(self.PERIODS):
                 is_first_period = (period_idx == 0)

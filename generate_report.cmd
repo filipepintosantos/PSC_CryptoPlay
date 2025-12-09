@@ -17,4 +17,4 @@ echo.
 echo ========================================
 echo Report generation complete!
 echo ========================================
-pause
+rem pause
