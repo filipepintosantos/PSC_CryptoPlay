@@ -36,9 +36,9 @@ class ExcelReporter:
         """Set up column widths for the summary sheet."""
         ws.column_dimensions['A'].width = 3.29  # Favorite column (23 pixels)
         ws.column_dimensions['B'].width = 8.29  # Symbol column (58 pixels)
-        ws.column_dimensions['C'].width = 5  # Period column
-        ws.column_dimensions['D'].width = 10  # Latest Quote column
-        ws.column_dimensions['E'].width = 10  # Second Latest Quote column
+        ws.column_dimensions['C'].width = 10  # Latest Quote column
+        ws.column_dimensions['D'].width = 10  # Second Latest Quote column
+        ws.column_dimensions['E'].width = 5  # Period column
         # Statistics columns
         for i in range(9):
             col_letter = get_column_letter(6 + i)
@@ -55,7 +55,7 @@ class ExcelReporter:
     
     def _create_headers(self, ws, row: int, header_fill, header_font, border):
         """Create column headers for the new row-based layout."""
-        headers = ["Fav", "Símbolo", "Período", "Última Cotação", "Penúltima Cotação",
+        headers = ["Fav", "Símbolo", "Última Cotação", "Penúltima Cotação", "Período",
                   "Mínimo", "Máximo", "Média", "Desvio", "Média-Desvio",
                   "Últ. Dif. Média %", "Últ. Dif. M-D %",
                   "Penúlt. Dif. Média %", "Penúlt. Dif. M-D %"]
@@ -144,8 +144,8 @@ class ExcelReporter:
         ws[f'J{row}'].value = f"=H{row}-I{row}"
     def _write_deviation_formulas(self, ws, row: int, period_data: Dict, border):
         """Write deviation formulas with conditional formatting in the new row layout."""
-        # Latest deviation from mean (column K)
-        ws[f'K{row}'].value = f"=(D{row}-H{row})/H{row}"
+        # Latest deviation from mean (column K) - uses column C (latest quote)
+        ws[f'K{row}'].value = f"=(C{row}-H{row})/H{row}"
         ws[f'K{row}'].number_format = '0.00%'
         ws[f'K{row}'].border = border
         ws[f'K{row}'].alignment = Alignment(horizontal='right')
@@ -153,8 +153,8 @@ class ExcelReporter:
         fill_color = "C6EFCE" if dev_mean_pct and dev_mean_pct >= 0 else "FFC7CE"
         ws[f'K{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
         
-        # Latest deviation from mean-std (column L)
-        ws[f'L{row}'].value = f"=(D{row}-J{row})/J{row}"
+        # Latest deviation from mean-std (column L) - uses column C (latest quote)
+        ws[f'L{row}'].value = f"=(C{row}-J{row})/J{row}"
         ws[f'L{row}'].number_format = '0.00%'
         ws[f'L{row}'].border = border
         ws[f'L{row}'].alignment = Alignment(horizontal='right')
@@ -162,8 +162,8 @@ class ExcelReporter:
         fill_color = "C6EFCE" if dev_mean_std_pct and dev_mean_std_pct >= 0 else "FFC7CE"
         ws[f'L{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
         
-        # Second latest deviation from mean (column M)
-        ws[f'M{row}'].value = f"=(E{row}-H{row})/H{row}"
+        # Second latest deviation from mean (column M) - uses column D (second latest quote)
+        ws[f'M{row}'].value = f"=(D{row}-H{row})/H{row}"
         ws[f'M{row}'].number_format = '0.00%'
         ws[f'M{row}'].border = border
         ws[f'M{row}'].alignment = Alignment(horizontal='right')
@@ -171,20 +171,14 @@ class ExcelReporter:
         fill_color = "C6EFCE" if second_dev_mean_pct and second_dev_mean_pct >= 0 else "FFC7CE"
         ws[f'M{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
         
-        # Second latest deviation from mean-std (column N)
-        ws[f'N{row}'].value = f"=(E{row}-J{row})/J{row}"
+        # Second latest deviation from mean-std (column N) - uses column D (second latest quote)
+        ws[f'N{row}'].value = f"=(D{row}-J{row})/J{row}"
         ws[f'N{row}'].number_format = '0.00%'
         ws[f'N{row}'].border = border
         ws[f'N{row}'].alignment = Alignment(horizontal='right')
         second_dev_mean_std_pct = period_data.get("second_deviation_from_mean_minus_std_pct")
         fill_color = "C6EFCE" if second_dev_mean_std_pct and second_dev_mean_std_pct >= 0 else "FFC7CE"
         ws[f'N{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
-        ws[f'{col_letter}{row}'].number_format = '0.00%'
-        ws[f'{col_letter}{row}'].border = border
-        ws[f'{col_letter}{row}'].alignment = Alignment(horizontal='right')
-        second_dev_mean_std_pct = period_data.get("second_deviation_from_mean_minus_std_pct")
-        fill_color = "C6EFCE" if second_dev_mean_std_pct and second_dev_mean_std_pct >= 0 else "FFC7CE"
-        ws[f'{col_letter}{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
     
     def create_summary_sheet(self, reports: Dict[str, Dict], market_caps: Dict[str, float] = None, favorites: List[str] = None):
         """
@@ -258,8 +252,8 @@ class ExcelReporter:
         # Add auto filter to the table
         ws.auto_filter.ref = f"A4:N{row - 1}"
         
-        # Freeze panes (freeze first 3 columns and header row)
-        ws.freeze_panes = ws['D5']
+        # Freeze panes (freeze columns A-D and header row)
+        ws.freeze_panes = ws['E5']
     
     def create_detail_sheet(self, symbol: str, report: Dict):
         """
