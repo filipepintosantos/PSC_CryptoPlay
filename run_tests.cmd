@@ -37,13 +37,13 @@ REM Run tests based on mode
 if "%TEST_MODE%"=="unittest" (
     echo [*] Running tests with unittest...
     echo.
-    python -m unittest discover -s tests -p "test_*.py" %VERBOSE%
+    venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py" %VERBOSE%
 ) else (
     echo [*] Running tests with pytest...
     echo.
     
     REM Check if pytest is installed
-    python -c "import pytest" >nul 2>&1
+    venv\Scripts\python.exe -c "import pytest" >nul 2>&1
     if errorlevel 1 (
         echo ERROR: pytest not found
         echo Please install with: pip install -r requirements-dev.txt
@@ -53,13 +53,13 @@ if "%TEST_MODE%"=="unittest" (
     REM Run with or without coverage
     if "%COVERAGE%"=="true" (
         echo [*] Generating coverage report...
-        python -m pytest tests/ -v --cov=src --cov-report=html --cov-report=term
+        venv\Scripts\python.exe -m pytest tests/ -v --cov=src --cov-report=html --cov-report=term
         if errorlevel 0 (
             echo.
             echo Coverage report generated: htmlcov\index.html
         )
     ) else (
-        python -m pytest tests/ %VERBOSE%
+        venv\Scripts\python.exe -m pytest tests/ %VERBOSE%
     )
 )
 

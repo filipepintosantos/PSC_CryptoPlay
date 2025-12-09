@@ -46,4 +46,4 @@ REM Activate venv
 call venv\Scripts\activate.bat
 
 REM Run main.py with arguments using the activated venv Python
-python main.py %*
+venv\Scripts\python.exe main.py %*
