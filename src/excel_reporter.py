@@ -34,21 +34,21 @@ class ExcelReporter:
     
     def _setup_column_widths(self, ws):
         """Set up column widths for the summary sheet."""
-        ws.column_dimensions['A'].width = 3.29  # Favorite column (23 pixels)
-        ws.column_dimensions['B'].width = 8.29  # Symbol column (58 pixels)
-        ws.column_dimensions['C'].width = 10  # Latest Quote column
-        ws.column_dimensions['D'].width = 10  # Second Latest Quote column
+        ws.column_dimensions['A'].width = 3  # Favorite column
+        ws.column_dimensions['B'].width = 7  # Symbol column
+        ws.column_dimensions['C'].width = 9  # Latest Quote column
+        ws.column_dimensions['D'].width = 9  # Second Latest Quote column
         ws.column_dimensions['E'].width = 5  # Period column
-        # Statistics columns
-        for i in range(9):
+        # Statistics columns (F to U = 16 columns) - reduced width
+        for i in range(16):
             col_letter = get_column_letter(6 + i)
-            ws.column_dimensions[col_letter].width = 10
+            ws.column_dimensions[col_letter].width = 8.5
     
     def _create_title_rows(self, ws):
         """Create title and date rows."""
         ws['A1'] = "Análise de Criptomoedas em EUR"
         ws['A1'].font = Font(bold=True, size=14)
-        ws.merge_cells('A1:N1')
+        ws.merge_cells('A1:U1')
         ws.row_dimensions[1].height = 25
         
         ws['A2'] = f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
@@ -57,10 +57,11 @@ class ExcelReporter:
     
     def _create_headers(self, ws, row: int, header_fill, header_font, border):
         """Create column headers for the new row-based layout."""
-        headers = ["Fav", "Símbolo", "Última Cotação", "Penúltima Cotação", "Período",
-                  "Mínimo", "Máximo", "Média", "Desvio", "Média-Desvio",
-                  "Últ. Dif. Média %", "Últ. Dif. M-D %",
-                  "Penúlt. Dif. Média %", "Penúlt. Dif. M-D %"]
+        headers = ["Fav", "Symbol", "Last", "2nd Last", "Period",
+                  "MIN", "MAX", "AVG", "STD", "AVG-STD",
+                  "Last-AVG%", "Last-A-S%", "2nd-AVG%", "2nd-A-S%",
+                  "MEDIAN", "MAD", "MED-MAD",
+                  "Last-MED%", "Last-M-M%", "2nd-MED%", "2nd-M-M%"]
         
         for i, header in enumerate(headers):
             col_letter = get_column_letter(i + 1)
@@ -69,7 +70,7 @@ class ExcelReporter:
             cell.fill = header_fill
             cell.font = header_font
             cell.border = border
-            cell.alignment = Alignment(horizontal='center', wrap_text=True)
+            cell.alignment = Alignment(horizontal='center', vertical='top', wrap_text=True)
     
     def _write_symbol_period_row(self, ws, row: int, symbol: str, period: str, report: Dict, 
                                   favorites: List[str], border):
@@ -95,7 +96,7 @@ class ExcelReporter:
         ws[f'C{row}'].number_format = self.NUMBER_FORMAT_DECIMAL
         ws[f'C{row}'].border = border
         ws[f'C{row}'].alignment = Alignment(horizontal='right')
-        ws[f'C{row}'].font = Font(bold=True)
+        ws[f'C{row}'].font = Font(bold=True, size=9)
         
         # Second latest quote (column D)
         second_latest_quote = period_data.get("second_latest_quote")
@@ -103,7 +104,7 @@ class ExcelReporter:
         ws[f'D{row}'].number_format = self.NUMBER_FORMAT_DECIMAL
         ws[f'D{row}'].border = border
         ws[f'D{row}'].alignment = Alignment(horizontal='right')
-        ws[f'D{row}'].font = Font(bold=True)
+        ws[f'D{row}'].font = Font(bold=True, size=9)
         
         # Period (column E)
         ws[f'E{row}'] = self.PERIOD_DISPLAY[period]
@@ -113,77 +114,146 @@ class ExcelReporter:
     def _write_period_stats(self, ws, row: int, period_data: Dict, border):
         """Write statistics for a specific period in the new row layout."""
         stats = period_data.get("stats", {})
+        small_font = Font(size=9)
         
         # Minimum (column F)
         ws[f'F{row}'].value = stats.get("min")
         ws[f'F{row}'].number_format = self.NUMBER_FORMAT_DECIMAL
         ws[f'F{row}'].border = border
         ws[f'F{row}'].alignment = Alignment(horizontal='right')
+        ws[f'F{row}'].font = small_font
         
         # Maximum (column G)
         ws[f'G{row}'].value = stats.get("max")
         ws[f'G{row}'].number_format = self.NUMBER_FORMAT_DECIMAL
         ws[f'G{row}'].border = border
         ws[f'G{row}'].alignment = Alignment(horizontal='right')
+        ws[f'G{row}'].font = small_font
         
         # Mean (column H)
         ws[f'H{row}'].value = stats.get("mean")
         ws[f'H{row}'].number_format = self.NUMBER_FORMAT_DECIMAL
         ws[f'H{row}'].border = border
         ws[f'H{row}'].alignment = Alignment(horizontal='right')
+        ws[f'H{row}'].font = small_font
         
         # Standard deviation (column I)
         ws[f'I{row}'].value = stats.get("std")
         ws[f'I{row}'].number_format = self.NUMBER_FORMAT_DECIMAL
         ws[f'I{row}'].border = border
         ws[f'I{row}'].alignment = Alignment(horizontal='right')
+        ws[f'I{row}'].font = small_font
         
         # Mean - Std formula (column J)
         ws[f'J{row}'].value = f"=H{row}-I{row}"
         ws[f'J{row}'].number_format = self.NUMBER_FORMAT_DECIMAL
         ws[f'J{row}'].border = border
         ws[f'J{row}'].alignment = Alignment(horizontal='right')
+        ws[f'J{row}'].font = small_font
+        
+        # Median (column O)
+        ws[f'O{row}'].value = stats.get("median")
+        ws[f'O{row}'].number_format = self.NUMBER_FORMAT_DECIMAL
+        ws[f'O{row}'].border = border
+        ws[f'O{row}'].alignment = Alignment(horizontal='right')
+        ws[f'O{row}'].font = small_font
+        
+        # MAD - Median Absolute Deviation (column P)
+        ws[f'P{row}'].value = stats.get("mad")
+        ws[f'P{row}'].number_format = self.NUMBER_FORMAT_DECIMAL
+        ws[f'P{row}'].border = border
+        ws[f'P{row}'].alignment = Alignment(horizontal='right')
+        ws[f'P{row}'].font = small_font
+        
+        # Median - MAD formula (column Q)
+        ws[f'Q{row}'].value = f"=O{row}-P{row}"
+        ws[f'Q{row}'].number_format = self.NUMBER_FORMAT_DECIMAL
+        ws[f'Q{row}'].border = border
+        ws[f'Q{row}'].alignment = Alignment(horizontal='right')
+        ws[f'Q{row}'].font = small_font
         
         # Deviation formulas with conditional formatting
         self._write_deviation_formulas(ws, row, period_data, border)
     
     def _write_deviation_formulas(self, ws, row: int, period_data: Dict, border):
         """Write deviation formulas with conditional formatting in the new row layout."""
-        # Latest deviation from mean (column K) - uses column C (latest quote)
+        small_font = Font(size=9)
+        
+        # Column K: Última - Média % (uses C and H)
         ws[f'K{row}'].value = f"=(C{row}-H{row})/H{row}"
         ws[f'K{row}'].number_format = '0.00%'
         ws[f'K{row}'].border = border
         ws[f'K{row}'].alignment = Alignment(horizontal='right')
+        ws[f'K{row}'].font = small_font
         dev_mean_pct = period_data.get("latest_deviation_from_mean_pct")
         fill_color = "C6EFCE" if dev_mean_pct and dev_mean_pct >= 0 else "FFC7CE"
         ws[f'K{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
         
-        # Latest deviation from mean-std (column L) - uses column C (latest quote)
+        # Column L: Última - Méd-STD % (uses C and J)
         ws[f'L{row}'].value = f"=(C{row}-J{row})/J{row}"
         ws[f'L{row}'].number_format = '0.00%'
         ws[f'L{row}'].border = border
         ws[f'L{row}'].alignment = Alignment(horizontal='right')
+        ws[f'L{row}'].font = small_font
         dev_mean_std_pct = period_data.get("latest_deviation_from_mean_minus_std_pct")
         fill_color = "C6EFCE" if dev_mean_std_pct and dev_mean_std_pct >= 0 else "FFC7CE"
         ws[f'L{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
         
-        # Second latest deviation from mean (column M) - uses column D (second latest quote)
+        # Column M: Penúltima - Média % (uses D and H)
         ws[f'M{row}'].value = f"=(D{row}-H{row})/H{row}"
         ws[f'M{row}'].number_format = '0.00%'
         ws[f'M{row}'].border = border
         ws[f'M{row}'].alignment = Alignment(horizontal='right')
+        ws[f'M{row}'].font = small_font
         second_dev_mean_pct = period_data.get("second_deviation_from_mean_pct")
         fill_color = "C6EFCE" if second_dev_mean_pct and second_dev_mean_pct >= 0 else "FFC7CE"
         ws[f'M{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
         
-        # Second latest deviation from mean-std (column N) - uses column D (second latest quote)
+        # Column N: Penúltima - Méd-STD % (uses D and J)
         ws[f'N{row}'].value = f"=(D{row}-J{row})/J{row}"
         ws[f'N{row}'].number_format = '0.00%'
         ws[f'N{row}'].border = border
         ws[f'N{row}'].alignment = Alignment(horizontal='right')
+        ws[f'N{row}'].font = small_font
         second_dev_mean_std_pct = period_data.get("second_deviation_from_mean_minus_std_pct")
         fill_color = "C6EFCE" if second_dev_mean_std_pct and second_dev_mean_std_pct >= 0 else "FFC7CE"
         ws[f'N{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+        
+        # Column R: Última - Mediana % (uses C and O)
+        ws[f'R{row}'].value = f"=(C{row}-O{row})/O{row}"
+        ws[f'R{row}'].number_format = '0.00%'
+        ws[f'R{row}'].border = border
+        ws[f'R{row}'].alignment = Alignment(horizontal='right')
+        ws[f'R{row}'].font = small_font
+        fill_color = "C6EFCE" if dev_mean_pct and dev_mean_pct >= 0 else "FFC7CE"  # Using mean as proxy
+        ws[f'R{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+        
+        # Column S: Última - Med-MAD % (uses C and Q)
+        ws[f'S{row}'].value = f"=(C{row}-Q{row})/Q{row}"
+        ws[f'S{row}'].number_format = '0.00%'
+        ws[f'S{row}'].border = border
+        ws[f'S{row}'].alignment = Alignment(horizontal='right')
+        ws[f'S{row}'].font = small_font
+        fill_color = "C6EFCE" if dev_mean_std_pct and dev_mean_std_pct >= 0 else "FFC7CE"  # Using mean-std as proxy
+        ws[f'S{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+        
+        # Column T: Penúltima - Mediana % (uses D and O)
+        ws[f'T{row}'].value = f"=(D{row}-O{row})/O{row}"
+        ws[f'T{row}'].number_format = '0.00%'
+        ws[f'T{row}'].border = border
+        ws[f'T{row}'].alignment = Alignment(horizontal='right')
+        ws[f'T{row}'].font = small_font
+        fill_color = "C6EFCE" if second_dev_mean_pct and second_dev_mean_pct >= 0 else "FFC7CE"  # Using mean as proxy
+        ws[f'T{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+        
+        # Column U: Penúltima - Med-MAD % (uses D and Q)
+        ws[f'U{row}'].value = f"=(D{row}-Q{row})/Q{row}"
+        ws[f'U{row}'].number_format = '0.00%'
+        ws[f'U{row}'].border = border
+        ws[f'U{row}'].alignment = Alignment(horizontal='right')
+        ws[f'U{row}'].font = small_font
+        fill_color = "C6EFCE" if second_dev_mean_std_pct and second_dev_mean_std_pct >= 0 else "FFC7CE"  # Using mean-std as proxy
+        ws[f'U{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
     
     def create_summary_sheet(self, reports: Dict[str, Dict], market_caps: Dict[str, float] = None, favorites: List[str] = None):
         """
@@ -213,6 +283,7 @@ class ExcelReporter:
         
         # Create column headers (row 4)
         self._create_headers(ws, 4, header_fill, header_font, border)
+        ws.row_dimensions[4].height = 30  # Compact header row with top alignment
         
         # Sort symbols by market cap
         symbols = list(reports.keys())
@@ -241,7 +312,7 @@ class ExcelReporter:
                 row += 1
         
         # Add auto filter to the table
-        ws.auto_filter.ref = f"A4:N{row - 1}"
+        ws.auto_filter.ref = f"A4:U{row - 1}"
         
         # Freeze panes (freeze columns A-D and header row)
         ws.freeze_panes = ws['E5']

@@ -1,5 +1,116 @@
 # Changelog
 
+## [2.9.2] - 2025-12-12
+
+### Fixed
+- **Column Order Correction**: Moved MEDIAN before MAD for better logical grouping
+  - Previous: K=MEDIAN, L-O=Comparisons, P=MAD, Q=MED-MAD, R-U=Comparisons
+  - Current: K-N=Mean Comparisons, O=MEDIAN, P=MAD, Q=MED-MAD, R-U=Median Comparisons
+  - Now follows sequence: Statistics → Comparisons → Robust Statistics → Robust Comparisons
+  
+### Changed
+- Updated all formula references to use correct column positions
+  - MEDIAN: K → O
+  - MED-MAD formula: `=K-P` → `=O-P`
+  - Median comparison formulas now reference column O instead of K
+  
+- Updated COLUMN_STRUCTURE.md with correct column mapping
+
+## [2.9.1] - 2025-12-12
+
+### Changed
+- **Column Width Optimization**: Reduced column widths for more compact display
+  - Favorite column: 3.29 → 3
+  - Symbol column: 8.29 → 7
+  - Quote columns: 10 → 9
+  - Statistics columns: 10 → 8.5
+  
+- **Header Alignment**: Aligned headers to top of cells with `vertical='top'`
+  - Allows for more compact row height while maintaining readability
+  - Header row height set to 30 for optimal display with wrapped text
+  
+### Result
+- More data visible on screen without scrolling
+- Maintains readability with 9pt font and top alignment
+
+## [2.9.0] - 2025-12-12
+
+### Changed
+- **Column Headers**: Replaced Portuguese headers with English abbreviations for compactness
+  - Símbolo → Symbol
+  - Última/Penúltima Cotação → Last/2nd Last
+  - Período → Period
+  - Mínimo/Máximo → MIN/MAX
+  - Média/Desvio → AVG/STD
+  - Média-Desvio → AVG-STD
+  - Mediana → MEDIAN
+  - Mediana-MAD → MED-MAD
+  - Percentage columns use abbreviated format (Last-AVG%, Last-A-S%, 2nd-AVG%, 2nd-A-S%, etc.)
+
+- **Font Size**: Reduced font size for all numeric data to 9pt for better density
+  - Applies to: quotes (columns C, D), statistics (F-K, P-Q), and all percentage columns (L-O, R-U)
+  - Headers and symbol remain at default size
+  - Period column reduced to 9pt
+
+### Technical
+- All numeric cells now use `Font(size=9)` for consistency
+- Bold quotes maintain size=9 for uniformity
+
+## [2.8.0] - 2025-12-12
+
+### Changed
+- **Column Reorganization**: Complete restructure of Excel report columns for better logical grouping
+  - Grouped mean-based statistics together (F-J): Min, Max, Média, Desvio, Média-Desvio
+  - Placed Mediana separately (K) as central robust statistic
+  - Grouped mean comparisons (L-O): Últ-Média %, Últ-Méd-STD %, Penúlt-Média %, Penúlt-Méd-STD %
+  - Grouped median-based statistics (P-Q): MAD, Mediana-MAD
+  - Grouped median comparisons (R-U): Últ-Mediana %, Últ-Med-MAD %, Penúlt-Mediana %, Penúlt-Med-MAD %
+  - Total: 21 columns (A-U)
+
+### Added
+- **COLUMN_STRUCTURE.md**: Comprehensive documentation of column structure and formula validation
+
+### Fixed
+- **Column Names**: Updated all column headers to match formulas accurately
+  - "Méd-STD" instead of "M-D" for clarity (Mean minus Standard Deviation)
+  - "Med-MAD" for Median minus MAD consistency
+
+## [2.7.0] - 2025-12-12
+
+### Added
+- **Median-MAD Deviation Columns**: Added 2 new columns for robust deviation analysis
+  - Column R: Últ. Dif. Med-MAD % - Latest quote deviation from Median-MAD baseline
+  - Column S: Penúlt. Dif. Med-MAD % - Second latest quote deviation from Median-MAD baseline
+  - Provides outlier-resistant alternative to Mean-Std deviations
+  - Same conditional formatting (green/red) as other deviation columns
+
+### Changed
+- **Report Structure**: Expanded from 17 to 19 columns (A-S)
+  - Auto-filter updated to cover all 19 columns
+  - Title merge adjusted to column S
+  - All tests passing
+
+## [2.6.0] - 2025-12-12
+
+### Added
+- **Median and MAD Statistics**: Enhanced report with robust statistical measures
+  - Median (column I): Central tendency measure less sensitive to outliers than mean
+  - MAD (column K): Median Absolute Deviation - robust dispersion measure
+  - Median-MAD (column M): Formula-based calculation (Median - MAD)
+  - These provide alternative statistical baselines for price analysis
+  
+### Changed
+- **Report Structure**: Expanded from 14 to 17 columns (A-Q)
+  - Column layout: Fav, Símbolo, Última, Penúltima, Período, Mínimo, Máximo, Média, **Mediana**, Desvio, **MAD**, Média-Desvio, **Mediana-MAD**, Últ.Dif.Média%, Últ.Dif.M-D%, Penúlt.Dif.Média%, Penúlt.Dif.M-D%
+  - Deviation columns shifted: N-Q (previously K-N)
+  - Auto-filter and title merge updated to column Q
+  
+### Technical
+- Updated `StatisticalAnalyzer.calculate_statistics()` to include median and MAD
+- Enhanced `_write_period_stats()` with new column writes
+- Adjusted all column references in deviation formulas
+- All 75 tests passing
+
 ## [2.5.5] - 2025-12-09
 
 ### Fixed

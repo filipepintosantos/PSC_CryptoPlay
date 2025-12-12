@@ -42,13 +42,19 @@ class StatisticalAnalyzer:
         prices_array = np.array(prices, dtype=float)
         mean_val = float(np.mean(prices_array))
         std_val = float(np.std(prices_array))
+        median_val = float(np.median(prices_array))
+        # MAD: Median Absolute Deviation
+        mad_val = float(np.median(np.abs(prices_array - median_val)))
         
         return {
             "min": float(np.min(prices_array)),
             "max": float(np.max(prices_array)),
             "mean": mean_val,
+            "median": median_val,
             "std": std_val,
+            "mad": mad_val,
             "mean_minus_std": mean_val - std_val,
+            "median_minus_mad": median_val - mad_val,
             "count": len(prices),
         }
     
@@ -60,8 +66,11 @@ class StatisticalAnalyzer:
                 "min": None,
                 "max": None,
                 "mean": None,
+                "median": None,
                 "std": None,
+                "mad": None,
                 "mean_minus_std": None,
+                "median_minus_mad": None,
                 "count": 0,
             },
             "latest_quote": None,
