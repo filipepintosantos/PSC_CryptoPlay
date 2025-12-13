@@ -285,6 +285,12 @@ class TestExcelReporterIntegration(unittest.TestCase):
                         "volatility": {
                             "volatility_positive_5": 50,
                             "volatility_negative_5": 40,
+                            "volatility_positive_10": 15,
+                            "volatility_negative_10": 12,
+                            "volatility_positive_15": 5,
+                            "volatility_negative_15": 4,
+                            "volatility_positive_20": 1,
+                            "volatility_negative_20": 1,
                             "volatility_score": 140
                         }
                     }
