@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="psc-cryptoplay",
-    version="3.2.1",
+    version="3.2.2",
     packages=find_packages(exclude=["tests*"]),
     python_requires=">=3.8",
     install_requires=[

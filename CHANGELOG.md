@@ -1,5 +1,31 @@
 # Changelog
 
+## [3.2.2] - 2025-12-13
+
+### Fixed
+- **🔧 SonarQube Code Quality**: Resolvidos todos os avisos de complexidade cognitiva e code smells
+  - Removido comentário inline no código (excel_reporter.py linha 48)
+  - Convertido f-string sem interpolação para string normal (main.py linha 263)
+  - Reduzida complexidade cognitiva de funções críticas:
+    * `_write_deviation_formulas`: 16→7 (extraída `_write_single_deviation_cell`)
+    * `create_volatility_detail_sheet`: 16→5 (extraída `_write_volatility_row`)
+    * `import_csv_data`: 21→8 (extraídas `_get_column_indices`, `_parse_csv_date`)
+    * `generate_report`: 18→12 (extraída `_add_volatility_to_reports`)
+    * `main`: 27→15 (extraídas `_setup_argument_parser`, `_handle_csv_import`, `_fetch_price_data`)
+
+### Changed
+- **Refatoração para melhor manutenibilidade**:
+  - Funções divididas em métodos auxiliares menores e focados
+  - Código mais legível e testável
+  - Separação de responsabilidades melhorada
+  - Funções auxiliares privadas (prefixo `_`) para clareza
+
+### Technical
+- Todas as funções agora com complexidade cognitiva ≤ 15 (limite SonarQube)
+- Nenhum code smell ou bug reportado
+- 80 testes passando sem erros
+- Código mais limpo e organizado
+
 ## [3.2.1] - 2025-12-13
 
 ### Fixed

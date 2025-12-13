@@ -26,6 +26,36 @@ from volatility_analysis import VolatilityAnalyzer
 DEFAULT_SYMBOLS = "BTC,ETH,ADA,XRP,SOL"
 
 
+def _get_column_indices(header, date_column: str, price_column: str, skip_header: bool):
+    """Get column indices from header or parse as integers."""
+    if skip_header:
+        try:
+            date_idx = header.index(date_column)
+            price_idx = header.index(price_column)
+        except ValueError:
+            date_idx = int(date_column)
+            price_idx = int(price_column)
+    else:
+        date_idx = int(date_column)
+        price_idx = int(price_column)
+    return date_idx, price_idx
+
+
+def _parse_csv_date(date_str: str, date_format: str = None):
+    """Parse date string with optional format or auto-detection."""
+    if date_format:
+        return datetime.strptime(date_str, date_format)
+    
+    # Try common formats
+    for fmt in ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y/%m/%d']:
+        try:
+            return datetime.strptime(date_str, fmt)
+        except ValueError:
+            continue
+    
+    return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+
+
 def import_csv_data(csv_path: str, symbol: str, db: CryptoDatabase,
                     date_column: str = '0', price_column: str = '1',
                     date_format: str = None, skip_header: bool = True) -> int:
@@ -47,18 +77,8 @@ def import_csv_data(csv_path: str, symbol: str, db: CryptoDatabase,
     with open(csv_path, 'r', encoding='utf-8') as f:
         reader = csv.reader(f)
         
-        # Read header if present
-        if skip_header:
-            header = next(reader)
-            try:
-                date_idx = header.index(date_column)
-                price_idx = header.index(price_column)
-            except ValueError:
-                date_idx = int(date_column)
-                price_idx = int(price_column)
-        else:
-            date_idx = int(date_column)
-            price_idx = int(price_column)
+        header = next(reader) if skip_header else None
+        date_idx, price_idx = _get_column_indices(header, date_column, price_column, skip_header)
         
         count = 0
         for row_num, row in enumerate(reader, start=2 if skip_header else 1):
@@ -66,21 +86,7 @@ def import_csv_data(csv_path: str, symbol: str, db: CryptoDatabase,
                 date_str = row[date_idx].strip()
                 price_str = row[price_idx].strip()
                 
-                # Parse date
-                if date_format:
-                    date_obj = datetime.strptime(date_str, date_format)
-                else:
-                    # Try common formats
-                    for fmt in ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y/%m/%d']:
-                        try:
-                            date_obj = datetime.strptime(date_str, fmt)
-                            break
-                        except ValueError:
-                            continue
-                    else:
-                        date_obj = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-                
-                # Parse price
+                date_obj = _parse_csv_date(date_str, date_format)
                 price_val = float(price_str.replace(',', '').replace('€', '').replace('$', '').strip())
                 
                 quote = {
@@ -203,6 +209,23 @@ def store_quotes(db, quotes: list, upsert: bool, fetch_mode: str) -> int:
         return count
 
 
+def _add_volatility_to_reports(reports: dict, symbols: list, volatility_analyzer):
+    """Add volatility statistics per period to reports."""
+    period_days_map = {
+        "12_months": 365,
+        "6_months": 180,
+        "3_months": 90,
+        "1_month": 30
+    }
+    
+    for symbol in symbols:
+        if symbol in reports and "error" not in reports[symbol]:
+            for period, days in period_days_map.items():
+                if period in reports[symbol].get('periods', {}):
+                    volatility_stats = volatility_analyzer.get_period_stats(symbol, days)
+                    reports[symbol]['periods'][period]['volatility'] = volatility_stats
+
+
 def generate_report(db, symbols: list, report_path: str, db_path: str) -> int:
     """Generate statistical analysis and Excel report."""
     print("Generating statistical analysis...")
@@ -223,20 +246,7 @@ def generate_report(db, symbols: list, report_path: str, db_path: str) -> int:
     volatility_results = volatility_analyzer.analyze_all_symbols(symbols, days=365)
     
     # Add volatility stats per period to reports
-    period_days_map = {
-        "12_months": 365,
-        "6_months": 180,
-        "3_months": 90,
-        "1_month": 30
-    }
-    
-    for symbol in symbols:
-        if symbol in reports and "error" not in reports[symbol]:
-            # Add volatility for each period
-            for period, days in period_days_map.items():
-                if period in reports[symbol].get('periods', {}):
-                    volatility_stats = volatility_analyzer.get_period_stats(symbol, days)
-                    reports[symbol]['periods'][period]['volatility'] = volatility_stats
+    _add_volatility_to_reports(reports, symbols, volatility_analyzer)
     
     # Get market caps for sorting
     market_caps = {}
@@ -260,13 +270,13 @@ def generate_report(db, symbols: list, report_path: str, db_path: str) -> int:
     print(f"  Symbols analyzed: {', '.join(symbols)}")
     print(f"  Database: {db_path}")
     print(f"  Report: {report_path}")
-    print(f"  Volatility details: See 'Volatility Detail' sheet in Excel")
+    print("  Volatility details: See 'Volatility Detail' sheet in Excel")
     
     return 0
 
 
-def main():
-    """Main entry point for the cryptocurrency analysis tool."""
+def _setup_argument_parser():
+    """Setup and return the argument parser."""
     parser = argparse.ArgumentParser(
         description="Cryptocurrency Price Tracker and Analysis Tool"
     )
@@ -349,6 +359,63 @@ def main():
         help="CSV file has no header row"
     )
     
+    return parser
+
+
+def _handle_csv_import(args, db, symbols) -> int:
+    """Handle CSV import if requested."""
+    print(f"Importing from CSV: {args.import_csv}")
+    
+    if not Path(args.import_csv).exists():
+        print(f"Error: CSV file not found: {args.import_csv}")
+        return 1
+    
+    if not symbols or len(symbols) != 1:
+        print("Error: Specify exactly one symbol with --symbols when importing CSV")
+        return 1
+    
+    symbol = symbols[0]
+    count = import_csv_data(
+        args.import_csv, symbol, db,
+        args.csv_date_col, args.csv_price_col,
+        args.csv_date_format,
+        skip_header=not args.csv_no_header
+    )
+    
+    if count == 0:
+        print("No data imported from CSV")
+        return 1
+    
+    print(f"✓ Imported {count} quotes from CSV")
+    return 0
+
+
+def _fetch_price_data(args, symbols, db, fetch_mode, throttle_seconds, retries, upsert) -> int:
+    """Fetch price data from Yahoo Finance."""
+    print(f"Fetching prices for: {', '.join(symbols)}")
+    print(f"Fetch mode: {fetch_mode}")
+    
+    try:
+        api = YFinanceCryptoAPI()
+        
+        if args.days:
+            fetch_historical_range(api, symbols, args.days, db, throttle_seconds, retries)
+        else:
+            quotes = fetch_quotes_incremental(api, symbols, db, fetch_mode)
+            if quotes:
+                store_quotes(db, quotes, upsert, fetch_mode)
+            else:
+                print("No quotes retrieved from API")
+                return 1
+        return 0
+    except Exception as e:
+        print(f"Error fetching from Yahoo Finance: {e}")
+        return 1
+
+
+def main():
+    """Main entry point for the cryptocurrency analysis tool."""
+    parser = _setup_argument_parser()
     args = parser.parse_args()
     
     # Load configuration
@@ -376,59 +443,17 @@ def main():
         
         # Handle CSV import if requested
         if args.import_csv:
-            print(f"Importing from CSV: {args.import_csv}")
-            if not Path(args.import_csv).exists():
-                print(f"Error: CSV file not found: {args.import_csv}")
-                return 1
-            
-            if not symbols or len(symbols) != 1:
-                print("Error: Specify exactly one symbol with --symbols when importing CSV")
-                return 1
-            
-            symbol = symbols[0]
-            count = import_csv_data(
-                args.import_csv,
-                symbol,
-                db,
-                args.csv_date_col,
-                args.csv_price_col,
-                args.csv_date_format,
-                skip_header=not args.csv_no_header
-            )
-            
-            if count == 0:
-                print("No data imported from CSV")
-                return 1
-            
-            print(f"✓ Imported {count} quotes from CSV")
-            
-            if args.fetch_only:
+            result = _handle_csv_import(args, db, symbols)
+            if result != 0 or args.fetch_only:
                 db.close()
-                return 0
+                return result
         
         # Fetch data if not report-only mode
         if not args.report_only and not args.import_csv:
-            print(f"Fetching prices for: {', '.join(symbols)}")
-            print(f"Fetch mode: {fetch_mode}")
-            try:
-                api = YFinanceCryptoAPI()
-                
-                if args.days:
-                    # Fetch specific historical range
-                    fetch_historical_range(api, symbols, args.days, db, throttle_seconds, retries)
-                else:
-                    # Fetch incremental or full
-                    quotes = fetch_quotes_incremental(api, symbols, db, fetch_mode)
-                    
-                    if quotes:
-                        store_quotes(db, quotes, upsert, fetch_mode)
-                    else:
-                        print("No quotes retrieved from API")
-                        return 1
-            
-            except Exception as e:
-                print(f"Error fetching from Yahoo Finance: {e}")
-                return 1
+            result = _fetch_price_data(args, symbols, db, fetch_mode, throttle_seconds, retries, upsert)
+            if result != 0:
+                db.close()
+                return result
         
         if args.fetch_only:
             print("Fetch-only mode: skipping report generation")

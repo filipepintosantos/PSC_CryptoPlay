@@ -44,8 +44,9 @@ class ExcelReporter:
             col_letter = get_column_letter(6 + i)
             ws.column_dimensions[col_letter].width = 8.5
         # Volatility columns (V to Z = 5 columns)
+        # Column V starts at position 22
         for i in range(5):
-            col_letter = get_column_letter(22 + i)  # 22 = V
+            col_letter = get_column_letter(22 + i)
             ws.column_dimensions[col_letter].width = 7
     
     def _create_title_rows(self, ws):
@@ -180,83 +181,36 @@ class ExcelReporter:
         # Deviation formulas with conditional formatting
         self._write_deviation_formulas(ws, row, period_data, border)
     
+    def _write_single_deviation_cell(self, ws, row: int, col: str, formula: str, 
+                                     deviation_value, border):
+        """Write a single deviation cell with formula and conditional formatting."""
+        small_font = Font(size=9)
+        ws[f'{col}{row}'].value = formula
+        ws[f'{col}{row}'].number_format = '0.00%'
+        ws[f'{col}{row}'].border = border
+        ws[f'{col}{row}'].alignment = Alignment(horizontal='right')
+        ws[f'{col}{row}'].font = small_font
+        fill_color = "C6EFCE" if deviation_value and deviation_value >= 0 else "FFC7CE"
+        ws[f'{col}{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+    
     def _write_deviation_formulas(self, ws, row: int, period_data: Dict, border):
         """Write deviation formulas with conditional formatting in the new row layout."""
-        small_font = Font(size=9)
-        
-        # Column K: Última - Média % (uses C and H)
-        ws[f'K{row}'].value = f"=(C{row}-H{row})/H{row}"
-        ws[f'K{row}'].number_format = '0.00%'
-        ws[f'K{row}'].border = border
-        ws[f'K{row}'].alignment = Alignment(horizontal='right')
-        ws[f'K{row}'].font = small_font
         dev_mean_pct = period_data.get("latest_deviation_from_mean_pct")
-        fill_color = "C6EFCE" if dev_mean_pct and dev_mean_pct >= 0 else "FFC7CE"
-        ws[f'K{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
-        
-        # Column L: Última - Méd-STD % (uses C and J)
-        ws[f'L{row}'].value = f"=(C{row}-J{row})/J{row}"
-        ws[f'L{row}'].number_format = '0.00%'
-        ws[f'L{row}'].border = border
-        ws[f'L{row}'].alignment = Alignment(horizontal='right')
-        ws[f'L{row}'].font = small_font
         dev_mean_std_pct = period_data.get("latest_deviation_from_mean_minus_std_pct")
-        fill_color = "C6EFCE" if dev_mean_std_pct and dev_mean_std_pct >= 0 else "FFC7CE"
-        ws[f'L{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
-        
-        # Column M: Penúltima - Média % (uses D and H)
-        ws[f'M{row}'].value = f"=(D{row}-H{row})/H{row}"
-        ws[f'M{row}'].number_format = '0.00%'
-        ws[f'M{row}'].border = border
-        ws[f'M{row}'].alignment = Alignment(horizontal='right')
-        ws[f'M{row}'].font = small_font
         second_dev_mean_pct = period_data.get("second_deviation_from_mean_pct")
-        fill_color = "C6EFCE" if second_dev_mean_pct and second_dev_mean_pct >= 0 else "FFC7CE"
-        ws[f'M{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
-        
-        # Column N: Penúltima - Méd-STD % (uses D and J)
-        ws[f'N{row}'].value = f"=(D{row}-J{row})/J{row}"
-        ws[f'N{row}'].number_format = '0.00%'
-        ws[f'N{row}'].border = border
-        ws[f'N{row}'].alignment = Alignment(horizontal='right')
-        ws[f'N{row}'].font = small_font
         second_dev_mean_std_pct = period_data.get("second_deviation_from_mean_minus_std_pct")
-        fill_color = "C6EFCE" if second_dev_mean_std_pct and second_dev_mean_std_pct >= 0 else "FFC7CE"
-        ws[f'N{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
         
-        # Column R: Última - Mediana % (uses C and O)
-        ws[f'R{row}'].value = f"=(C{row}-O{row})/O{row}"
-        ws[f'R{row}'].number_format = '0.00%'
-        ws[f'R{row}'].border = border
-        ws[f'R{row}'].alignment = Alignment(horizontal='right')
-        ws[f'R{row}'].font = small_font
-        fill_color = "C6EFCE" if dev_mean_pct and dev_mean_pct >= 0 else "FFC7CE"  # Using mean as proxy
-        ws[f'R{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+        # Mean-based deviations
+        self._write_single_deviation_cell(ws, row, 'K', f"=(C{row}-H{row})/H{row}", dev_mean_pct, border)
+        self._write_single_deviation_cell(ws, row, 'L', f"=(C{row}-J{row})/J{row}", dev_mean_std_pct, border)
+        self._write_single_deviation_cell(ws, row, 'M', f"=(D{row}-H{row})/H{row}", second_dev_mean_pct, border)
+        self._write_single_deviation_cell(ws, row, 'N', f"=(D{row}-J{row})/J{row}", second_dev_mean_std_pct, border)
         
-        # Column S: Última - Med-MAD % (uses C and Q)
-        ws[f'S{row}'].value = f"=(C{row}-Q{row})/Q{row}"
-        ws[f'S{row}'].number_format = '0.00%'
-        ws[f'S{row}'].border = border
-        ws[f'S{row}'].alignment = Alignment(horizontal='right')
-        ws[f'S{row}'].font = small_font
-        fill_color = "C6EFCE" if dev_mean_std_pct and dev_mean_std_pct >= 0 else "FFC7CE"  # Using mean-std as proxy
-        ws[f'S{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
-        
-        # Column T: Penúltima - Mediana % (uses D and O)
-        ws[f'T{row}'].value = f"=(D{row}-O{row})/O{row}"
-        ws[f'T{row}'].number_format = '0.00%'
-        ws[f'T{row}'].border = border
-        ws[f'T{row}'].alignment = Alignment(horizontal='right')
-        ws[f'T{row}'].font = small_font
-        fill_color = "C6EFCE" if second_dev_mean_pct and second_dev_mean_pct >= 0 else "FFC7CE"  # Using mean as proxy
-        ws[f'T{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
-        
-        # Column U: Penúltima - Med-MAD % (uses D and Q)
-        ws[f'U{row}'].value = f"=(D{row}-Q{row})/Q{row}"
-        ws[f'U{row}'].number_format = '0.00%'
-        ws[f'U{row}'].border = border
-        ws[f'U{row}'].alignment = Alignment(horizontal='right')
-        ws[f'U{row}'].font = small_font
+        # Median-based deviations (using mean as proxy for color)
+        self._write_single_deviation_cell(ws, row, 'R', f"=(C{row}-O{row})/O{row}", dev_mean_pct, border)
+        self._write_single_deviation_cell(ws, row, 'S', f"=(C{row}-Q{row})/Q{row}", dev_mean_std_pct, border)
+        self._write_single_deviation_cell(ws, row, 'T', f"=(D{row}-O{row})/O{row}", second_dev_mean_pct, border)
+        self._write_single_deviation_cell(ws, row, 'U', f"=(D{row}-Q{row})/Q{row}", second_dev_mean_std_pct, border)
         fill_color = "C6EFCE" if second_dev_mean_std_pct and second_dev_mean_std_pct >= 0 else "FFC7CE"  # Using mean-std as proxy
         ws[f'U{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
     
@@ -448,6 +402,38 @@ class ExcelReporter:
         self.workbook.save(self.filename)
         print(f"Excel report saved to: {self.filename}")
     
+    def _write_volatility_row(self, ws, row: int, symbol: str, window_name: str, 
+                              events: Dict, border) -> int:
+        """Write a single volatility data row."""
+        # Symbol
+        ws.cell(row=row, column=1).value = symbol
+        ws.cell(row=row, column=1).font = Font(bold=True)
+        ws.cell(row=row, column=1).border = border
+        ws.cell(row=row, column=1).alignment = Alignment(horizontal='center')
+        
+        # Window
+        ws.cell(row=row, column=2).value = window_name
+        ws.cell(row=row, column=2).border = border
+        ws.cell(row=row, column=2).alignment = Alignment(horizontal='center')
+        
+        # Write thresholds (positive then negative)
+        col = 3
+        for threshold in [5, 10, 15, 20]:
+            cell = ws.cell(row=row, column=col)
+            cell.value = events.get(f'positive_{threshold}', 0)
+            cell.border = border
+            cell.alignment = Alignment(horizontal='center')
+            col += 1
+        
+        for threshold in [5, 10, 15, 20]:
+            cell = ws.cell(row=row, column=col)
+            cell.value = events.get(f'negative_{threshold}', 0)
+            cell.border = border
+            cell.alignment = Alignment(horizontal='center')
+            col += 1
+        
+        return row
+    
     def create_volatility_detail_sheet(self, volatility_results: Dict[str, Dict]):
         """
         Create a detailed volatility analysis sheet with all windows and thresholds.
@@ -497,36 +483,8 @@ class ExcelReporter:
             # Write data for each window (only short windows: 24h, 72h, 7d)
             for window_name in ["24h", "72h", "7d"]:
                 if window_name in windows:
-                    events = windows[window_name]
-                    
-                    # Symbol
-                    ws.cell(row=row, column=1).value = symbol
-                    ws.cell(row=row, column=1).font = Font(bold=True)
-                    ws.cell(row=row, column=1).border = border
-                    ws.cell(row=row, column=1).alignment = Alignment(horizontal='center')
-                    
-                    # Window
-                    ws.cell(row=row, column=2).value = window_name
-                    ws.cell(row=row, column=2).border = border
-                    ws.cell(row=row, column=2).alignment = Alignment(horizontal='center')
-                    
-                    # Positive thresholds
-                    col = 3
-                    for threshold in [5, 10, 15, 20]:
-                        cell = ws.cell(row=row, column=col)
-                        cell.value = events.get(f'positive_{threshold}', 0)
-                        cell.border = border
-                        cell.alignment = Alignment(horizontal='center')
-                        col += 1
-                    
-                    # Negative thresholds
-                    for threshold in [5, 10, 15, 20]:
-                        cell = ws.cell(row=row, column=col)
-                        cell.value = events.get(f'negative_{threshold}', 0)
-                        cell.border = border
-                        cell.alignment = Alignment(horizontal='center')
-                        col += 1
-                    
+                    row = self._write_volatility_row(ws, row, symbol, window_name, 
+                                                     windows[window_name], border)
                     row += 1
         
         # Add auto filter
