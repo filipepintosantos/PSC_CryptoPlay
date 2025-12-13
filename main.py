@@ -21,6 +21,7 @@ from database import CryptoDatabase
 from analysis import StatisticalAnalyzer
 from excel_reporter import ExcelReporter
 from volatility_analysis import VolatilityAnalyzer
+from favorites_helper import validate_and_update_favorites, get_all_favorites_list
 
 # Constants
 DEFAULT_SYMBOLS = "BTC,ETH,ADA,XRP,SOL"
@@ -257,9 +258,11 @@ def generate_report(db, symbols: list, report_path: str, db_path: str) -> int:
         else:
             market_caps[symbol] = 0
     
-    # Get favorites list from database
-    result = db.conn.execute('SELECT code FROM crypto_info WHERE favorite = 1').fetchall()
-    favorites = [row[0] for row in result]
+    # Get favorites organized by class from database
+    favorites = {}
+    for cls in ['A', 'B', 'C']:
+        result = db.conn.execute('SELECT code FROM crypto_info WHERE favorite = ?', (cls,)).fetchall()
+        favorites[cls] = [row[0] for row in result]
     
     # Generate Excel report with volatility detail sheet
     print(f"Generating Excel report: {report_path}")
@@ -440,6 +443,12 @@ def main():
         # Initialize database
         print("Initializing database...")
         db = CryptoDatabase(db_path)
+        
+        # Validate and update favorite classifications
+        print("Validating favorite classifications...")
+        updated = validate_and_update_favorites(db, config)
+        if updated > 0:
+            print(f"  ✓ Updated {updated} favorite classifications")
         
         # Handle CSV import if requested
         if args.import_csv:

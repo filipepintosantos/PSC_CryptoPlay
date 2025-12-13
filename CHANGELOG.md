@@ -1,5 +1,37 @@
 # Changelog
 
+## [3.5.0] - 2025-12-13
+
+### Added
+- **⭐ Sistema de Classificação de Favoritos A/B/C**: Favoritos agora têm três níveis de prioridade
+  - 🥇 Classe A (⭐⭐⭐): Top priority - Dourado (#FFD700)
+  - 🥈 Classe B (⭐⭐): Secondary priority - Laranja (#FFA500)
+  - 🥉 Classe C (⭐): Tertiary priority - Azul claro (#87CEEB)
+  - 📝 Configuração em `config.ini`: `favorites_a`, `favorites_b`, `favorites_c`
+  - 🔄 Validação automática das classificações ao executar `main.py`
+  - 📊 Relatórios Excel mostram classe (A/B/C) com cores diferentes
+  - 🛠️ Novo módulo `favorites_helper.py` com funções utilitárias
+  - 📜 Script `add_symbols.py` para adicionar símbolos com classificação
+  - 🔧 Script `migrate_to_favorite_classes.py` para migrar bases existentes
+
+### Changed
+- **Database Schema**: Coluna `favorite` agora aceita TEXT ('A', 'B', 'C', NULL) em vez de BOOLEAN
+  - Migração automática de valores antigos: 1 → 'A', 0 → NULL
+  - Mantida compatibilidade com `set_favorite(code, bool)` (converte para Classe A)
+- **Excel Report**: Coluna de favoritos mostra A/B/C em vez de X
+  - Coluna B (Symbol): largura 46 pixels
+  - Colunas K-N e R-U (Percentagens): largura 55 pixels
+  - Colunas V-Z (Volatilidade): largura 37 pixels
+- **Script `mark_favorites.py`**: Atualizado para marcar todas as três classes
+  - Mostra resumo por classe com emojis diferentes
+  - Lista todos os favoritos organizados por classificação
+
+### Documentation
+- 📚 Novo arquivo `FAVORITES_CLASSIFICATION.md` com guia completo do sistema
+  - Instruções de uso e migração
+  - Exemplos de configuração
+  - Referência das funções da API
+
 ## [3.4.0] - 2025-12-13
 
 ### Enhanced

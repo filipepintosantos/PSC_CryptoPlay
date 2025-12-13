@@ -38,6 +38,53 @@
    python -m pytest tests/ -v
    ```
 
+## Gestão de Versões
+
+### Single Source of Truth
+
+A versão do projeto é gerida centralmente em **`src/__init__.py`**:
+
+```python
+__version__ = "3.5.0"
+```
+
+Outros ficheiros leem dinamicamente desta fonte:
+- **`setup.py`**: Usa `get_version()` para ler de `src/__init__.py`
+- **`sonar-project.properties`**: Sincronizado via script `update_version.py`
+- **`CHANGELOG.md`**: Atualização manual obrigatória
+
+### Como Atualizar a Versão
+
+1. **Edite `src/__init__.py`:**
+   ```python
+   __version__ = "3.6.0"  # Nova versão
+   ```
+
+2. **Execute o script de sincronização:**
+   ```bash
+   python scripts/update_version.py
+   ```
+
+3. **Atualize o CHANGELOG.md manualmente:**
+   ```markdown
+   ## [3.6.0] - 2025-12-XX
+   ### Added
+   - Nova funcionalidade...
+   ```
+
+4. **Verifique a consistência:**
+   ```bash
+   python -c "from src import __version__; print(__version__)"
+   grep projectVersion sonar-project.properties
+   ```
+
+### Vantagens da Centralização
+
+✅ **Uma única fonte de verdade** - evita inconsistências  
+✅ **Automatização** - script sincroniza ficheiros derivados  
+✅ **Rastreabilidade** - Git mostra claramente mudanças de versão  
+✅ **Simplicidade** - apenas um ficheiro para editar manualmente
+
 ## Estrutura de Desenvolvimento
 
 ### Conveções de Código

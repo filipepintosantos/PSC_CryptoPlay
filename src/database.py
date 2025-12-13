@@ -54,7 +54,7 @@ class CryptoDatabase:
                 name TEXT NOT NULL,
                 market_entry TIMESTAMP,
                 market_cap REAL,
-                favorite BOOLEAN DEFAULT 0,
+                favorite TEXT DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -334,7 +334,7 @@ class CryptoDatabase:
             return False
     
     def add_crypto_info(self, code: str, name: str, market_entry: Optional[datetime] = None, 
-                       market_cap: Optional[float] = None, favorite: bool = False) -> Optional[int]:
+                       market_cap: Optional[float] = None, favorite: Optional[str] = None) -> Optional[int]:
         """
         Add or update cryptocurrency information to crypto_info table.
         Uses UPSERT to update if code already exists.
@@ -344,7 +344,7 @@ class CryptoDatabase:
             name: Cryptocurrency name (e.g., 'Bitcoin')
             market_entry: Date when cryptocurrency entered the market
             market_cap: Market capitalization
-            favorite: Whether this is a favorite cryptocurrency
+            favorite: Favorite classification ('A', 'B', 'C', or None)
         
         Returns:
             ID of the inserted/existing cryptocurrency info
@@ -374,7 +374,7 @@ class CryptoDatabase:
     def update_crypto_info(self, code: str, name: Optional[str] = None, 
                           market_entry: Optional[datetime] = None, 
                           market_cap: Optional[float] = None, 
-                          favorite: Optional[bool] = None) -> bool:
+                          favorite: Optional[str] = None) -> bool:
         """
         Update cryptocurrency information.
         
@@ -383,7 +383,7 @@ class CryptoDatabase:
             name: Cryptocurrency name (optional)
             market_entry: Market entry date (optional)
             market_cap: Market cap (optional)
-            favorite: Favorite flag (optional)
+            favorite: Favorite classification ('A', 'B', 'C', or None) (optional)
         
         Returns:
             True if update was successful
@@ -435,12 +435,13 @@ class CryptoDatabase:
         row = cursor.fetchone()
         return dict(row) if row else None
     
-    def get_all_crypto_info(self, favorites_only: bool = False) -> List[Dict]:
+    def get_all_crypto_info(self, favorites_only: bool = False, favorite_class: Optional[str] = None) -> List[Dict]:
         """
         Get all cryptocurrency information.
         
         Args:
-            favorites_only: If True, return only favorite cryptocurrencies
+            favorites_only: If True, return only favorite cryptocurrencies (any class)
+            favorite_class: If specified, return only cryptocurrencies with this class ('A', 'B', or 'C')
         
         Returns:
             List of cryptocurrency info dictionaries
@@ -448,26 +449,44 @@ class CryptoDatabase:
         cursor = self.conn.cursor()
         query = "SELECT * FROM crypto_info"
         
-        if favorites_only:
-            query += " WHERE favorite = 1"
+        if favorite_class:
+            query += f" WHERE favorite = '{favorite_class}'"
+        elif favorites_only:
+            query += " WHERE favorite IS NOT NULL AND favorite != ''"
         
         query += " ORDER BY code"
         cursor.execute(query)
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
     
-    def set_favorite(self, code: str, favorite: bool) -> bool:
+    def set_favorite_class(self, code: str, favorite_class: Optional[str]) -> bool:
         """
-        Set or unset a cryptocurrency as favorite.
+        Set or unset a cryptocurrency favorite class.
         
         Args:
             code: Cryptocurrency code
-            favorite: True to mark as favorite, False to unmark
+            favorite_class: 'A', 'B', 'C' to set class, None to unmark
         
         Returns:
             True if successful
         """
-        return self.update_crypto_info(code, favorite=favorite)
+        if favorite_class and favorite_class not in ['A', 'B', 'C']:
+            raise ValueError("favorite_class must be 'A', 'B', 'C', or None")
+        return self.update_crypto_info(code, favorite=favorite_class)
+    
+    def set_favorite(self, code: str, is_favorite: bool) -> bool:
+        """
+        Legacy method for backwards compatibility.
+        Set or unset a cryptocurrency as favorite (class A).
+        
+        Args:
+            code: Cryptocurrency code
+            is_favorite: True to mark as favorite (class A), False to unmark
+        
+        Returns:
+            True if successful
+        """
+        return self.set_favorite_class(code, 'A' if is_favorite else None)
     
     def delete_crypto_info(self, code: str) -> bool:
         """

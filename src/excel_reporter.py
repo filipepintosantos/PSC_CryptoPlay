@@ -35,19 +35,35 @@ class ExcelReporter:
     def _setup_column_widths(self, ws):
         """Set up column widths for the summary sheet."""
         ws.column_dimensions['A'].width = 3  # Favorite column
-        ws.column_dimensions['B'].width = 7  # Symbol column
+        ws.column_dimensions['B'].width = 6.57  # Symbol column (46 pixels)
         ws.column_dimensions['C'].width = 9  # Latest Quote column
         ws.column_dimensions['D'].width = 9  # Second Latest Quote column
         ws.column_dimensions['E'].width = 5  # Period column
-        # Statistics columns (F to U = 16 columns) - reduced width
-        for i in range(16):
+        
+        # Statistics columns F to J (5 columns) - width 8.5
+        for i in range(5):
             col_letter = get_column_letter(6 + i)
             ws.column_dimensions[col_letter].width = 8.5
-        # Volatility columns (V to Z = 5 columns)
-        # Column V starts at position 22
+        
+        # Percentage columns K to N (4 columns) - 55 pixels = 7.86 units
+        for i in range(4):
+            col_letter = get_column_letter(11 + i)
+            ws.column_dimensions[col_letter].width = 7.86
+        
+        # Statistics columns O to Q (3 columns) - width 8.5
+        for i in range(3):
+            col_letter = get_column_letter(15 + i)
+            ws.column_dimensions[col_letter].width = 8.5
+        
+        # Percentage columns R to U (4 columns) - 55 pixels = 7.86 units
+        for i in range(4):
+            col_letter = get_column_letter(18 + i)
+            ws.column_dimensions[col_letter].width = 7.86
+        
+        # Volatility columns V to Z (5 columns) - 37 pixels = 5.29 units
         for i in range(5):
             col_letter = get_column_letter(22 + i)
-            ws.column_dimensions[col_letter].width = 7
+            ws.column_dimensions[col_letter].width = 5.29
     
     def _create_title_rows(self, ws):
         """Create title and date rows."""
@@ -83,11 +99,31 @@ class ExcelReporter:
         """Write data for a single cryptocurrency symbol and period combination."""
         period_data = report.get("periods", {}).get(period, {})
         
-        # Favorite marker (in all rows)
-        ws[f'A{row}'] = "X" if symbol in favorites else ""
+        # Favorite marker with class (in all rows)
+        favorite_marker = ""
+        favorite_color = None
+        
+        if isinstance(favorites, dict):
+            # New format: dict with classes as keys
+            if symbol in favorites.get('A', []):
+                favorite_marker = "A"
+                favorite_color = "FFD700"  # Gold for A
+            elif symbol in favorites.get('B', []):
+                favorite_marker = "B"
+                favorite_color = "FFA500"  # Orange for B
+            elif symbol in favorites.get('C', []):
+                favorite_marker = "C"
+                favorite_color = "87CEEB"  # Light blue for C
+        else:
+            # Legacy format: list of symbols (treat as class A)
+            if symbol in favorites:
+                favorite_marker = "X"
+                favorite_color = "FFD700"
+        
+        ws[f'A{row}'] = favorite_marker
         ws[f'A{row}'].font = Font(bold=True, size=12)
-        if symbol in favorites:
-            ws[f'A{row}'].fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")
+        if favorite_color:
+            ws[f'A{row}'].fill = PatternFill(start_color=favorite_color, end_color=favorite_color, fill_type="solid")
         ws[f'A{row}'].border = border
         ws[f'A{row}'].alignment = Alignment(horizontal='center')
         
@@ -409,13 +445,25 @@ class ExcelReporter:
         self.workbook.save(self.filename)
         print(f"Excel report saved to: {self.filename}")
     
-    def _write_volatility_detail_row(self, ws, row: int, is_favorite: bool, symbol: str, 
+    def _write_volatility_detail_row(self, ws, row: int, favorite_class: str, symbol: str, 
                                      period: str, volatility_data: Dict, border) -> int:
         """Write a single volatility detail row with period information."""
-        # Favorite marker
-        ws.cell(row=row, column=1).value = "X" if is_favorite else ""
+        # Favorite marker with class
+        favorite_marker = favorite_class if favorite_class else ""
+        favorite_colors = {
+            'A': "FFD700",  # Gold
+            'B': "FFA500",  # Orange
+            'C': "87CEEB"   # Light blue
+        }
+        
+        ws.cell(row=row, column=1).value = favorite_marker
         ws.cell(row=row, column=1).font = Font(bold=True, size=12)
-        ws.cell(row=row, column=1).fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid") if is_favorite else PatternFill()
+        if favorite_class and favorite_class in favorite_colors:
+            ws.cell(row=row, column=1).fill = PatternFill(
+                start_color=favorite_colors[favorite_class], 
+                end_color=favorite_colors[favorite_class], 
+                fill_type="solid"
+            )
         ws.cell(row=row, column=1).border = border
         ws.cell(row=row, column=1).alignment = Alignment(horizontal='center')
         
@@ -554,8 +602,17 @@ class ExcelReporter:
                     volatility_data = period_data.get('volatility', {})
                     
                     if volatility_data:
-                        is_favorite = symbol in favorites
-                        row = self._write_volatility_detail_row(ws, row, is_favorite, symbol, 
+                        # Determine favorite class
+                        favorite_class = None
+                        if isinstance(favorites, dict):
+                            for cls in ['A', 'B', 'C']:
+                                if symbol in favorites.get(cls, []):
+                                    favorite_class = cls
+                                    break
+                        elif symbol in favorites:
+                            favorite_class = 'A'  # Legacy format
+                        
+                        row = self._write_volatility_detail_row(ws, row, favorite_class, symbol, 
                                                                 period_label, volatility_data, border)
                         row += 1
         
