@@ -11,13 +11,11 @@ from datetime import datetime, timedelta
 class VolatilityAnalyzer:
     """Analyzes price oscillations and volatility events for cryptocurrencies."""
     
+    # Rolling windows for calculating returns (short periods only)
     WINDOWS = {
         "24h": 1,
         "72h": 3,
-        "7d": 7,
-        "1M": 30,
-        "3M": 90,
-        "6M": 180
+        "7d": 7
     }
     
     THRESHOLDS = [5, 10, 15, 20]
@@ -189,36 +187,28 @@ class VolatilityAnalyzer:
     def get_period_stats(self, symbol: str, period_days: int) -> Dict:
         """
         Get volatility statistics for a specific analysis period.
-        Maps report periods (12M, 6M, 3M, 1M) to appropriate rolling windows.
+        Analyzes oscillations within the specified period using short rolling windows.
         
         Args:
             symbol: Cryptocurrency symbol
-            period_days: Analysis period (365, 180, 90, 30)
+            period_days: Analysis period in days (365, 180, 90, 30)
             
         Returns:
             Dictionary with volatility stats for the period
         """
+        # Calculate oscillations for this period using SHORT windows (24h, 72h, 7d)
         oscillations = self.calculate_oscillations(symbol, days=period_days)
         
-        # Select appropriate windows based on period
-        if period_days >= 180:  # 6M or 12M - use longer windows
-            windows_to_use = ["7d", "1M", "3M"]
-        elif period_days >= 90:  # 3M - use medium windows
-            windows_to_use = ["72h", "7d", "1M"]
-        else:  # 1M - use shorter windows
-            windows_to_use = ["24h", "72h", "7d"]
-        
-        # Aggregate selected windows
-        total_positive_5 = sum(oscillations.get(w, {}).get('positive_5', 0) for w in windows_to_use if w in oscillations)
-        total_positive_10 = sum(oscillations.get(w, {}).get('positive_10', 0) for w in windows_to_use if w in oscillations)
-        total_negative_5 = sum(oscillations.get(w, {}).get('negative_5', 0) for w in windows_to_use if w in oscillations)
-        total_negative_10 = sum(oscillations.get(w, {}).get('negative_10', 0) for w in windows_to_use if w in oscillations)
+        # Aggregate all windows (we only have short windows now)
+        total_positive_5 = sum(oscillations.get(w, {}).get('positive_5', 0) for w in self.WINDOWS.keys() if w in oscillations)
+        total_positive_10 = sum(oscillations.get(w, {}).get('positive_10', 0) for w in self.WINDOWS.keys() if w in oscillations)
+        total_negative_5 = sum(oscillations.get(w, {}).get('negative_5', 0) for w in self.WINDOWS.keys() if w in oscillations)
+        total_negative_10 = sum(oscillations.get(w, {}).get('negative_10', 0) for w in self.WINDOWS.keys() if w in oscillations)
         
         return {
             'volatility_positive_5': total_positive_5,
             'volatility_positive_10': total_positive_10,
             'volatility_negative_5': total_negative_5,
             'volatility_negative_10': total_negative_10,
-            'volatility_score': total_positive_5 + total_positive_10 + total_negative_5 + total_negative_10,
-            'windows_used': windows_to_use
+            'volatility_score': total_positive_5 + total_positive_10 + total_negative_5 + total_negative_10
         }

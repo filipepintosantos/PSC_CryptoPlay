@@ -1,5 +1,32 @@
 # Changelog
 
+## [3.2.1] - 2025-12-13
+
+### Fixed
+- **🎯 Volatility Analysis - Correção Conceitual Importante**: 
+  - **ANTES (errado)**: Períodos 1M, 3M, 6M eram usados como JANELAS ROLANTES longas
+  - **AGORA (correto)**: Períodos 1M, 3M, 6M são PERÍODOS DE ANÁLISE (quantos dados históricos usar)
+  - Janelas rolantes são apenas **períodos curtos**: 24h, 72h, 7d
+  
+- **Interpretação correta**:
+  - Análise de **12 meses**: Conta oscilações em 365 dias usando janelas de 24h, 72h, 7d
+  - Análise de **6 meses**: Conta oscilações em 180 dias usando janelas de 24h, 72h, 7d
+  - Análise de **3 meses**: Conta oscilações em 90 dias usando janelas de 24h, 72h, 7d
+  - Análise de **1 mês**: Conta oscilações em 30 dias usando janelas de 24h, 72h, 7d
+
+### Changed
+- `VolatilityAnalyzer.WINDOWS`: Removidas janelas longas (1M, 3M, 6M) - agora apenas 24h, 72h, 7d
+- `VolatilityAnalyzer.get_period_stats()`: Simplificado para usar sempre janelas curtas
+- `ExcelReporter.create_volatility_detail_sheet()`: Agora mostra apenas 3 janelas (24h, 72h, 7d)
+- Folha "Volatility Detail" reduzida mas mais precisa
+
+### Benefits
+- **Comparação correta entre períodos**: 
+  - Pode comparar volatilidade recente (1M) vs. histórica (12M)
+  - Exemplo: BTC teve 50 oscilações de +5% no último mês vs. 200 no último ano
+- **Análise consistente**: Mesmas janelas (24h, 72h, 7d) para todos os períodos
+- **Interpretação clara**: Períodos = horizonte temporal, Janelas = frequência de oscilação
+
 ## [3.2.0] - 2025-12-13
 
 ### Enhanced

@@ -494,8 +494,8 @@ class ExcelReporter:
         for symbol in sorted(volatility_results.keys()):
             windows = volatility_results[symbol]
             
-            # Write data for each window
-            for window_name in ["24h", "72h", "7d", "1M", "3M", "6M"]:
+            # Write data for each window (only short windows: 24h, 72h, 7d)
+            for window_name in ["24h", "72h", "7d"]:
                 if window_name in windows:
                     events = windows[window_name]
                     
