@@ -472,7 +472,19 @@ class CryptoDatabase:
         """
         if favorite_class and favorite_class not in ['A', 'B', 'C']:
             raise ValueError("favorite_class must be 'A', 'B', 'C', or None")
-        return self.update_crypto_info(code, favorite=favorite_class)
+        
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute("""
+                UPDATE crypto_info 
+                SET favorite = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE code = ?
+            """, (favorite_class, code))
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error setting favorite class for {code}: {e}")
+            return False
     
     def set_favorite(self, code: str, is_favorite: bool) -> bool:
         """

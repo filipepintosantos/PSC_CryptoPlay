@@ -124,20 +124,30 @@ python main.py --report-only --favorites
 
 ## Estatísticas do Commit
 
-- **12 ficheiros modificados**
+- **13 ficheiros modificados**
 - **4 novos ficheiros** (favorites_helper.py, add_symbols.py, migrate_to_favorite_classes.py, update_version.py)
 - **1 novo documento** (FAVORITES_CLASSIFICATION.md)
 - **Versão**: 3.5.0
 - **Data**: 2025-12-13
+- **Testes**: 94 testes passando (100% success rate)
+  - 30 testes database (incluindo 3 novos para classificação A/B/C)
+  - 10 testes excel_reporter
+  - 24 testes main
+  - 18 testes project
+  - 9 testes volatility_analysis
+  - 7 testes yfinance_api
+  - 2 testes seed
 
 ## Notas Importantes
 
-✅ Todos os testes passam  
+✅ **Todos os 94 testes passam** (0 falhas)  
 ✅ Sistema testado com 88 símbolos  
 ✅ Migração testada (7 favoritos → classe A)  
 ✅ Excel gerado com sucesso  
 ✅ Documentação completa  
 ✅ Compatibilidade retroativa mantida  
+✅ Testes atualizados para o novo sistema A/B/C  
+✅ Função `set_favorite_class()` corrigida para aceitar NULL  
 
 ---
 

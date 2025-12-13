@@ -217,14 +217,14 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
             code="ETH",
             name="Ethereum",
             market_cap=400000000000.0,
-            favorite=False
+            favorite=None
         )
         
         info = self.db.get_crypto_info("ETH")
         self.assertIsNotNone(info)
         self.assertEqual(info["code"], "ETH")
         self.assertEqual(info["name"], "Ethereum")
-        self.assertFalse(info["favorite"])
+        self.assertIsNone(info["favorite"])
     
     def test_get_crypto_info_not_found(self):
         """Test getting info for non-existent crypto."""
@@ -249,24 +249,25 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
         """Test marking crypto as favorite."""
         self.db.add_crypto_info("ADA", "Cardano", market_cap=15000000000.0)
         
+        # set_favorite(True) converts to class 'A'
         success = self.db.set_favorite("ADA", True)
         self.assertTrue(success)
         
         info = self.db.get_crypto_info("ADA")
-        self.assertTrue(info["favorite"])
+        self.assertEqual(info["favorite"], 'A')
         
-        # Unmark as favorite
+        # Unmark as favorite (converts to None)
         success = self.db.set_favorite("ADA", False)
         self.assertTrue(success)
         
         info = self.db.get_crypto_info("ADA")
-        self.assertFalse(info["favorite"])
+        self.assertIsNone(info["favorite"])
     
     def test_get_favorites(self):
         """Test getting favorite cryptocurrencies."""
-        self.db.add_crypto_info("BTC", "Bitcoin", favorite=True)
-        self.db.add_crypto_info("ETH", "Ethereum", favorite=True)
-        self.db.add_crypto_info("SOL", "Solana", favorite=False)
+        self.db.add_crypto_info("BTC", "Bitcoin", favorite='A')
+        self.db.add_crypto_info("ETH", "Ethereum", favorite='B')
+        self.db.add_crypto_info("SOL", "Solana", favorite=None)
         
         favorites = self.db.get_all_crypto_info(favorites_only=True)
         self.assertEqual(len(favorites), 2)
@@ -335,9 +336,9 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
     
     def test_get_all_crypto_info_favorites_only(self):
         """Test getting only favorite cryptocurrencies."""
-        self.db.add_crypto_info("BTC", "Bitcoin", favorite=True)
-        self.db.add_crypto_info("ETH", "Ethereum", favorite=False)
-        self.db.add_crypto_info("SOL", "Solana", favorite=True)
+        self.db.add_crypto_info("BTC", "Bitcoin", favorite='A')
+        self.db.add_crypto_info("ETH", "Ethereum", favorite=None)
+        self.db.add_crypto_info("SOL", "Solana", favorite='C')
         
         all_info = self.db.get_all_crypto_info(favorites_only=False)
         self.assertEqual(len(all_info), 3)
@@ -430,6 +431,65 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
         self.assertEqual(len(quotes), 1)
         # Quotes are returned as dicts, check price_eur key
         self.assertIn(3100.0, [q['price_eur'] for q in quotes])
+    
+    def test_favorite_classification_system(self):
+        """Test the new A/B/C favorite classification system."""
+        # Add cryptos with different classes
+        self.db.add_crypto_info("BTC", "Bitcoin", favorite='A')
+        self.db.add_crypto_info("ETH", "Ethereum", favorite='B')
+        self.db.add_crypto_info("SOL", "Solana", favorite='C')
+        self.db.add_crypto_info("ADA", "Cardano", favorite=None)
+        
+        # Test get by specific class
+        class_a = self.db.get_all_crypto_info(favorite_class='A')
+        self.assertEqual(len(class_a), 1)
+        self.assertEqual(class_a[0]['code'], 'BTC')
+        
+        class_b = self.db.get_all_crypto_info(favorite_class='B')
+        self.assertEqual(len(class_b), 1)
+        self.assertEqual(class_b[0]['code'], 'ETH')
+        
+        class_c = self.db.get_all_crypto_info(favorite_class='C')
+        self.assertEqual(len(class_c), 1)
+        self.assertEqual(class_c[0]['code'], 'SOL')
+        
+        # Test get all favorites (any class)
+        all_favorites = self.db.get_all_crypto_info(favorites_only=True)
+        self.assertEqual(len(all_favorites), 3)
+        codes = [f['code'] for f in all_favorites]
+        self.assertIn('BTC', codes)
+        self.assertIn('ETH', codes)
+        self.assertIn('SOL', codes)
+        self.assertNotIn('ADA', codes)
+    
+    def test_set_favorite_class(self):
+        """Test setting favorite class directly."""
+        self.db.add_crypto_info("LINK", "Chainlink")
+        
+        # Set to class A
+        success = self.db.set_favorite_class("LINK", 'A')
+        self.assertTrue(success)
+        info = self.db.get_crypto_info("LINK")
+        self.assertEqual(info['favorite'], 'A')
+        
+        # Change to class B
+        success = self.db.set_favorite_class("LINK", 'B')
+        self.assertTrue(success)
+        info = self.db.get_crypto_info("LINK")
+        self.assertEqual(info['favorite'], 'B')
+        
+        # Remove favorite
+        success = self.db.set_favorite_class("LINK", None)
+        self.assertTrue(success)
+        info = self.db.get_crypto_info("LINK")
+        self.assertIsNone(info['favorite'])
+    
+    def test_set_favorite_class_validation(self):
+        """Test that invalid classes are rejected."""
+        self.db.add_crypto_info("XRP", "Ripple")
+        
+        with self.assertRaises(ValueError):
+            self.db.set_favorite_class("XRP", 'D')  # Invalid class
 
 
 if __name__ == "__main__":
