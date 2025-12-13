@@ -448,7 +448,95 @@ class ExcelReporter:
         self.workbook.save(self.filename)
         print(f"Excel report saved to: {self.filename}")
     
-    def generate_report(self, reports: Dict[str, Dict], market_caps: Dict[str, float] = None, favorites: List[str] = None):
+    def create_volatility_detail_sheet(self, volatility_results: Dict[str, Dict]):
+        """
+        Create a detailed volatility analysis sheet with all windows and thresholds.
+        
+        Args:
+            volatility_results: Dictionary with volatility analysis from VolatilityAnalyzer.analyze_all_symbols()
+        """
+        ws = self.workbook.create_sheet(title="Volatility Detail")
+        
+        # Define styles
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF", size=10)
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Title
+        ws['A1'] = "Análise Detalhada de Volatilidade"
+        ws['A1'].font = Font(bold=True, size=14)
+        ws.merge_cells('A1:J1')
+        ws.row_dimensions[1].height = 25
+        
+        # Headers
+        headers = ["Symbol", "Window", "+5%", "+10%", "+15%", "+20%", "-5%", "-10%", "-15%", "-20%"]
+        for i, header in enumerate(headers, start=1):
+            cell = ws.cell(row=3, column=i)
+            cell.value = header
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.border = border
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Column widths
+        ws.column_dimensions['A'].width = 10  # Symbol
+        ws.column_dimensions['B'].width = 8   # Window
+        for col in ['C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']:
+            ws.column_dimensions[col].width = 7
+        
+        # Write data
+        row = 4
+        for symbol in sorted(volatility_results.keys()):
+            windows = volatility_results[symbol]
+            
+            # Write data for each window
+            for window_name in ["24h", "72h", "7d", "1M", "3M", "6M"]:
+                if window_name in windows:
+                    events = windows[window_name]
+                    
+                    # Symbol
+                    ws.cell(row=row, column=1).value = symbol
+                    ws.cell(row=row, column=1).font = Font(bold=True)
+                    ws.cell(row=row, column=1).border = border
+                    ws.cell(row=row, column=1).alignment = Alignment(horizontal='center')
+                    
+                    # Window
+                    ws.cell(row=row, column=2).value = window_name
+                    ws.cell(row=row, column=2).border = border
+                    ws.cell(row=row, column=2).alignment = Alignment(horizontal='center')
+                    
+                    # Positive thresholds
+                    col = 3
+                    for threshold in [5, 10, 15, 20]:
+                        cell = ws.cell(row=row, column=col)
+                        cell.value = events.get(f'positive_{threshold}', 0)
+                        cell.border = border
+                        cell.alignment = Alignment(horizontal='center')
+                        col += 1
+                    
+                    # Negative thresholds
+                    for threshold in [5, 10, 15, 20]:
+                        cell = ws.cell(row=row, column=col)
+                        cell.value = events.get(f'negative_{threshold}', 0)
+                        cell.border = border
+                        cell.alignment = Alignment(horizontal='center')
+                        col += 1
+                    
+                    row += 1
+        
+        # Add auto filter
+        ws.auto_filter.ref = f"A3:J{row-1}"
+        
+        # Freeze panes (freeze header)
+        ws.freeze_panes = ws['A4']
+    
+    def generate_report(self, reports: Dict[str, Dict], market_caps: Dict[str, float] = None, 
+                       favorites: List[str] = None, volatility_results: Dict[str, Dict] = None):
         """
         Generate complete Excel report.
         
@@ -456,9 +544,14 @@ class ExcelReporter:
             reports: Dictionary with analysis reports from StatisticalAnalyzer
             market_caps: Dictionary with market cap values for sorting
             favorites: List of favorite cryptocurrency symbols
+            volatility_results: Dictionary with detailed volatility analysis (optional)
         """
         # Create summary sheet
         self.create_summary_sheet(reports, market_caps, favorites)
+        
+        # Create volatility detail sheet if data available
+        if volatility_results:
+            self.create_volatility_detail_sheet(volatility_results)
         
         # Create detailed sheets for each cryptocurrency
         for symbol, report in sorted(reports.items()):

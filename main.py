@@ -222,9 +222,6 @@ def generate_report(db, symbols: list, report_path: str, db_path: str) -> int:
     volatility_analyzer = VolatilityAnalyzer(db)
     volatility_results = volatility_analyzer.analyze_all_symbols(symbols, days=365)
     
-    # Export volatility to CSV
-    volatility_analyzer.export_to_csv(volatility_results, "reports/volatility_analysis.csv")
-    
     # Add volatility stats per period to reports
     period_days_map = {
         "12_months": 365,
@@ -254,16 +251,16 @@ def generate_report(db, symbols: list, report_path: str, db_path: str) -> int:
     result = db.conn.execute('SELECT code FROM crypto_info WHERE favorite = 1').fetchall()
     favorites = [row[0] for row in result]
     
-    # Generate Excel report
+    # Generate Excel report with volatility detail sheet
     print(f"Generating Excel report: {report_path}")
     reporter = ExcelReporter(report_path)
-    reporter.generate_report(reports, market_caps, favorites)
+    reporter.generate_report(reports, market_caps, favorites, volatility_results)
     
     print("✓ Analysis complete!")
     print(f"  Symbols analyzed: {', '.join(symbols)}")
     print(f"  Database: {db_path}")
     print(f"  Report: {report_path}")
-    print(f"  Volatility CSV: reports/volatility_analysis.csv")
+    print(f"  Volatility details: See 'Volatility Detail' sheet in Excel")
     
     return 0
 

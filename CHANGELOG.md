@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.2.0] - 2025-12-13
+
+### Enhanced
+- **📊 Volatility Detail as Excel Sheet**: Dados detalhados de volatilidade agora numa folha "Volatility Detail" dentro do Excel
+  - Elimina necessidade de ficheiro CSV separado
+  - Tudo num único ficheiro Excel para melhor organização
+  - Folha formatada com headers, borders, freeze panes e auto-filter
+  - Contém todas as 6 janelas (24h, 72h, 7d, 1M, 3M, 6M) e 8 limiares (±5%, ±10%, ±15%, ±20%)
+
+### Changed
+- `ExcelReporter.generate_report()`: Aceita agora parâmetro `volatility_results` (opcional)
+- `ExcelReporter.create_volatility_detail_sheet()`: Novo método para criar folha de volatilidade detalhada
+- `main.py`: Remove exportação CSV, dados incluídos diretamente no Excel
+- Console output atualizado: "Volatility details: See 'Volatility Detail' sheet in Excel"
+
+### Removed
+- Exportação automática para CSV `reports/volatility_analysis.csv`
+- Método `VolatilityAnalyzer.export_to_csv()` ainda disponível mas não usado por padrão
+
+### Benefits
+- **Ficheiro único**: Tudo no Excel (Resumo + Detalhes + Volatilidade)
+- **Melhor organização**: Não precisa gerir múltiplos ficheiros
+- **Fácil navegação**: Troca entre folhas no mesmo Excel
+- **Formatação profissional**: Headers coloridos, borders, filtros
+
 ## [3.1.0] - 2025-12-13
 
 ### Enhanced
