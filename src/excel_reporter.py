@@ -67,7 +67,7 @@ class ExcelReporter:
                   "Last-AVG%", "Last-A-S%", "2nd-AVG%", "2nd-A-S%",
                   "MEDIAN", "MAD", "MED-MAD",
                   "Last-MED%", "Last-M-M%", "2nd-MED%", "2nd-M-M%",
-                  "Vol+5%", "Vol+10%", "Vol-5%", "Vol-10%", "Vol/M"]
+                  "±5%", "±10%", "±15%", "±20%", "Vol/M"]
         
         for i, header in enumerate(headers):
             col_letter = get_column_letter(i + 1)
@@ -221,26 +221,30 @@ class ExcelReporter:
         
         small_font = Font(size=9)
         
-        # Column V: Vol+5% (positive oscillations >= 5%)
-        ws[f'V{row}'].value = volatility_data.get('volatility_positive_5', 0)
+        # Column V: ±5% (sum of positive and negative >= 5%)
+        total_5 = volatility_data.get('volatility_positive_5', 0) + volatility_data.get('volatility_negative_5', 0)
+        ws[f'V{row}'].value = total_5
         ws[f'V{row}'].border = border
         ws[f'V{row}'].alignment = Alignment(horizontal='center')
         ws[f'V{row}'].font = small_font
         
-        # Column W: Vol+10% (positive oscillations >= 10%)
-        ws[f'W{row}'].value = volatility_data.get('volatility_positive_10', 0)
+        # Column W: ±10% (sum of positive and negative >= 10%)
+        total_10 = volatility_data.get('volatility_positive_10', 0) + volatility_data.get('volatility_negative_10', 0)
+        ws[f'W{row}'].value = total_10
         ws[f'W{row}'].border = border
         ws[f'W{row}'].alignment = Alignment(horizontal='center')
         ws[f'W{row}'].font = small_font
         
-        # Column X: Vol-5% (negative oscillations <= -5%)
-        ws[f'X{row}'].value = volatility_data.get('volatility_negative_5', 0)
+        # Column X: ±15% (sum of positive and negative >= 15%)
+        total_15 = volatility_data.get('volatility_positive_15', 0) + volatility_data.get('volatility_negative_15', 0)
+        ws[f'X{row}'].value = total_15
         ws[f'X{row}'].border = border
         ws[f'X{row}'].alignment = Alignment(horizontal='center')
         ws[f'X{row}'].font = small_font
         
-        # Column Y: Vol-10% (negative oscillations <= -10%)
-        ws[f'Y{row}'].value = volatility_data.get('volatility_negative_10', 0)
+        # Column Y: ±20% (sum of positive and negative >= 20%)
+        total_20 = volatility_data.get('volatility_positive_20', 0) + volatility_data.get('volatility_negative_20', 0)
+        ws[f'Y{row}'].value = total_20
         ws[f'Y{row}'].border = border
         ws[f'Y{row}'].alignment = Alignment(horizontal='center')
         ws[f'Y{row}'].font = small_font
