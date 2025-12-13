@@ -78,9 +78,27 @@ class TestVolatilityAnalyzer(unittest.TestCase):
         
         self.assertIn('volatility_positive_5', summary)
         self.assertIn('volatility_positive_10', summary)
+        self.assertIn('volatility_positive_15', summary)
+        self.assertIn('volatility_positive_20', summary)
         self.assertIn('volatility_negative_5', summary)
         self.assertIn('volatility_negative_10', summary)
+        self.assertIn('volatility_negative_15', summary)
+        self.assertIn('volatility_negative_20', summary)
         self.assertIn('volatility_score', summary)
+    
+    def test_weighted_score_calculation(self):
+        """Test that volatility score is weighted correctly (5*1, 10*2, 15*3, 20*4)."""
+        summary = self.analyzer.get_summary_stats("TEST", days=30)
+        
+        # Calculate expected weighted score
+        expected_score = (
+            (summary['volatility_positive_5'] + summary['volatility_negative_5']) * 1 +
+            (summary['volatility_positive_10'] + summary['volatility_negative_10']) * 2 +
+            (summary['volatility_positive_15'] + summary['volatility_negative_15']) * 3 +
+            (summary['volatility_positive_20'] + summary['volatility_negative_20']) * 4
+        )
+        
+        self.assertEqual(summary['volatility_score'], expected_score)
     
     def test_analyze_all_symbols(self):
         """Test batch analysis of multiple symbols."""
@@ -115,11 +133,47 @@ class TestVolatilityAnalyzer(unittest.TestCase):
             self.assertIn('Window', df.columns)
             self.assertIn('+5%', df.columns)
             self.assertIn('-10%', df.columns)
-            
         finally:
             # Cleanup
             if os.path.exists(temp_path):
                 os.remove(temp_path)
+    
+    def test_get_period_stats_all_periods(self):
+        """Test get_period_stats for all period durations"""
+        periods = [30, 90, 180, 365]
+        
+        for days in periods:
+            stats = self.analyzer.get_period_stats("TEST", days)
+            
+            # Verify structure
+            self.assertIn('volatility_positive_5', stats)
+            self.assertIn('volatility_negative_5', stats)
+            self.assertIn('volatility_positive_10', stats)
+            self.assertIn('volatility_negative_10', stats)
+            self.assertIn('volatility_positive_15', stats)
+            self.assertIn('volatility_negative_15', stats)
+            self.assertIn('volatility_positive_20', stats)
+            self.assertIn('volatility_negative_20', stats)
+            self.assertIn('volatility_score', stats)
+            
+            # Verify score calculation (weighted)
+            score_calc = (
+                (stats['volatility_positive_5'] + stats['volatility_negative_5']) * 1 +
+                (stats['volatility_positive_10'] + stats['volatility_negative_10']) * 2 +
+                (stats['volatility_positive_15'] + stats['volatility_negative_15']) * 3 +
+                (stats['volatility_positive_20'] + stats['volatility_negative_20']) * 4
+            )
+            self.assertEqual(stats['volatility_score'], score_calc)
+    
+    def test_empty_oscillations_handling(self):
+        """Test handling of empty oscillations data"""
+        # Symbol with no data
+        stats = self.analyzer.get_period_stats("NONEXISTENT", 30)
+        
+        # Should return zeros
+        self.assertEqual(stats['volatility_positive_5'], 0)
+        self.assertEqual(stats['volatility_negative_5'], 0)
+        self.assertEqual(stats['volatility_score'], 0)
     
     def tearDown(self):
         """Clean up database."""

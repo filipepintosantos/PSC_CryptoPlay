@@ -141,6 +141,26 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         self.assertIn("3_months", results)
         self.assertIn("1_month", results)
     
+    def test_generate_report_empty_data(self):
+        """Test generate_report with empty data returns default structure."""
+        report = StatisticalAnalyzer.generate_report("TEST", [])
+        
+        self.assertEqual(report["symbol"], "TEST")
+        self.assertIn("periods", report)
+        self.assertEqual(len(report["periods"]), 4)  # 12M, 6M, 3M, 1M
+    
+    def test_calculate_deviation(self):
+        """Test deviation calculation helper method."""
+        deviation, deviation_pct = StatisticalAnalyzer._calculate_deviation(110, 100)
+        
+        self.assertEqual(deviation, 10)
+        self.assertEqual(deviation_pct, 10.0)
+        
+        # Test with zero baseline
+        dev, dev_pct = StatisticalAnalyzer._calculate_deviation(100, 0)
+        self.assertIsNone(dev)
+        self.assertIsNone(dev_pct)
+    
     def test_batch_generate_reports(self):
         """Test batch report generation."""
         def mock_get_quotes(symbol):

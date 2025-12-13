@@ -69,6 +69,21 @@ class TestYFinanceAPI(unittest.TestCase):
         quote = self.api.get_latest_quote('INVALID999')
         # Should return None or empty, not crash
         self.assertIsNone(quote)
+    
+
+    def test_get_latest_quotes_empty_list(self):
+        """Test with empty symbol list."""
+        quotes = self.api.get_latest_quotes([])
+        self.assertEqual(quotes, [])
+    
+    def test_fetch_historical_longer_period(self):
+        """Test fetching historical data for longer period."""
+        quotes = self.api.fetch_historical_range(['BTC'], days=30)
+        
+        if quotes:  # May fail if network is down
+            # Should have close to 30 days of data
+            self.assertGreater(len(quotes), 20)
+            self.assertLessEqual(len(quotes), 30)
 
 
 if __name__ == '__main__':

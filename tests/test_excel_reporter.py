@@ -259,6 +259,45 @@ class TestExcelReporterIntegration(unittest.TestCase):
             self.assertTrue(os.path.exists(self.test_file))
         except Exception as e:
             self.fail(f"generate_report with market_caps failed: {e}")
+    
+    def test_generate_report_with_complete_volatility(self):
+        """Test report generation with complete volatility data for all periods."""
+        reports = {
+            "BTC": {
+                "periods": {
+                    "12_months": {
+                        "count": 365,
+                        "mean": 45000.0,
+                        "volatility": {
+                            "volatility_positive_5": 100,
+                            "volatility_negative_5": 80,
+                            "volatility_positive_10": 30,
+                            "volatility_negative_10": 25,
+                            "volatility_positive_15": 10,
+                            "volatility_negative_15": 8,
+                            "volatility_positive_20": 3,
+                            "volatility_negative_20": 2,
+                            "volatility_score": 280
+                        }
+                    },
+                    "6_months": {
+                        "count": 180,
+                        "volatility": {
+                            "volatility_positive_5": 50,
+                            "volatility_negative_5": 40,
+                            "volatility_score": 140
+                        }
+                    }
+                }
+            }
+        }
+        
+        try:
+            self.reporter.generate_report(reports, {"BTC": 1000000}, ["BTC"])
+            self.assertTrue(os.path.exists(self.test_file))
+        except Exception as e:
+            self.fail(f"generate_report with volatility failed: {e}")
+
 
 
 if __name__ == "__main__":
