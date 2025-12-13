@@ -1,5 +1,38 @@
 # Changelog
 
+## [3.1.0] - 2025-12-13
+
+### Enhanced
+- **🎯 Volatility Analysis - Period-Specific Stats**: Agora cada período (12M, 6M, 3M, 1M) tem suas próprias estatísticas de volatilidade
+  - Adicionadas janelas de análise: **1M (30 dias), 3M (90 dias), 6M (180 dias)**
+  - CSV expandido com 6 janelas: 24h, 72h, 7d, 1M, 3M, 6M
+  - Excel agora mostra volatilidade **específica para cada período** em vez de agregado total
+  - Períodos longos (12M, 6M) usam janelas longas (7d, 1M, 3M)
+  - Períodos médios (3M) usam janelas médias (72h, 7d, 1M)
+  - Períodos curtos (1M) usam janelas curtas (24h, 72h, 7d)
+
+- **📊 Excel Report - Volatility per Period**: 
+  - Cada linha de período mostra suas próprias estatísticas Vol+5%, Vol+10%, Vol-5%, Vol-10%, VolScore
+  - Permite comparação direta de volatilidade entre períodos de 12M, 6M, 3M e 1M
+  - Facilita identificação de mudanças de padrão de volatilidade ao longo do tempo
+
+### Changed
+- `VolatilityAnalyzer.WINDOWS`: Expandido de 3 para 6 janelas (adicionadas 1M, 3M, 6M)
+- `VolatilityAnalyzer.get_period_stats()`: Novo método para estatísticas específicas de período
+- `main.py`: Agora calcula volatilidade por período em vez de agregado global
+- `excel_reporter.py._write_volatility_stats()`: Agora escreve volatilidade em cada linha de período
+
+### Technical
+- CSV exportado inclui todas as 6 janelas para análise detalhada
+- Excel mostra resumos apropriados para cada período de análise
+- Seleção inteligente de janelas baseada no período: períodos mais longos usam janelas mais longas
+
+### Documentation
+- A volatilidade por período permite:
+  - Identificar se a moeda está mais volátil recentemente (1M) vs. historicamente (12M)
+  - Comparar padrões de oscilação entre diferentes horizontes temporais
+  - Detectar mudanças de comportamento do mercado
+
 ## [3.0.0] - 2025-12-13
 
 ### Added

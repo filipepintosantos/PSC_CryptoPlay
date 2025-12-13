@@ -260,9 +260,9 @@ class ExcelReporter:
         fill_color = "C6EFCE" if second_dev_mean_std_pct and second_dev_mean_std_pct >= 0 else "FFC7CE"  # Using mean-std as proxy
         ws[f'U{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
     
-    def _write_volatility_stats(self, ws, row: int, volatility_data: Dict, border, is_first_row: bool):
-        """Write volatility statistics (only in first row for each symbol)."""
-        if not is_first_row or not volatility_data:
+    def _write_volatility_stats(self, ws, row: int, volatility_data: Dict, border):
+        """Write volatility statistics for each period row."""
+        if not volatility_data:
             return
         
         small_font = Font(size=9)
@@ -345,12 +345,9 @@ class ExcelReporter:
         favorites = favorites or []
         for symbol in symbols:
             report = reports[symbol]
-            volatility_data = report.get("volatility", {})
             
             # Write 4 rows for this symbol (one per period)
             for i, period in enumerate(self.PERIODS):
-                is_first_row = (i == 0)
-                
                 # Write symbol, period, and quotes
                 self._write_symbol_period_row(ws, row, symbol, period, report, favorites, border)
                 
@@ -358,9 +355,10 @@ class ExcelReporter:
                 period_data = report.get("periods", {}).get(period, {})
                 if period_data:
                     self._write_period_stats(ws, row, period_data, border)
-                
-                # Write volatility stats (only in first row)
-                self._write_volatility_stats(ws, row, volatility_data, border, is_first_row)
+                    
+                    # Write volatility stats for this period
+                    volatility_data = period_data.get('volatility', {})
+                    self._write_volatility_stats(ws, row, volatility_data, border)
                 
                 row += 1
         

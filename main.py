@@ -225,11 +225,21 @@ def generate_report(db, symbols: list, report_path: str, db_path: str) -> int:
     # Export volatility to CSV
     volatility_analyzer.export_to_csv(volatility_results, "reports/volatility_analysis.csv")
     
-    # Add volatility summary to reports
+    # Add volatility stats per period to reports
+    period_days_map = {
+        "12_months": 365,
+        "6_months": 180,
+        "3_months": 90,
+        "1_month": 30
+    }
+    
     for symbol in symbols:
         if symbol in reports and "error" not in reports[symbol]:
-            volatility_summary = volatility_analyzer.get_summary_stats(symbol)
-            reports[symbol]['volatility'] = volatility_summary
+            # Add volatility for each period
+            for period, days in period_days_map.items():
+                if period in reports[symbol].get('periods', {}):
+                    volatility_stats = volatility_analyzer.get_period_stats(symbol, days)
+                    reports[symbol]['periods'][period]['volatility'] = volatility_stats
     
     # Get market caps for sorting
     market_caps = {}
