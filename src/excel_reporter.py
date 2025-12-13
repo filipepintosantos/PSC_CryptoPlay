@@ -43,12 +43,16 @@ class ExcelReporter:
         for i in range(16):
             col_letter = get_column_letter(6 + i)
             ws.column_dimensions[col_letter].width = 8.5
+        # Volatility columns (V to Z = 5 columns)
+        for i in range(5):
+            col_letter = get_column_letter(22 + i)  # 22 = V
+            ws.column_dimensions[col_letter].width = 7
     
     def _create_title_rows(self, ws):
         """Create title and date rows."""
         ws['A1'] = "Análise de Criptomoedas em EUR"
         ws['A1'].font = Font(bold=True, size=14)
-        ws.merge_cells('A1:U1')
+        ws.merge_cells('A1:Z1')
         ws.row_dimensions[1].height = 25
         
         ws['A2'] = f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
@@ -61,7 +65,8 @@ class ExcelReporter:
                   "MIN", "MAX", "AVG", "STD", "AVG-STD",
                   "Last-AVG%", "Last-A-S%", "2nd-AVG%", "2nd-A-S%",
                   "MEDIAN", "MAD", "MED-MAD",
-                  "Last-MED%", "Last-M-M%", "2nd-MED%", "2nd-M-M%"]
+                  "Last-MED%", "Last-M-M%", "2nd-MED%", "2nd-M-M%",
+                  "Vol+5%", "Vol+10%", "Vol-5%", "Vol-10%", "VolScore"]
         
         for i, header in enumerate(headers):
             col_letter = get_column_letter(i + 1)
@@ -255,6 +260,49 @@ class ExcelReporter:
         fill_color = "C6EFCE" if second_dev_mean_std_pct and second_dev_mean_std_pct >= 0 else "FFC7CE"  # Using mean-std as proxy
         ws[f'U{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
     
+    def _write_volatility_stats(self, ws, row: int, volatility_data: Dict, border, is_first_row: bool):
+        """Write volatility statistics (only in first row for each symbol)."""
+        if not is_first_row or not volatility_data:
+            return
+        
+        small_font = Font(size=9)
+        
+        # Column V: Vol+5% (positive oscillations >= 5%)
+        ws[f'V{row}'].value = volatility_data.get('volatility_positive_5', 0)
+        ws[f'V{row}'].border = border
+        ws[f'V{row}'].alignment = Alignment(horizontal='center')
+        ws[f'V{row}'].font = small_font
+        
+        # Column W: Vol+10% (positive oscillations >= 10%)
+        ws[f'W{row}'].value = volatility_data.get('volatility_positive_10', 0)
+        ws[f'W{row}'].border = border
+        ws[f'W{row}'].alignment = Alignment(horizontal='center')
+        ws[f'W{row}'].font = small_font
+        
+        # Column X: Vol-5% (negative oscillations <= -5%)
+        ws[f'X{row}'].value = volatility_data.get('volatility_negative_5', 0)
+        ws[f'X{row}'].border = border
+        ws[f'X{row}'].alignment = Alignment(horizontal='center')
+        ws[f'X{row}'].font = small_font
+        
+        # Column Y: Vol-10% (negative oscillations <= -10%)
+        ws[f'Y{row}'].value = volatility_data.get('volatility_negative_10', 0)
+        ws[f'Y{row}'].border = border
+        ws[f'Y{row}'].alignment = Alignment(horizontal='center')
+        ws[f'Y{row}'].font = small_font
+        
+        # Column Z: VolScore (total volatility score)
+        ws[f'Z{row}'].value = volatility_data.get('volatility_score', 0)
+        ws[f'Z{row}'].border = border
+        ws[f'Z{row}'].alignment = Alignment(horizontal='center')
+        ws[f'Z{row}'].font = Font(bold=True, size=9)
+        # Color code: higher score = more volatile (orange)
+        score = volatility_data.get('volatility_score', 0)
+        if score > 100:
+            ws[f'Z{row}'].fill = PatternFill(start_color="FFA500", end_color="FFA500", fill_type="solid")
+        elif score > 50:
+            ws[f'Z{row}'].fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")
+    
     def create_summary_sheet(self, reports: Dict[str, Dict], market_caps: Dict[str, float] = None, favorites: List[str] = None):
         """
         Create a summary sheet with all cryptocurrencies and periods.
@@ -297,9 +345,11 @@ class ExcelReporter:
         favorites = favorites or []
         for symbol in symbols:
             report = reports[symbol]
+            volatility_data = report.get("volatility", {})
             
             # Write 4 rows for this symbol (one per period)
-            for period in self.PERIODS:
+            for i, period in enumerate(self.PERIODS):
+                is_first_row = (i == 0)
                 
                 # Write symbol, period, and quotes
                 self._write_symbol_period_row(ws, row, symbol, period, report, favorites, border)
@@ -309,10 +359,13 @@ class ExcelReporter:
                 if period_data:
                     self._write_period_stats(ws, row, period_data, border)
                 
+                # Write volatility stats (only in first row)
+                self._write_volatility_stats(ws, row, volatility_data, border, is_first_row)
+                
                 row += 1
         
         # Add auto filter to the table
-        ws.auto_filter.ref = f"A4:U{row - 1}"
+        ws.auto_filter.ref = f"A4:Z{row - 1}"
         
         # Freeze panes (freeze columns A-D and header row)
         ws.freeze_panes = ws['E5']

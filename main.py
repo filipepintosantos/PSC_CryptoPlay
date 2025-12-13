@@ -20,6 +20,7 @@ from api_yfinance import YFinanceCryptoAPI
 from database import CryptoDatabase
 from analysis import StatisticalAnalyzer
 from excel_reporter import ExcelReporter
+from volatility_analysis import VolatilityAnalyzer
 
 # Constants
 DEFAULT_SYMBOLS = "BTC,ETH,ADA,XRP,SOL"
@@ -216,6 +217,20 @@ def generate_report(db, symbols: list, report_path: str, db_path: str) -> int:
         print("No valid data available for report generation")
         return 1
     
+    # Generate volatility analysis
+    print("Analyzing volatility patterns...")
+    volatility_analyzer = VolatilityAnalyzer(db)
+    volatility_results = volatility_analyzer.analyze_all_symbols(symbols, days=365)
+    
+    # Export volatility to CSV
+    volatility_analyzer.export_to_csv(volatility_results, "reports/volatility_analysis.csv")
+    
+    # Add volatility summary to reports
+    for symbol in symbols:
+        if symbol in reports and "error" not in reports[symbol]:
+            volatility_summary = volatility_analyzer.get_summary_stats(symbol)
+            reports[symbol]['volatility'] = volatility_summary
+    
     # Get market caps for sorting
     market_caps = {}
     for symbol in symbols:
@@ -238,6 +253,7 @@ def generate_report(db, symbols: list, report_path: str, db_path: str) -> int:
     print(f"  Symbols analyzed: {', '.join(symbols)}")
     print(f"  Database: {db_path}")
     print(f"  Report: {report_path}")
+    print(f"  Volatility CSV: reports/volatility_analysis.csv")
     
     return 0
 

@@ -1,5 +1,65 @@
 # Changelog
 
+## [3.0.0] - 2025-12-13
+
+### Added
+- **🎯 Volatility Analysis Module**: New comprehensive volatility analysis system
+  - Created `volatility_analysis.py` module with `VolatilityAnalyzer` class
+  - Rolling window analysis for 24h (1 day), 72h (3 days), and 7 days periods
+  - Tracks price oscillations at multiple thresholds: ±5%, ±10%, ±15%, ±20%
+  - Counts positive and negative oscillation events across all windows
+  - Calculates composite volatility score (sum of all oscillation events)
+
+- **📊 Excel Report - 5 New Volatility Columns** (V-Z):
+  - Column V: **Vol+5%** - Count of positive oscillations ≥ +5%
+  - Column W: **Vol+10%** - Count of positive oscillations ≥ +10%
+  - Column X: **Vol-5%** - Count of negative oscillations ≤ -5%
+  - Column Y: **Vol-10%** - Count of negative oscillations ≤ -10%
+  - Column Z: **VolScore** - Total volatility score with conditional formatting:
+    * Orange (FFA500) if score > 100 (very high volatility)
+    * Gold (FFD700) if score > 50 (high volatility)
+  - Volatility data displayed once per symbol (merged across 4 period rows)
+
+- **📄 CSV Export**: Detailed volatility analysis exported to `reports/volatility_analysis.csv`
+  - Columns: Symbol, Window, +5%, +10%, +15%, +20%, -5%, -10%, -15%, -20%
+  - Shows granular data for each rolling window and threshold
+  - Useful for in-depth volatility pattern analysis
+
+- **🧪 Unit Tests**: Created `test_volatility_analysis.py` with 6 tests
+  - Tests oscillation calculation structure
+  - Validates threshold counting
+  - Tests summary statistics aggregation
+  - Tests batch symbol analysis
+  - Tests CSV export functionality
+  - Tests empty/missing symbol handling
+
+### Changed
+- **Excel Report Structure**: Expanded from 21 to 26 columns (A-Z)
+  - Previous columns A-U remain unchanged
+  - New columns V-Z added for volatility metrics
+  - Auto-filter range extended: A4:U{row} → A4:Z{row}
+  - Title merge extended: A1:U1 → A1:Z1
+
+- **main.py Integration**: Enhanced `generate_report()` function
+  - Creates `VolatilityAnalyzer` instance
+  - Analyzes all symbols with `analyze_all_symbols()`
+  - Exports detailed CSV: `reports/volatility_analysis.csv`
+  - Adds volatility summary to reports dictionary
+  - Console output includes volatility CSV path
+
+### Technical
+- **Dependencies**: Uses existing pandas library for rolling window calculations
+- **Performance**: Analyzes 365 days of data by default
+- **Data Flow**: Database → VolatilityAnalyzer → CSV + Excel summary
+- **Testing**: 80 total tests passing (was 74, added 6 new)
+
+### Documentation
+- Volatility metrics help identify:
+  - Price stability/instability patterns
+  - Risk levels for trading strategies
+  - Comparative volatility between cryptocurrencies
+  - Frequency of significant price movements
+
 ## [2.9.2] - 2025-12-12
 
 ### Fixed
