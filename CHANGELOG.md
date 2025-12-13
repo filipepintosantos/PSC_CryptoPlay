@@ -1,5 +1,32 @@
 # Changelog
 
+## [3.3.0] - 2025-12-13
+
+### Enhanced
+- **📊 Volatility Detail Sheet Improvements**: Reorganizada a folha de detalhe de volatilidade
+  - ✨ Adicionada coluna "Fav" para marcar favoritos com "X" e fundo dourado
+  - 📅 Adicionada coluna "Period" mostrando período de análise (12M, 6M, 3M, 1M)
+  - 📋 Dados organizados por símbolo (alfabético) e depois por período
+  - ◀️ Cabeçalhos alinhados à esquerda para melhor legibilidade
+  - 🎨 Score de volatilidade com destaque colorido (laranja >100, dourado >50)
+  - 📊 Estrutura completa: 12 colunas com todos os thresholds
+  - 🔄 Colunas ordenadas por variação absoluta: +5%, -5%, +10%, -10%, +15%, -15%, +20%, -20%
+
+### Changed
+- **Estrutura da folha Volatility Detail**:
+  - Antes: 10 colunas (Symbol, Window, +5%, +10%, +15%, +20%, -5%, -10%, -15%, -20%)
+  - Depois: 12 colunas (Fav, Symbol, Period, +5%, -5%, +10%, -10%, +15%, -15%, +20%, -20%, Score)
+  - Título: "Análise Detalhada de Volatilidade por Período"
+  - Cada símbolo aparece 4 vezes (12M, 6M, 3M, 1M)
+  - Ordenação: Alfabética por símbolo, depois por período descendente
+
+### Technical
+- Refatorado `_write_volatility_row` → `_write_volatility_detail_row`
+- Método `create_volatility_detail_sheet` recebe `reports` e `favorites`
+- Loop reorganizado: símbolo (outer) → período (inner) para agrupamento
+- 81 testes passando (pytest), 80 testes (unittest)
+- **Cobertura: 85%** (687 statements, 105 missing)
+
 ## [3.2.2] - 2025-12-13
 
 ### Fixed

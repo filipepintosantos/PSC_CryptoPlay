@@ -402,44 +402,63 @@ class ExcelReporter:
         self.workbook.save(self.filename)
         print(f"Excel report saved to: {self.filename}")
     
-    def _write_volatility_row(self, ws, row: int, symbol: str, window_name: str, 
-                              events: Dict, border) -> int:
-        """Write a single volatility data row."""
-        # Symbol
-        ws.cell(row=row, column=1).value = symbol
-        ws.cell(row=row, column=1).font = Font(bold=True)
+    def _write_volatility_detail_row(self, ws, row: int, is_favorite: bool, symbol: str, 
+                                     period: str, volatility_data: Dict, border) -> int:
+        """Write a single volatility detail row with period information."""
+        # Favorite marker
+        ws.cell(row=row, column=1).value = "X" if is_favorite else ""
+        ws.cell(row=row, column=1).font = Font(bold=True, size=12)
+        ws.cell(row=row, column=1).fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid") if is_favorite else PatternFill()
         ws.cell(row=row, column=1).border = border
         ws.cell(row=row, column=1).alignment = Alignment(horizontal='center')
         
-        # Window
-        ws.cell(row=row, column=2).value = window_name
+        # Symbol
+        ws.cell(row=row, column=2).value = symbol
+        ws.cell(row=row, column=2).font = Font(bold=True)
         ws.cell(row=row, column=2).border = border
-        ws.cell(row=row, column=2).alignment = Alignment(horizontal='center')
+        ws.cell(row=row, column=2).alignment = Alignment(horizontal='left')
         
-        # Write thresholds (positive then negative)
-        col = 3
+        # Period
+        ws.cell(row=row, column=3).value = period
+        ws.cell(row=row, column=3).border = border
+        ws.cell(row=row, column=3).alignment = Alignment(horizontal='center')
+        ws.cell(row=row, column=3).font = Font(bold=True)
+        
+        # Thresholds ordered by absolute variation: +5%, -5%, +10%, -10%, +15%, -15%, +20%, -20%
+        col = 4
         for threshold in [5, 10, 15, 20]:
-            cell = ws.cell(row=row, column=col)
-            cell.value = events.get(f'positive_{threshold}', 0)
-            cell.border = border
-            cell.alignment = Alignment(horizontal='center')
+            # Positive threshold
+            ws.cell(row=row, column=col).value = volatility_data.get(f'volatility_positive_{threshold}', 0)
+            ws.cell(row=row, column=col).border = border
+            ws.cell(row=row, column=col).alignment = Alignment(horizontal='center')
+            col += 1
+            
+            # Negative threshold
+            ws.cell(row=row, column=col).value = volatility_data.get(f'volatility_negative_{threshold}', 0)
+            ws.cell(row=row, column=col).border = border
+            ws.cell(row=row, column=col).alignment = Alignment(horizontal='center')
             col += 1
         
-        for threshold in [5, 10, 15, 20]:
-            cell = ws.cell(row=row, column=col)
-            cell.value = events.get(f'negative_{threshold}', 0)
-            cell.border = border
-            cell.alignment = Alignment(horizontal='center')
-            col += 1
+        # Volatility score with color coding
+        score = volatility_data.get('volatility_score', 0)
+        ws.cell(row=row, column=col).value = score
+        ws.cell(row=row, column=col).border = border
+        ws.cell(row=row, column=col).alignment = Alignment(horizontal='center')
+        ws.cell(row=row, column=col).font = Font(bold=True)
+        if score > 100:
+            ws.cell(row=row, column=col).fill = PatternFill(start_color="FFA500", end_color="FFA500", fill_type="solid")
+        elif score > 50:
+            ws.cell(row=row, column=col).fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")
         
         return row
     
-    def create_volatility_detail_sheet(self, volatility_results: Dict[str, Dict]):
+    def create_volatility_detail_sheet(self, reports: Dict[str, Dict], favorites: List[str] = None):
         """
-        Create a detailed volatility analysis sheet with all windows and thresholds.
+        Create a detailed volatility analysis sheet organized by period.
         
         Args:
-            volatility_results: Dictionary with volatility analysis from VolatilityAnalyzer.analyze_all_symbols()
+            reports: Dictionary with analysis reports including period-specific volatility
+            favorites: List of favorite cryptocurrency symbols
         """
         ws = self.workbook.create_sheet(title="Volatility Detail")
         
@@ -453,42 +472,59 @@ class ExcelReporter:
             bottom=Side(style='thin')
         )
         
+        if favorites is None:
+            favorites = []
+        
         # Title
-        ws['A1'] = "Análise Detalhada de Volatilidade"
+        ws['A1'] = "Análise Detalhada de Volatilidade por Período"
         ws['A1'].font = Font(bold=True, size=14)
-        ws.merge_cells('A1:J1')
+        ws.merge_cells('A1:L1')
         ws.row_dimensions[1].height = 25
         
-        # Headers
-        headers = ["Symbol", "Window", "+5%", "+10%", "+15%", "+20%", "-5%", "-10%", "-15%", "-20%"]
+        # Headers with left alignment - ordered by absolute variation
+        headers = ["Fav", "Symbol", "Period", "+5%", "-5%", "+10%", "-10%", 
+                  "+15%", "-15%", "+20%", "-20%", "Score"]
         for i, header in enumerate(headers, start=1):
             cell = ws.cell(row=3, column=i)
             cell.value = header
             cell.fill = header_fill
             cell.font = header_font
             cell.border = border
-            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.alignment = Alignment(horizontal='left', vertical='center')
         
         # Column widths
-        ws.column_dimensions['A'].width = 10  # Symbol
-        ws.column_dimensions['B'].width = 8   # Window
-        for col in ['C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']:
+        ws.column_dimensions['A'].width = 4   # Fav
+        ws.column_dimensions['B'].width = 12  # Symbol
+        ws.column_dimensions['C'].width = 8   # Period
+        for col in ['D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']:  # All thresholds
             ws.column_dimensions[col].width = 7
+        ws.column_dimensions['L'].width = 8   # Score
         
-        # Write data
+        # Write data organized by period
+        period_map = {
+            "12M": "12_months",
+            "6M": "6_months",
+            "3M": "3_months",
+            "1M": "1_month"
+        }
+        
         row = 4
-        for symbol in sorted(volatility_results.keys()):
-            windows = volatility_results[symbol]
-            
-            # Write data for each window (only short windows: 24h, 72h, 7d)
-            for window_name in ["24h", "72h", "7d"]:
-                if window_name in windows:
-                    row = self._write_volatility_row(ws, row, symbol, window_name, 
-                                                     windows[window_name], border)
-                    row += 1
+        # Sort by symbol first, then by period
+        for symbol in sorted(reports.keys()):
+            for period_label, period_key in period_map.items():
+                if period_key in reports[symbol].get('periods', {}):
+                    period_data = reports[symbol]['periods'][period_key]
+                    volatility_data = period_data.get('volatility', {})
+                    
+                    if volatility_data:
+                        is_favorite = symbol in favorites
+                        row = self._write_volatility_detail_row(ws, row, is_favorite, symbol, 
+                                                                period_label, volatility_data, border)
+                        row += 1
         
         # Add auto filter
-        ws.auto_filter.ref = f"A3:J{row-1}"
+        if row > 4:
+            ws.auto_filter.ref = f"A3:L{row-1}"
         
         # Freeze panes (freeze header)
         ws.freeze_panes = ws['A4']
@@ -507,9 +543,8 @@ class ExcelReporter:
         # Create summary sheet
         self.create_summary_sheet(reports, market_caps, favorites)
         
-        # Create volatility detail sheet if data available
-        if volatility_results:
-            self.create_volatility_detail_sheet(volatility_results)
+        # Create volatility detail sheet with period-specific data
+        self.create_volatility_detail_sheet(reports, favorites)
         
         # Create detailed sheets for each cryptocurrency
         for symbol, report in sorted(reports.items()):

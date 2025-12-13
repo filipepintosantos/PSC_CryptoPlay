@@ -20,4 +20,4 @@ echo.
 echo ========================================
 echo Update Complete
 echo ========================================
-pause
+REM pause
