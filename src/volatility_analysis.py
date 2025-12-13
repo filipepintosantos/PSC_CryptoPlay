@@ -173,15 +173,32 @@ class VolatilityAnalyzer:
         # Aggregate across all windows
         total_positive_5 = sum(w.get('positive_5', 0) for w in oscillations.values())
         total_positive_10 = sum(w.get('positive_10', 0) for w in oscillations.values())
+        total_positive_15 = sum(w.get('positive_15', 0) for w in oscillations.values())
+        total_positive_20 = sum(w.get('positive_20', 0) for w in oscillations.values())
         total_negative_5 = sum(w.get('negative_5', 0) for w in oscillations.values())
         total_negative_10 = sum(w.get('negative_10', 0) for w in oscillations.values())
+        total_negative_15 = sum(w.get('negative_15', 0) for w in oscillations.values())
+        total_negative_20 = sum(w.get('negative_20', 0) for w in oscillations.values())
+        
+        # Calculate weighted score (5*1, 10*2, 15*3, 20*4)
+        score_5 = (total_positive_5 + total_negative_5) * 1
+        score_10 = (total_positive_10 + total_negative_10) * 2
+        score_15 = (total_positive_15 + total_negative_15) * 3
+        score_20 = (total_positive_20 + total_negative_20) * 4
+        volatility_score = score_5 + score_10 + score_15 + score_20
+        
+
         
         return {
             'volatility_positive_5': total_positive_5,
             'volatility_positive_10': total_positive_10,
+            'volatility_positive_15': total_positive_15,
+            'volatility_positive_20': total_positive_20,
             'volatility_negative_5': total_negative_5,
             'volatility_negative_10': total_negative_10,
-            'volatility_score': total_positive_5 + total_positive_10 + total_negative_5 + total_negative_10
+            'volatility_negative_15': total_negative_15,
+            'volatility_negative_20': total_negative_20,
+            'volatility_score': volatility_score
         }
     
     def get_period_stats(self, symbol: str, period_days: int) -> Dict:
@@ -202,13 +219,28 @@ class VolatilityAnalyzer:
         # Aggregate all windows (we only have short windows now)
         total_positive_5 = sum(oscillations.get(w, {}).get('positive_5', 0) for w in self.WINDOWS.keys() if w in oscillations)
         total_positive_10 = sum(oscillations.get(w, {}).get('positive_10', 0) for w in self.WINDOWS.keys() if w in oscillations)
+        total_positive_15 = sum(oscillations.get(w, {}).get('positive_15', 0) for w in self.WINDOWS.keys() if w in oscillations)
+        total_positive_20 = sum(oscillations.get(w, {}).get('positive_20', 0) for w in self.WINDOWS.keys() if w in oscillations)
         total_negative_5 = sum(oscillations.get(w, {}).get('negative_5', 0) for w in self.WINDOWS.keys() if w in oscillations)
         total_negative_10 = sum(oscillations.get(w, {}).get('negative_10', 0) for w in self.WINDOWS.keys() if w in oscillations)
+        total_negative_15 = sum(oscillations.get(w, {}).get('negative_15', 0) for w in self.WINDOWS.keys() if w in oscillations)
+        total_negative_20 = sum(oscillations.get(w, {}).get('negative_20', 0) for w in self.WINDOWS.keys() if w in oscillations)
+        
+        # Calculate weighted score
+        score_5 = (total_positive_5 + total_negative_5) * 1
+        score_10 = (total_positive_10 + total_negative_10) * 2
+        score_15 = (total_positive_15 + total_negative_15) * 3
+        score_20 = (total_positive_20 + total_negative_20) * 4
+        volatility_score = score_5 + score_10 + score_15 + score_20
         
         return {
             'volatility_positive_5': total_positive_5,
             'volatility_positive_10': total_positive_10,
+            'volatility_positive_15': total_positive_15,
+            'volatility_positive_20': total_positive_20,
             'volatility_negative_5': total_negative_5,
             'volatility_negative_10': total_negative_10,
-            'volatility_score': total_positive_5 + total_positive_10 + total_negative_5 + total_negative_10
+            'volatility_negative_15': total_negative_15,
+            'volatility_negative_20': total_negative_20,
+            'volatility_score': volatility_score
         }
