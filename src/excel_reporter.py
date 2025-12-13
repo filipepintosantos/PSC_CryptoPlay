@@ -67,7 +67,7 @@ class ExcelReporter:
                   "Last-AVG%", "Last-A-S%", "2nd-AVG%", "2nd-A-S%",
                   "MEDIAN", "MAD", "MED-MAD",
                   "Last-MED%", "Last-M-M%", "2nd-MED%", "2nd-M-M%",
-                  "Vol+5%", "Vol+10%", "Vol-5%", "Vol-10%", "VolScore"]
+                  "Vol+5%", "Vol+10%", "Vol-5%", "Vol-10%", "Vol/M"]
         
         for i, header in enumerate(headers):
             col_letter = get_column_letter(i + 1)
@@ -214,7 +214,7 @@ class ExcelReporter:
         fill_color = "C6EFCE" if second_dev_mean_std_pct and second_dev_mean_std_pct >= 0 else "FFC7CE"  # Using mean-std as proxy
         ws[f'U{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
     
-    def _write_volatility_stats(self, ws, row: int, volatility_data: Dict, border):
+    def _write_volatility_stats(self, ws, row: int, volatility_data: Dict, period: str, border):
         """Write volatility statistics for each period row."""
         if not volatility_data:
             return
@@ -245,16 +245,19 @@ class ExcelReporter:
         ws[f'Y{row}'].alignment = Alignment(horizontal='center')
         ws[f'Y{row}'].font = small_font
         
-        # Column Z: VolScore (total volatility score)
-        ws[f'Z{row}'].value = volatility_data.get('volatility_score', 0)
+        # Column Z: Score/Mês (score por mês)
+        period_months = {"12_months": 12, "6_months": 6, "3_months": 3, "1_month": 1}
+        months = period_months.get(period, 1)
+        score = volatility_data.get('volatility_score', 0)
+        score_per_month = score / months if months > 0 else 0
+        ws[f'Z{row}'].value = round(score_per_month, 1)
         ws[f'Z{row}'].border = border
         ws[f'Z{row}'].alignment = Alignment(horizontal='center')
         ws[f'Z{row}'].font = Font(bold=True, size=9)
-        # Color code: higher score = more volatile (orange)
-        score = volatility_data.get('volatility_score', 0)
-        if score > 100:
+        # Color code: higher score/month = more volatile
+        if score_per_month > 25:
             ws[f'Z{row}'].fill = PatternFill(start_color="FFA500", end_color="FFA500", fill_type="solid")
-        elif score > 50:
+        elif score_per_month > 15:
             ws[f'Z{row}'].fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")
     
     def create_summary_sheet(self, reports: Dict[str, Dict], market_caps: Dict[str, float] = None, favorites: List[str] = None):
@@ -312,7 +315,7 @@ class ExcelReporter:
                     
                     # Write volatility stats for this period
                     volatility_data = period_data.get('volatility', {})
-                    self._write_volatility_stats(ws, row, volatility_data, border)
+                    self._write_volatility_stats(ws, row, volatility_data, period, border)
                 
                 row += 1
         
@@ -424,40 +427,62 @@ class ExcelReporter:
         ws.cell(row=row, column=3).alignment = Alignment(horizontal='center')
         ws.cell(row=row, column=3).font = Font(bold=True)
         
-        # Thresholds ordered by absolute variation: +5%, -5%, +10%, -10%, +15%, -15%, +20%, -20%
+        # Thresholds ordered by absolute variation with sum columns
         col = 4
         for threshold in [5, 10, 15, 20]:
             # Positive threshold
-            ws.cell(row=row, column=col).value = volatility_data.get(f'volatility_positive_{threshold}', 0)
+            pos_val = volatility_data.get(f'volatility_positive_{threshold}', 0)
+            ws.cell(row=row, column=col).value = pos_val
             ws.cell(row=row, column=col).border = border
             ws.cell(row=row, column=col).alignment = Alignment(horizontal='center')
             col += 1
             
             # Negative threshold
-            ws.cell(row=row, column=col).value = volatility_data.get(f'volatility_negative_{threshold}', 0)
+            neg_val = volatility_data.get(f'volatility_negative_{threshold}', 0)
+            ws.cell(row=row, column=col).value = neg_val
             ws.cell(row=row, column=col).border = border
             ws.cell(row=row, column=col).alignment = Alignment(horizontal='center')
             col += 1
+            
+            # Sum column (±threshold)
+            sum_val = pos_val + neg_val
+            ws.cell(row=row, column=col).value = sum_val
+            ws.cell(row=row, column=col).border = border
+            ws.cell(row=row, column=col).alignment = Alignment(horizontal='center')
+            ws.cell(row=row, column=col).font = Font(bold=True)
+            ws.cell(row=row, column=col).fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
+            col += 1
         
-        # Volatility score with color coding
-        score = volatility_data.get('volatility_score', 0)
-        ws.cell(row=row, column=col).value = score
+        # Score Weighted (com ponderação: 5*1, 10*2, 15*3, 20*4)
+        score_weighted = volatility_data.get('volatility_score', 0)
+        ws.cell(row=row, column=col).value = score_weighted
         ws.cell(row=row, column=col).border = border
         ws.cell(row=row, column=col).alignment = Alignment(horizontal='center')
         ws.cell(row=row, column=col).font = Font(bold=True)
-        if score > 100:
+        if score_weighted > 100:
             ws.cell(row=row, column=col).fill = PatternFill(start_color="FFA500", end_color="FFA500", fill_type="solid")
-        elif score > 50:
+        elif score_weighted > 50:
             ws.cell(row=row, column=col).fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")
+        col += 1
+        
+        # Score/Mês (score dividido pelo número de meses)
+        period_months = {"12M": 12, "6M": 6, "3M": 3, "1M": 1}
+        months = period_months.get(period, 1)
+        score_per_month = score_weighted / months if months > 0 else 0
+        ws.cell(row=row, column=col).value = round(score_per_month, 1)
+        ws.cell(row=row, column=col).border = border
+        ws.cell(row=row, column=col).alignment = Alignment(horizontal='center')
+        ws.cell(row=row, column=col).font = Font(bold=True)
         
         return row
     
-    def create_volatility_detail_sheet(self, reports: Dict[str, Dict], favorites: List[str] = None):
+    def create_volatility_detail_sheet(self, reports: Dict[str, Dict], market_caps: Dict[str, float] = None, favorites: List[str] = None):
         """
         Create a detailed volatility analysis sheet organized by period.
         
         Args:
             reports: Dictionary with analysis reports including period-specific volatility
+            market_caps: Dictionary with market cap values for sorting (same order as summary)
             favorites: List of favorite cryptocurrency symbols
         """
         ws = self.workbook.create_sheet(title="Volatility Detail")
@@ -478,12 +503,12 @@ class ExcelReporter:
         # Title
         ws['A1'] = "Análise Detalhada de Volatilidade por Período"
         ws['A1'].font = Font(bold=True, size=14)
-        ws.merge_cells('A1:L1')
+        ws.merge_cells('A1:Q1')
         ws.row_dimensions[1].height = 25
         
-        # Headers with left alignment - ordered by absolute variation
-        headers = ["Fav", "Symbol", "Period", "+5%", "-5%", "+10%", "-10%", 
-                  "+15%", "-15%", "+20%", "-20%", "Score"]
+        # Headers with left alignment - ordered by absolute variation with sum columns
+        headers = ["Fav", "Symbol", "Period", "+5%", "-5%", "±5%", "+10%", "-10%", "±10%",
+                  "+15%", "-15%", "±15%", "+20%", "-20%", "±20%", "Score", "Score/M"]
         for i, header in enumerate(headers, start=1):
             cell = ws.cell(row=3, column=i)
             cell.value = header
@@ -494,11 +519,13 @@ class ExcelReporter:
         
         # Column widths
         ws.column_dimensions['A'].width = 4   # Fav
-        ws.column_dimensions['B'].width = 12  # Symbol
-        ws.column_dimensions['C'].width = 8   # Period
-        for col in ['D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']:  # All thresholds
-            ws.column_dimensions[col].width = 7
-        ws.column_dimensions['L'].width = 8   # Score
+        ws.column_dimensions['B'].width = 9   # Symbol (63 pixels)
+        ws.column_dimensions['C'].width = 6   # Period
+        # All % columns with 52 pixels = 7.43 units
+        for col in ['D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O']:
+            ws.column_dimensions[col].width = 7.43
+        ws.column_dimensions['P'].width = 7.57   # Score
+        ws.column_dimensions['Q'].width = 7.57   # Score/M
         
         # Write data organized by period
         period_map = {
@@ -509,8 +536,14 @@ class ExcelReporter:
         }
         
         row = 4
-        # Sort by symbol first, then by period
-        for symbol in sorted(reports.keys()):
+        # Sort by market cap (same as summary sheet)
+        symbols = list(reports.keys())
+        if market_caps:
+            symbols = sorted(symbols, key=lambda s: market_caps.get(s, 0), reverse=True)
+        else:
+            symbols.sort()
+        
+        for symbol in symbols:
             for period_label, period_key in period_map.items():
                 if period_key in reports[symbol].get('periods', {}):
                     period_data = reports[symbol]['periods'][period_key]
@@ -524,7 +557,7 @@ class ExcelReporter:
         
         # Add auto filter
         if row > 4:
-            ws.auto_filter.ref = f"A3:L{row-1}"
+            ws.auto_filter.ref = f"A3:Q{row-1}"
         
         # Freeze panes (freeze header)
         ws.freeze_panes = ws['A4']
@@ -544,7 +577,7 @@ class ExcelReporter:
         self.create_summary_sheet(reports, market_caps, favorites)
         
         # Create volatility detail sheet with period-specific data
-        self.create_volatility_detail_sheet(reports, favorites)
+        self.create_volatility_detail_sheet(reports, market_caps, favorites)
         
         # Create detailed sheets for each cryptocurrency
         for symbol, report in sorted(reports.items()):

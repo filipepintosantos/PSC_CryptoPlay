@@ -1,31 +1,56 @@
 # Changelog
 
+## [3.4.0] - 2025-12-13
+
+### Enhanced
+- **📊 Score Normalizado por Mês**: Adicionada métrica Score/Mês para comparação justa entre períodos
+  - 🔢 Nova coluna "Score/M" divide score ponderado pelo número de meses do período
+  - 📈 Permite comparar volatilidade entre 1M, 3M, 6M e 12M de forma normalizada
+  - 🎨 Formatação colorida: laranja >25, dourado >15
+  - ✅ Exibido tanto na folha Resumo quanto Volatility Detail
+
+### Changed
+- **Folha Resumo - Colunas de Volatilidade Simplificadas**:
+  - Removidas: Vol+15%, Vol+20%, Vol-15%, Vol-20%, VolScore
+  - Mantidas: Vol+5%, Vol+10%, Vol-5%, Vol-10%, Vol/M
+  - Foco nas métricas mais relevantes e score normalizado
+  
+- **Folha Volatility Detail**:
+  - Removida coluna "Simple" (score sem ponderação)
+  - Renomeadas: "Weighted" → "Score", adicionada "Score/M"
+  - 17 colunas total: Fav, Symbol, Period, 12 thresholds, Score, Score/M
+  - Ordenação por market cap (igual à folha Resumo)
+  - Colunas soma adicionadas: ±5%, ±10%, ±15%, ±20% (fundo cinza)
+
+### Fixed
+- **🐛 Bug Crítico - Weighted Scoring**: Corrigido cálculo de score ponderado
+  - `get_period_stats()` não estava agregando thresholds ±15% e ±20%
+  - Score weighted era igual ao simple por falta de ponderação
+  - Agora calcula corretamente: (±5%×1) + (±10%×2) + (±15%×3) + (±20%×4)
+  - Exemplo BTC 12M: Simple=214, Weighted=251, Score/M=20.9
+
+### Technical
+- Novo parâmetro `period` em `_write_volatility_stats()` para cálculo de Score/M
+- Atualizado `get_period_stats()` com todas as agregações de thresholds
+- Teste adicionado: `test_weighted_score_calculation()`
+- 81 testes passando, 85% coverage
+
 ## [3.3.0] - 2025-12-13
 
 ### Enhanced
 - **📊 Volatility Detail Sheet Improvements**: Reorganizada a folha de detalhe de volatilidade
   - ✨ Adicionada coluna "Fav" para marcar favoritos com "X" e fundo dourado
   - 📅 Adicionada coluna "Period" mostrando período de análise (12M, 6M, 3M, 1M)
-  - 📋 Dados organizados por símbolo (alfabético) e depois por período
+  - 📋 Dados organizados por símbolo e ordenados por market cap
   - ◀️ Cabeçalhos alinhados à esquerda para melhor legibilidade
   - 🎨 Score de volatilidade com destaque colorido (laranja >100, dourado >50)
-  - 📊 Estrutura completa: 12 colunas com todos os thresholds
-  - 🔄 Colunas ordenadas por variação absoluta: +5%, -5%, +10%, -10%, +15%, -15%, +20%, -20%
-
-### Changed
-- **Estrutura da folha Volatility Detail**:
-  - Antes: 10 colunas (Symbol, Window, +5%, +10%, +15%, +20%, -5%, -10%, -15%, -20%)
-  - Depois: 12 colunas (Fav, Symbol, Period, +5%, -5%, +10%, -10%, +15%, -15%, +20%, -20%, Score)
-  - Título: "Análise Detalhada de Volatilidade por Período"
-  - Cada símbolo aparece 4 vezes (12M, 6M, 3M, 1M)
-  - Ordenação: Alfabética por símbolo, depois por período descendente
+  - 📊 Estrutura completa: todos os thresholds exibidos
+  - 🔄 Colunas ordenadas por variação absoluta
 
 ### Technical
 - Refatorado `_write_volatility_row` → `_write_volatility_detail_row`
-- Método `create_volatility_detail_sheet` recebe `reports` e `favorites`
-- Loop reorganizado: símbolo (outer) → período (inner) para agrupamento
-- 81 testes passando (pytest), 80 testes (unittest)
-- **Cobertura: 85%** (687 statements, 105 missing)
+- Método `create_volatility_detail_sheet` recebe `market_caps` para ordenação
+- Loop reorganizado com ordenação por market cap descendente
 
 ## [3.2.2] - 2025-12-13
 
