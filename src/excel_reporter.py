@@ -505,7 +505,7 @@ class ExcelReporter:
             ws.cell(row=row, column=col).fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
             col += 1
         
-        # Score Weighted (com ponderação: 5*1, 10*2, 15*3, 20*4)
+        # Score Weighted (com ponderação: 5*1.0, 10*1.5, 15*2.0, 20*2.5)
         score_weighted = volatility_data.get('volatility_score', 0)
         ws.cell(row=row, column=col).value = score_weighted
         ws.cell(row=row, column=col).border = border

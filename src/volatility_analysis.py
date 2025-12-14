@@ -217,11 +217,11 @@ class VolatilityAnalyzer:
         total_negative_15 = window_7d.get('negative_15', 0)
         total_negative_20 = window_7d.get('negative_20', 0)
         
-        # Calculate weighted score (5*1, 10*2, 15*3, 20*4)
-        score_5 = (total_positive_5 + total_negative_5) * 1
-        score_10 = (total_positive_10 + total_negative_10) * 2
-        score_15 = (total_positive_15 + total_negative_15) * 3
-        score_20 = (total_positive_20 + total_negative_20) * 4
+        # Calculate weighted score (5*1.0, 10*1.5, 15*2.0, 20*2.5)
+        score_5 = (total_positive_5 + total_negative_5) * 1.0
+        score_10 = (total_positive_10 + total_negative_10) * 1.5
+        score_15 = (total_positive_15 + total_negative_15) * 2.0
+        score_20 = (total_positive_20 + total_negative_20) * 2.5
         volatility_score = score_5 + score_10 + score_15 + score_20
         
         return {
@@ -263,11 +263,11 @@ class VolatilityAnalyzer:
         total_negative_15 = window_7d.get('negative_15', 0)
         total_negative_20 = window_7d.get('negative_20', 0)
         
-        # Calculate weighted score
-        score_5 = (total_positive_5 + total_negative_5) * 1
-        score_10 = (total_positive_10 + total_negative_10) * 2
-        score_15 = (total_positive_15 + total_negative_15) * 3
-        score_20 = (total_positive_20 + total_negative_20) * 4
+        # Calculate weighted score (5*1.0, 10*1.5, 15*2.0, 20*2.5)
+        score_5 = (total_positive_5 + total_negative_5) * 1.0
+        score_10 = (total_positive_10 + total_negative_10) * 1.5
+        score_15 = (total_positive_15 + total_negative_15) * 2.0
+        score_20 = (total_positive_20 + total_negative_20) * 2.5
         volatility_score = score_5 + score_10 + score_15 + score_20
         
         return {

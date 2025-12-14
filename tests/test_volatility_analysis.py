@@ -87,15 +87,15 @@ class TestVolatilityAnalyzer(unittest.TestCase):
         self.assertIn('volatility_score', summary)
     
     def test_weighted_score_calculation(self):
-        """Test that volatility score is weighted correctly (5*1, 10*2, 15*3, 20*4)."""
+        """Test that volatility score is weighted correctly (5*1.0, 10*1.5, 15*2.0, 20*2.5)."""
         summary = self.analyzer.get_summary_stats("TEST", days=30)
         
         # Calculate expected weighted score
         expected_score = (
-            (summary['volatility_positive_5'] + summary['volatility_negative_5']) * 1 +
-            (summary['volatility_positive_10'] + summary['volatility_negative_10']) * 2 +
-            (summary['volatility_positive_15'] + summary['volatility_negative_15']) * 3 +
-            (summary['volatility_positive_20'] + summary['volatility_negative_20']) * 4
+            (summary['volatility_positive_5'] + summary['volatility_negative_5']) * 1.0 +
+            (summary['volatility_positive_10'] + summary['volatility_negative_10']) * 1.5 +
+            (summary['volatility_positive_15'] + summary['volatility_negative_15']) * 2.0 +
+            (summary['volatility_positive_20'] + summary['volatility_negative_20']) * 2.5
         )
         
         self.assertEqual(summary['volatility_score'], expected_score)
@@ -158,10 +158,10 @@ class TestVolatilityAnalyzer(unittest.TestCase):
             
             # Verify score calculation (weighted)
             score_calc = (
-                (stats['volatility_positive_5'] + stats['volatility_negative_5']) * 1 +
-                (stats['volatility_positive_10'] + stats['volatility_negative_10']) * 2 +
-                (stats['volatility_positive_15'] + stats['volatility_negative_15']) * 3 +
-                (stats['volatility_positive_20'] + stats['volatility_negative_20']) * 4
+                (stats['volatility_positive_5'] + stats['volatility_negative_5']) * 1.0 +
+                (stats['volatility_positive_10'] + stats['volatility_negative_10']) * 1.5 +
+                (stats['volatility_positive_15'] + stats['volatility_negative_15']) * 2.0 +
+                (stats['volatility_positive_20'] + stats['volatility_negative_20']) * 2.5
             )
             self.assertEqual(stats['volatility_score'], score_calc)
     
