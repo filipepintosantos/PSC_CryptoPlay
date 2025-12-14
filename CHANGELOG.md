@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.5.2] - 2025-12-14
+
+### Changed
+- **🔄 Atualização Automática de Favoritos**: Favoritos agora são atualizados automaticamente
+  - `generate_report()`: Chama `validate_and_update_favorites()` antes de gerar relatórios
+  - Garante sincronização com `config.ini` sempre que um relatório é gerado
+  - Remove necessidade de executar manualmente `scripts/mark_favorites.py`
+  - `generate_report.cmd`: Atualizado para incluir atualização de favoritos
+
+- **⚖️ Ponderação Suavizada do Score de Volatilidade**: Nova escala reduz impacto excessivo
+  - Anterior: 5%×1, 10%×2, 15%×3, 20%×4
+  - Atual: 5%×1.0, 10%×1.5, 15%×2.0, 20%×2.5
+  - Mantém 5% como base (peso 1.0) com incrementos de 0.5
+  - Scores mais proporcionais e menos agressivos
+  - Comentários e testes atualizados com nova fórmula
+
 ## [3.5.1] - 2025-12-14
 
 ### Fixed

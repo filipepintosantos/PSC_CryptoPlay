@@ -8,7 +8,10 @@ echo ========================================
 echo Generating Cryptocurrency Report
 echo ========================================
 echo.
-echo Generating report from existing data...
+echo [1/2] Updating favorites from config...
+venv\Scripts\python.exe scripts\mark_favorites.py
+echo.
+echo [2/2] Generating report from existing data...
 echo.
 
 venv\Scripts\python.exe main.py --all-from-db --days 0
