@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.5.1] - 2025-12-14
+
+### Fixed
+- **🔧 Correção de Contagem Duplicada de Eventos de Volatilidade**:
+  - `_analyze_window()`: Agora processa thresholds do maior para o menor (20% → 15% → 10% → 5%)
+  - Quando detecta evento de threshold maior (ex: 15%), marca o período como "usado"
+  - Eventos menores (10%, 5%) não são contados se já houver um maior no mesmo período
+  - Previne sobreposição marcando índices vizinhos (±window_days) como usados
+  - Exemplo: variação de 15% em 72h conta apenas 1x (não conta como 10% ou 5%)
+  
+- **🔧 Eliminação de Sobreposição entre Janelas**:
+  - `get_summary_stats()` e `get_period_stats()` agora usam apenas janela de 7d
+  - Anteriormente somava 24h + 72h + 7d (contagem triplicada)
+  - Janela de 7d é a mais abrangente e já captura movimentos significativos
+  - Reduz drasticamente os valores de volatilidade para refletir eventos únicos reais
+
 ## [3.5.0] - 2025-12-13
 
 ### Added

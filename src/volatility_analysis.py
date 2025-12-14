@@ -63,6 +63,7 @@ class VolatilityAnalyzer:
     def _analyze_window(self, df: pd.DataFrame, window_days: int) -> Dict:
         """
         Analyze oscillations for a specific rolling window.
+        Detects unique events and counts only the highest threshold reached.
         
         Args:
             df: DataFrame with timestamp and price_eur columns
@@ -75,15 +76,40 @@ class VolatilityAnalyzer:
         df = df.copy()
         df['return_pct'] = df['price_eur'].pct_change(periods=window_days) * 100
         
-        # Count events for each threshold
-        events = {}
+        # Initialize event counters
+        events = {f'positive_{t}': 0 for t in self.THRESHOLDS}
+        events.update({f'negative_{t}': 0 for t in self.THRESHOLDS})
         
-        for threshold in self.THRESHOLDS:
-            # Positive oscillations
-            events[f'positive_{threshold}'] = (df['return_pct'] >= threshold).sum()
-            
-            # Negative oscillations
-            events[f'negative_{threshold}'] = (df['return_pct'] <= -threshold).sum()
+        # Track already counted periods to avoid duplicates
+        used_indices = set()
+        
+        # Sort thresholds from highest to lowest to count bigger events first
+        sorted_thresholds = sorted(self.THRESHOLDS, reverse=True)
+        
+        # Count positive events (from highest to lowest threshold)
+        for threshold in sorted_thresholds:
+            positive_mask = df['return_pct'] >= threshold
+            for idx in df[positive_mask].index:
+                # Only count if this index hasn't been used by a higher threshold
+                if idx not in used_indices:
+                    events[f'positive_{threshold}'] += 1
+                    # Mark this index and nearby indices as used to avoid overlap
+                    for i in range(max(0, idx - window_days), min(len(df), idx + window_days + 1)):
+                        used_indices.add(i)
+        
+        # Reset used indices for negative events
+        used_indices = set()
+        
+        # Count negative events (from highest to lowest threshold in absolute value)
+        for threshold in sorted_thresholds:
+            negative_mask = df['return_pct'] <= -threshold
+            for idx in df[negative_mask].index:
+                # Only count if this index hasn't been used by a higher threshold
+                if idx not in used_indices:
+                    events[f'negative_{threshold}'] += 1
+                    # Mark this index and nearby indices as used to avoid overlap
+                    for i in range(max(0, idx - window_days), min(len(df), idx + window_days + 1)):
+                        used_indices.add(i)
         
         return events
     
@@ -160,6 +186,7 @@ class VolatilityAnalyzer:
     def get_summary_stats(self, symbol: str, days: int = 365) -> Dict:
         """
         Get summary statistics for a symbol to add to Excel report.
+        Uses only the 7d window to avoid overlapping between different window sizes.
         
         Args:
             symbol: Cryptocurrency symbol
@@ -170,15 +197,18 @@ class VolatilityAnalyzer:
         """
         oscillations = self.calculate_oscillations(symbol, days)
         
-        # Aggregate across all windows
-        total_positive_5 = sum(w.get('positive_5', 0) for w in oscillations.values())
-        total_positive_10 = sum(w.get('positive_10', 0) for w in oscillations.values())
-        total_positive_15 = sum(w.get('positive_15', 0) for w in oscillations.values())
-        total_positive_20 = sum(w.get('positive_20', 0) for w in oscillations.values())
-        total_negative_5 = sum(w.get('negative_5', 0) for w in oscillations.values())
-        total_negative_10 = sum(w.get('negative_10', 0) for w in oscillations.values())
-        total_negative_15 = sum(w.get('negative_15', 0) for w in oscillations.values())
-        total_negative_20 = sum(w.get('negative_20', 0) for w in oscillations.values())
+        # Use only 7d window to avoid overlap with shorter windows
+        # This gives the most comprehensive view without double counting
+        window_7d = oscillations.get('7d', {})
+        
+        total_positive_5 = window_7d.get('positive_5', 0)
+        total_positive_10 = window_7d.get('positive_10', 0)
+        total_positive_15 = window_7d.get('positive_15', 0)
+        total_positive_20 = window_7d.get('positive_20', 0)
+        total_negative_5 = window_7d.get('negative_5', 0)
+        total_negative_10 = window_7d.get('negative_10', 0)
+        total_negative_15 = window_7d.get('negative_15', 0)
+        total_negative_20 = window_7d.get('negative_20', 0)
         
         # Calculate weighted score (5*1, 10*2, 15*3, 20*4)
         score_5 = (total_positive_5 + total_negative_5) * 1
@@ -186,8 +216,6 @@ class VolatilityAnalyzer:
         score_15 = (total_positive_15 + total_negative_15) * 3
         score_20 = (total_positive_20 + total_negative_20) * 4
         volatility_score = score_5 + score_10 + score_15 + score_20
-        
-
         
         return {
             'volatility_positive_5': total_positive_5,
@@ -204,7 +232,7 @@ class VolatilityAnalyzer:
     def get_period_stats(self, symbol: str, period_days: int) -> Dict:
         """
         Get volatility statistics for a specific analysis period.
-        Analyzes oscillations within the specified period using short rolling windows.
+        Uses only the 7d window to avoid overlapping between different window sizes.
         
         Args:
             symbol: Cryptocurrency symbol
@@ -216,15 +244,17 @@ class VolatilityAnalyzer:
         # Calculate oscillations for this period using SHORT windows (24h, 72h, 7d)
         oscillations = self.calculate_oscillations(symbol, days=period_days)
         
-        # Aggregate all windows (we only have short windows now)
-        total_positive_5 = sum(oscillations.get(w, {}).get('positive_5', 0) for w in self.WINDOWS.keys() if w in oscillations)
-        total_positive_10 = sum(oscillations.get(w, {}).get('positive_10', 0) for w in self.WINDOWS.keys() if w in oscillations)
-        total_positive_15 = sum(oscillations.get(w, {}).get('positive_15', 0) for w in self.WINDOWS.keys() if w in oscillations)
-        total_positive_20 = sum(oscillations.get(w, {}).get('positive_20', 0) for w in self.WINDOWS.keys() if w in oscillations)
-        total_negative_5 = sum(oscillations.get(w, {}).get('negative_5', 0) for w in self.WINDOWS.keys() if w in oscillations)
-        total_negative_10 = sum(oscillations.get(w, {}).get('negative_10', 0) for w in self.WINDOWS.keys() if w in oscillations)
-        total_negative_15 = sum(oscillations.get(w, {}).get('negative_15', 0) for w in self.WINDOWS.keys() if w in oscillations)
-        total_negative_20 = sum(oscillations.get(w, {}).get('negative_20', 0) for w in self.WINDOWS.keys() if w in oscillations)
+        # Use only 7d window to avoid overlap with shorter windows
+        window_7d = oscillations.get('7d', {})
+        
+        total_positive_5 = window_7d.get('positive_5', 0)
+        total_positive_10 = window_7d.get('positive_10', 0)
+        total_positive_15 = window_7d.get('positive_15', 0)
+        total_positive_20 = window_7d.get('positive_20', 0)
+        total_negative_5 = window_7d.get('negative_5', 0)
+        total_negative_10 = window_7d.get('negative_10', 0)
+        total_negative_15 = window_7d.get('negative_15', 0)
+        total_negative_20 = window_7d.get('negative_20', 0)
         
         # Calculate weighted score
         score_5 = (total_positive_5 + total_negative_5) * 1
