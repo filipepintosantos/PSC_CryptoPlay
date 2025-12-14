@@ -80,38 +80,45 @@ class VolatilityAnalyzer:
         events = {f'positive_{t}': 0 for t in self.THRESHOLDS}
         events.update({f'negative_{t}': 0 for t in self.THRESHOLDS})
         
-        # Track already counted periods to avoid duplicates
-        used_indices = set()
-        
         # Sort thresholds from highest to lowest to count bigger events first
         sorted_thresholds = sorted(self.THRESHOLDS, reverse=True)
         
-        # Count positive events (from highest to lowest threshold)
-        for threshold in sorted_thresholds:
-            positive_mask = df['return_pct'] >= threshold
-            for idx in df[positive_mask].index:
-                # Only count if this index hasn't been used by a higher threshold
-                if idx not in used_indices:
-                    events[f'positive_{threshold}'] += 1
-                    # Mark this index and nearby indices as used to avoid overlap
-                    for i in range(max(0, idx - window_days), min(len(df), idx + window_days + 1)):
-                        used_indices.add(i)
-        
-        # Reset used indices for negative events
-        used_indices = set()
-        
-        # Count negative events (from highest to lowest threshold in absolute value)
-        for threshold in sorted_thresholds:
-            negative_mask = df['return_pct'] <= -threshold
-            for idx in df[negative_mask].index:
-                # Only count if this index hasn't been used by a higher threshold
-                if idx not in used_indices:
-                    events[f'negative_{threshold}'] += 1
-                    # Mark this index and nearby indices as used to avoid overlap
-                    for i in range(max(0, idx - window_days), min(len(df), idx + window_days + 1)):
-                        used_indices.add(i)
+        # Count positive and negative events separately
+        self._count_threshold_events(df, sorted_thresholds, window_days, events, 'positive')
+        self._count_threshold_events(df, sorted_thresholds, window_days, events, 'negative')
         
         return events
+    
+    def _count_threshold_events(self, df: pd.DataFrame, sorted_thresholds: list, 
+                                window_days: int, events: dict, direction: str) -> None:
+        """
+        Count events for a specific direction (positive or negative).
+        
+        Args:
+            df: DataFrame with return_pct column
+            sorted_thresholds: Thresholds sorted from highest to lowest
+            window_days: Window size in days
+            events: Dictionary to update with event counts
+            direction: 'positive' or 'negative'
+        """
+        used_indices = set()
+        
+        for threshold in sorted_thresholds:
+            # Determine mask based on direction
+            if direction == 'positive':
+                mask = df['return_pct'] >= threshold
+            else:  # negative
+                mask = df['return_pct'] <= -threshold
+            
+            for idx in df[mask].index:
+                # Only count if this index hasn't been used by a higher threshold
+                if idx not in used_indices:
+                    events[f'{direction}_{threshold}'] += 1
+                    # Mark this index and nearby indices as used to avoid overlap
+                    start_idx = max(0, idx - window_days)
+                    end_idx = min(len(df), idx + window_days + 1)
+                    for i in range(start_idx, end_idx):
+                        used_indices.add(i)
     
     def _create_empty_result(self) -> Dict:
         """Create empty result structure for symbols with insufficient data."""
