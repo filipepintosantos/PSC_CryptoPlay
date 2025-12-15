@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.5.3] - 2025-12-15
+
+### Fixed
+- **🎨 Correção da Lógica de Cores nas Colunas de Diferenças**: Cores agora seguem convenção financeira padrão
+  - Verde (C6EFCE): Valores positivos (≥ 0) - preço acima da média/mediana
+  - Vermelho (FFC7CE): Valores negativos (< 0) - preço abaixo da média/mediana
+  - Aplica-se a todas as 8 colunas de diferenças (K, L, M, N, R, S, T, U)
+  - `_write_single_deviation_cell()`: Lógica de cores corrigida
+  - Removida linha duplicada que reaplicava cor desnecessariamente na célula U
+
+- **🔧 Cálculo Correto de Desvios da Mediana**: Adicionados cálculos específicos para mediana/MAD
+  - `_analyze_period_data()`: Novos cálculos de desvios da mediana e MAD
+  - Variáveis adicionadas: `latest_deviation_from_median_pct`, `latest_deviation_from_median_minus_mad_pct`
+  - Variáveis adicionadas: `second_deviation_from_median_pct`, `second_deviation_from_median_minus_mad_pct`
+  - Colunas R, S, T, U agora usam valores corretos da mediana (anteriormente usavam valores da média)
+  - `_write_deviation_formulas()`: Corrigido para usar variáveis específicas da mediana
+
+- **🔧 Correção do Bug no update_quotes.cmd**: Script agora executa completamente
+  - `generate_report()`: Adicionado parâmetro `config` na assinatura da função
+  - `validate_and_update_favorites()`: Agora recebe o parâmetro `config` corretamente
+  - Script update_quotes.cmd agora gera o relatório Excel após atualizar cotações
+
 ## [3.5.2] - 2025-12-14
 
 ### Changed

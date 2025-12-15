@@ -1,6 +1,6 @@
 """
 Seed crypto_info table with large, established cryptocurrencies using yfinance.
-Criteria: Market cap > $1B USD and launch date > 3 months ago.
+Criteria: Market cap > $100M USD and launch date > 3 months ago.
 Uses CoinGecko API (free) to get comprehensive list of all cryptos.
 """
 

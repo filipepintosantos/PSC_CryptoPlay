@@ -227,11 +227,11 @@ def _add_volatility_to_reports(reports: dict, symbols: list, volatility_analyzer
                     reports[symbol]['periods'][period]['volatility'] = volatility_stats
 
 
-def generate_report(db, symbols: list, report_path: str, db_path: str) -> int:
+def generate_report(db, symbols: list, report_path: str, db_path: str, config: configparser.ConfigParser) -> int:
     """Generate statistical analysis and Excel report."""
     # Update favorites from config.ini before generating report
     print("Updating favorites from config...")
-    validate_and_update_favorites(db)
+    validate_and_update_favorites(db, config)
     print()
     
     print("Generating statistical analysis...")
@@ -475,7 +475,7 @@ def main():
             return 0
         
         # Generate report
-        result = generate_report(db, symbols, report_path, db_path)
+        result = generate_report(db, symbols, report_path, db_path, config)
         db.close()
         return result
     

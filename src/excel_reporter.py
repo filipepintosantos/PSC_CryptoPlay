@@ -236,19 +236,22 @@ class ExcelReporter:
         second_dev_mean_pct = period_data.get("second_deviation_from_mean_pct")
         second_dev_mean_std_pct = period_data.get("second_deviation_from_mean_minus_std_pct")
         
+        dev_median_pct = period_data.get("latest_deviation_from_median_pct")
+        dev_median_mad_pct = period_data.get("latest_deviation_from_median_minus_mad_pct")
+        second_dev_median_pct = period_data.get("second_deviation_from_median_pct")
+        second_dev_median_mad_pct = period_data.get("second_deviation_from_median_minus_mad_pct")
+        
         # Mean-based deviations
         self._write_single_deviation_cell(ws, row, 'K', f"=(C{row}-H{row})/H{row}", dev_mean_pct, border)
         self._write_single_deviation_cell(ws, row, 'L', f"=(C{row}-J{row})/J{row}", dev_mean_std_pct, border)
         self._write_single_deviation_cell(ws, row, 'M', f"=(D{row}-H{row})/H{row}", second_dev_mean_pct, border)
         self._write_single_deviation_cell(ws, row, 'N', f"=(D{row}-J{row})/J{row}", second_dev_mean_std_pct, border)
         
-        # Median-based deviations (using mean as proxy for color)
-        self._write_single_deviation_cell(ws, row, 'R', f"=(C{row}-O{row})/O{row}", dev_mean_pct, border)
-        self._write_single_deviation_cell(ws, row, 'S', f"=(C{row}-Q{row})/Q{row}", dev_mean_std_pct, border)
-        self._write_single_deviation_cell(ws, row, 'T', f"=(D{row}-O{row})/O{row}", second_dev_mean_pct, border)
-        self._write_single_deviation_cell(ws, row, 'U', f"=(D{row}-Q{row})/Q{row}", second_dev_mean_std_pct, border)
-        fill_color = "C6EFCE" if second_dev_mean_std_pct and second_dev_mean_std_pct >= 0 else "FFC7CE"  # Using mean-std as proxy
-        ws[f'U{row}'].fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+        # Median-based deviations
+        self._write_single_deviation_cell(ws, row, 'R', f"=(C{row}-O{row})/O{row}", dev_median_pct, border)
+        self._write_single_deviation_cell(ws, row, 'S', f"=(C{row}-Q{row})/Q{row}", dev_median_mad_pct, border)
+        self._write_single_deviation_cell(ws, row, 'T', f"=(D{row}-O{row})/O{row}", second_dev_median_pct, border)
+        self._write_single_deviation_cell(ws, row, 'U', f"=(D{row}-Q{row})/Q{row}", second_dev_median_mad_pct, border)
     
     def _write_volatility_stats(self, ws, row: int, volatility_data: Dict, period: str, border):
         """Write volatility statistics for each period row."""

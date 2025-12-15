@@ -85,6 +85,14 @@ class StatisticalAnalyzer:
             "second_deviation_from_mean_pct": None,
             "second_deviation_from_mean_minus_std": None,
             "second_deviation_from_mean_minus_std_pct": None,
+            "latest_deviation_from_median": None,
+            "latest_deviation_from_median_pct": None,
+            "latest_deviation_from_median_minus_mad": None,
+            "latest_deviation_from_median_minus_mad_pct": None,
+            "second_deviation_from_median": None,
+            "second_deviation_from_median_pct": None,
+            "second_deviation_from_median_minus_mad": None,
+            "second_deviation_from_median_minus_mad_pct": None,
         }
     
     @staticmethod
@@ -127,6 +135,25 @@ class StatisticalAnalyzer:
                 second_latest_price, stats['mean_minus_std']
             )
         
+        # Calculate deviations from median for latest price
+        latest_dev_median, latest_dev_median_pct = StatisticalAnalyzer._calculate_deviation(
+            latest_price, stats['median']
+        )
+        latest_dev_median_mad, latest_dev_median_mad_pct = StatisticalAnalyzer._calculate_deviation(
+            latest_price, stats['median_minus_mad']
+        )
+        
+        # Calculate deviations from median for second latest price
+        second_dev_median, second_dev_median_pct = (None, None)
+        second_dev_median_mad, second_dev_median_mad_pct = (None, None)
+        if second_latest_price:
+            second_dev_median, second_dev_median_pct = StatisticalAnalyzer._calculate_deviation(
+                second_latest_price, stats['median']
+            )
+            second_dev_median_mad, second_dev_median_mad_pct = StatisticalAnalyzer._calculate_deviation(
+                second_latest_price, stats['median_minus_mad']
+            )
+        
         return {
             "stats": stats,
             "latest_quote": float(latest_price),
@@ -141,6 +168,14 @@ class StatisticalAnalyzer:
             "second_deviation_from_mean_pct": second_dev_mean_pct,
             "second_deviation_from_mean_minus_std": second_dev_mean_std,
             "second_deviation_from_mean_minus_std_pct": second_dev_mean_std_pct,
+            "latest_deviation_from_median": latest_dev_median,
+            "latest_deviation_from_median_pct": latest_dev_median_pct,
+            "latest_deviation_from_median_minus_mad": latest_dev_median_mad,
+            "latest_deviation_from_median_minus_mad_pct": latest_dev_median_mad_pct,
+            "second_deviation_from_median": second_dev_median,
+            "second_deviation_from_median_pct": second_dev_median_pct,
+            "second_deviation_from_median_minus_mad": second_dev_median_mad,
+            "second_deviation_from_median_minus_mad_pct": second_dev_median_mad_pct,
         }
     
     @staticmethod
