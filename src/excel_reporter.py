@@ -612,22 +612,29 @@ class ExcelReporter:
             "1M": "1_month"
         }
         for symbol in symbols:
-            for period_label, period_key in period_map.items():
-                if period_key in reports[symbol].get('periods', {}):
-                    period_data = reports[symbol]['periods'][period_key]
-                    volatility_data = period_data.get('volatility', {})
-                    if volatility_data:
-                        favorite_class = None
-                        if isinstance(favorites, dict):
-                            for cls in ['A', 'B', 'C']:
-                                if symbol in favorites.get(cls, []):
-                                    favorite_class = cls
-                                    break
-                        elif symbol in favorites:
-                            favorite_class = 'A'  # Legacy format
-                        row = self._write_volatility_detail_row(ws, row, favorite_class, symbol, 
-                                                                period_label, volatility_data, border)
-                        row += 1
+            row = self._write_symbol_volatility_rows(ws, row, symbol, reports, favorites, border, period_map)
+        return row
+
+    def _get_favorite_class(self, symbol, favorites):
+        if isinstance(favorites, dict):
+            for cls in ['A', 'B', 'C']:
+                if symbol in favorites.get(cls, []):
+                    return cls
+        elif symbol in favorites:
+            return 'A'  # Legacy format
+        return None
+
+    def _write_symbol_volatility_rows(self, ws, row, symbol, reports, favorites, border, period_map):
+        periods = reports[symbol].get('periods', {})
+        for period_label, period_key in period_map.items():
+            if period_key in periods:
+                period_data = periods[period_key]
+                volatility_data = period_data.get('volatility', {})
+                if volatility_data:
+                    favorite_class = self._get_favorite_class(symbol, favorites)
+                    row = self._write_volatility_detail_row(ws, row, favorite_class, symbol,
+                                                            period_label, volatility_data, border)
+                    row += 1
         return row
     
     def generate_report(self, reports: Dict[str, Dict], market_caps: Dict[str, float] = None, 
