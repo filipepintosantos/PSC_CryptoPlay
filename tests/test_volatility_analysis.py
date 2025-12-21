@@ -41,7 +41,7 @@ class TestVolatilityAnalyzer(unittest.TestCase):
             timestamp = datetime.now() - timedelta(days=30-i)
             quote_data = {
                 'timestamp': timestamp,
-                'price_eur': price
+                'close_eur': price
             }
             self.db.insert_or_update_quote("TEST", quote_data)
     

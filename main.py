@@ -93,7 +93,8 @@ def import_csv_data(csv_path: str, symbol: str, db: CryptoDatabase,
                 quote = {
                     'symbol': symbol,
                     'name': symbol,
-                    'price_eur': price_val,
+                    'close_eur': price_val,
+                    'price_eur': price_val,  # Backward compatibility
                     'timestamp': date_obj
                 }
                 

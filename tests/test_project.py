@@ -54,7 +54,7 @@ class TestDatabase(unittest.TestCase):
         """Test inserting a price quote."""
         quote_data = {
             "name": "Bitcoin",
-            "price_eur": 45000.50,
+            "close_eur": 45000.50,
             "market_cap_eur": 900000000,
             "volume_24h_eur": 25000000,
             "percent_change_24h": 2.5,
@@ -104,12 +104,12 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         quotes = [
             {
                 "symbol": "BTC",
-                "price_eur": 45000,
+                "close_eur": 45000,
                 "timestamp": datetime.now()
             },
             {
                 "symbol": "BTC",
-                "price_eur": 45500,
+                "close_eur": 45500,
                 "timestamp": datetime.now() - timedelta(days=1)
             },
         ]
@@ -117,7 +117,7 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         df = StatisticalAnalyzer.prepare_dataframe_from_quotes(quotes)
         
         self.assertEqual(len(df), 2)
-        self.assertIn("price_eur", df.columns)
+        self.assertIn("close_eur", df.columns)
         self.assertIn("timestamp", df.columns)
     
     def test_analyze_rolling_periods(self):
@@ -129,7 +129,7 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         for i in range(100):
             quotes.append({
                 "symbol": "BTC",
-                "price_eur": 40000 + (i * 100),
+                "close_eur": 40000 + (i * 100),
                 "timestamp": now - timedelta(days=365-i)
             })
         
@@ -167,7 +167,7 @@ class TestStatisticalAnalyzer(unittest.TestCase):
             quotes = []
             for i in range(100):
                 quotes.append({
-                    'price_eur': 100.0 + i,
+                    'close_eur': 100.0 + i,
                     'timestamp': datetime.now() - timedelta(days=i)
                 })
             return quotes

@@ -107,13 +107,13 @@ class StatisticalAnalyzer:
     @staticmethod
     def _analyze_period_data(period_data: pd.DataFrame) -> Dict:
         """Analyze data for a specific period and calculate all metrics."""
-        prices = period_data['price_eur'].tolist()
+        prices = period_data['close_eur'].tolist()
         stats = StatisticalAnalyzer.calculate_statistics(prices)
         
         # Extract latest and second latest prices
-        latest_price = period_data.iloc[0]['price_eur']
+        latest_price = period_data.iloc[0]['close_eur']
         latest_date = period_data.iloc[0]['timestamp']
-        second_latest_price = period_data.iloc[1]['price_eur'] if len(period_data) > 1 else None
+        second_latest_price = period_data.iloc[1]['close_eur'] if len(period_data) > 1 else None
         second_latest_date = period_data.iloc[1]['timestamp'] if len(period_data) > 1 else None
         
         # Calculate deviations for latest price

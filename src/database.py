@@ -61,12 +61,15 @@ class CryptoDatabase:
             )
         """)
         
-        # Table for price quotes (simplified: only date and price)
+        # Table for price quotes (OHLC data + daily returns)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS price_quotes (
                 id INTEGER PRIMARY KEY,
                 crypto_id TEXT NOT NULL,
-                price_eur REAL NOT NULL,
+                close_eur REAL NOT NULL,
+                low_eur REAL,
+                high_eur REAL,
+                daily_returns REAL,
                 timestamp DATE NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 -- crypto_id stores the cryptocurrency code (symbol), e.g. 'BTC'
@@ -131,14 +134,21 @@ class CryptoDatabase:
             
             cursor.execute("""
                 INSERT INTO price_quotes (
-                    crypto_id, price_eur, timestamp, created_at
-                ) VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                    crypto_id, close_eur, low_eur, high_eur, daily_returns, timestamp, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
                 ON CONFLICT(crypto_id, timestamp) 
-                DO UPDATE SET price_eur = excluded.price_eur
+                DO UPDATE SET 
+                    close_eur = excluded.close_eur,
+                    low_eur = excluded.low_eur,
+                    high_eur = excluded.high_eur,
+                    daily_returns = excluded.daily_returns
                     -- created_at is NOT updated, preserves original insert time
             """, (
                 symbol,
-                quote_data.get("price_eur"),
+                quote_data.get("close_eur") or quote_data.get("price_eur"),  # Backward compatibility
+                quote_data.get("low_eur"),
+                quote_data.get("high_eur"),
+                quote_data.get("daily_returns"),
                 date_only
             ))
             self.conn.commit()
@@ -314,21 +324,30 @@ class CryptoDatabase:
                 # Update existing quote
                 cursor.execute("""
                     UPDATE price_quotes SET
-                        price_eur = ?
+                        close_eur = ?,
+                        low_eur = ?,
+                        high_eur = ?,
+                        daily_returns = ?
                     WHERE id = ?
                 """, (
-                    quote_data.get("price_eur"),
+                    quote_data.get("close_eur") or quote_data.get("price_eur"),  # Backward compatibility
+                    quote_data.get("low_eur"),
+                    quote_data.get("high_eur"),
+                    quote_data.get("daily_returns"),
                     existing[0]
                 ))
             else:
                 # Insert new quote
                 cursor.execute("""
                     INSERT INTO price_quotes (
-                        crypto_id, price_eur, timestamp
-                    ) VALUES (?, ?, ?)
+                        crypto_id, close_eur, low_eur, high_eur, daily_returns, timestamp
+                    ) VALUES (?, ?, ?, ?, ?, ?)
                 """, (
                     symbol,
-                    quote_data.get("price_eur"),
+                    quote_data.get("close_eur") or quote_data.get("price_eur"),  # Backward compatibility
+                    quote_data.get("low_eur"),
+                    quote_data.get("high_eur"),
+                    quote_data.get("daily_returns"),
                     timestamp
                 ))
             

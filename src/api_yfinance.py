@@ -65,10 +65,12 @@ class YFinanceCryptoAPI:
             if not info or 'regularMarketPrice' not in info:
                 return None
             
+            price = info.get('regularMarketPrice')
             return {
                 'symbol': symbol,
                 'name': info.get('shortName', symbol),
-                'price_eur': info.get('regularMarketPrice'),
+                'close_eur': price,
+                'price_eur': price,  # Backward compatibility
                 'timestamp': datetime.now()
             }
             
@@ -136,14 +138,28 @@ class YFinanceCryptoAPI:
                     print(f"No historical data for {symbol}")
                     continue
                 
-                # Extract close prices
+                # Extract OHLC data and calculate daily returns
+                prev_close = None
                 for date, row in hist.iterrows():
+                    close_price = row['Close']
+                    
+                    # Calculate daily returns (percentage change from previous close)
+                    daily_return = None
+                    if prev_close is not None and prev_close > 0:
+                        daily_return = ((close_price - prev_close) / prev_close) * 100
+                    
                     results.append({
                         'symbol': symbol,
                         'name': symbol,
-                        'price_eur': row['Close'],
+                        'close_eur': close_price,
+                        'low_eur': row.get('Low'),
+                        'high_eur': row.get('High'),
+                        'daily_returns': daily_return,
+                        'price_eur': close_price,  # Backward compatibility
                         'timestamp': date.to_pydatetime().date()
                     })
+                    
+                    prev_close = close_price
                 
                 print(f"✓ Fetched {len(hist)} days for {symbol}")
                 

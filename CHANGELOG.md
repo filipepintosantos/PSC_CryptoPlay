@@ -1,5 +1,59 @@
 # Changelog
 
+## [3.8.1] - 2025-12-21
+
+### Fixed
+- **🐛 Cálculo de Volatilidade**: Corrigido query SQL em `calculate_daily_volatility()`
+  - Bug: JOIN com `crypto_info` falhava porque `price_quotes.crypto_id` guarda símbolo (texto) não ID numérico
+  - Fix: Query agora usa `WHERE crypto_id = ?` diretamente com símbolo
+  - Resultado: Coluna Vol% agora mostra volatilidade anualizada para cada período
+  - Confirmado: Cálculo diferenciado por período (365, 180, 90, 30 dias)
+
+## [3.8.0] - 2025-12-21
+
+### Added
+- **📊 Volatilidade Anualizada no Relatório**: Nova coluna V com cálculo de volatilidade baseado em daily_returns
+  - Cálculo: σ(daily_returns) × √365 (desvio padrão anualizado)
+  - Método `calculate_daily_volatility()` em VolatilityAnalyzer
+  - Permite comparar risco entre diferentes criptomoedas
+  - Volatilidade calculada para cada período (12M, 6M, 3M, 1M)
+
+### Changed
+- **📈 Estrutura do Relatório Excel**: Coluna V agora mostra Vol% (antes ±5%)
+  - Coluna V: Vol% (volatilidade anualizada)
+  - Colunas W-Z: ±5%, ±10%, ±15%, ±20% (deslocadas uma posição)
+  - Coluna AA: Score/M (anteriormente coluna Z)
+  - Header atualizado: "Vol%" adicionado
+
+### Technical
+- `volatility_analysis.py`: Novo método `calculate_daily_volatility(symbol, period_days)`
+- `excel_reporter.py`: Headers e colunas ajustadas (V-AA)
+- `get_period_stats()`: Retorna `daily_volatility` no dicionário de resultados
+
+## [3.7.0] - 2025-12-21
+
+### Added
+- **📊 Estrutura OHLC na Tabela price_quotes**: Suporte completo para dados OHLC (Open/High/Low/Close)
+  - Nova coluna `close_eur`: Renomeação de `price_eur` (preço de fecho)
+  - Nova coluna `low_eur`: Preço mínimo do dia (NULL para dados antigos)
+  - Nova coluna `high_eur`: Preço máximo do dia (NULL para dados antigos)
+  - Nova coluna `daily_returns`: Retornos diários calculados (% variação)
+  - API Yahoo Finance atualizada para capturar Low/High/Close
+  - Cálculo automático de returns percentuais dia-a-dia
+  - Retrocompatibilidade mantida com `price_eur` em CSV imports
+
+### Changed
+- **🔄 Migration Script**: Novo script `migrate_to_ohlc_schema.py`
+  - Migração automática de bases existentes: `price_eur` → `close_eur`
+  - Cálculo de `daily_returns` para dados históricos
+  - Suporta `--dry-run` para preview
+  - Preserva IDs e timestamps originais
+
+### Technical
+- Módulos atualizados: `database.py`, `api_yfinance.py`, `analysis.py`, `volatility_analysis.py`, `main.py`
+- DataFrame references: `price_eur` → `close_eur`
+- Backward compatibility: CSV imports aceitam ambos formatos
+
 ## [3.6.2] - 2025-12-21
 
 ### Changed

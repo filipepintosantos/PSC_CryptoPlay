@@ -47,7 +47,7 @@ class VolatilityAnalyzer:
             return self._create_empty_result()
         
         # Convert to DataFrame
-        df = pd.DataFrame(quotes, columns=['timestamp', 'price_eur'])
+        df = pd.DataFrame(quotes, columns=['timestamp', 'close_eur'])
         df['timestamp'] = pd.to_datetime(df['timestamp'])
         df = df.sort_values('timestamp', ascending=True).reset_index(drop=True)
         
@@ -66,7 +66,7 @@ class VolatilityAnalyzer:
         Detects unique events and counts only the highest threshold reached.
         
         Args:
-            df: DataFrame with timestamp and price_eur columns
+            df: DataFrame with timestamp and close_eur columns
             window_days: Window size in days
             
         Returns:
@@ -74,7 +74,7 @@ class VolatilityAnalyzer:
         """
         # Calculate rolling returns
         df = df.copy()
-        df['return_pct'] = df['price_eur'].pct_change(periods=window_days) * 100
+        df['return_pct'] = df['close_eur'].pct_change(periods=window_days) * 100
         
         # Initialize event counters
         events = {f'positive_{t}': 0 for t in self.THRESHOLDS}
@@ -236,6 +236,42 @@ class VolatilityAnalyzer:
             'volatility_score': volatility_score
         }
     
+    def calculate_daily_volatility(self, symbol: str, period_days: int) -> float:
+        """
+        Calculate volatility as standard deviation of daily returns.
+        
+        Args:
+            symbol: Cryptocurrency symbol
+            period_days: Analysis period in days
+            
+        Returns:
+            Volatility (annualized standard deviation of returns) or None
+        """
+        # Get quotes with daily_returns directly by symbol
+        cursor = self.database.conn.cursor()
+        cursor.execute("""
+            SELECT daily_returns
+            FROM price_quotes
+            WHERE crypto_id = ?
+            AND daily_returns IS NOT NULL
+            ORDER BY timestamp DESC
+            LIMIT ?
+        """, (symbol, period_days))
+        
+        returns = [row[0] for row in cursor.fetchall()]
+        
+        if len(returns) < 7:  # Need minimum data
+            return None
+        
+        # Calculate standard deviation (volatility)
+        df = pd.DataFrame({'returns': returns})
+        volatility = df['returns'].std()
+        
+        # Annualize: daily volatility * sqrt(365)
+        annualized_volatility = volatility * (365 ** 0.5)
+        
+        return round(annualized_volatility, 2) if volatility else None
+    
     def get_period_stats(self, symbol: str, period_days: int) -> Dict:
         """
         Get volatility statistics for a specific analysis period.
@@ -248,6 +284,9 @@ class VolatilityAnalyzer:
         Returns:
             Dictionary with volatility stats for the period
         """
+        # Calculate daily returns volatility
+        daily_volatility = self.calculate_daily_volatility(symbol, period_days)
+        
         # Calculate oscillations for this period using SHORT windows (24h, 72h, 7d)
         oscillations = self.calculate_oscillations(symbol, days=period_days)
         
@@ -271,6 +310,7 @@ class VolatilityAnalyzer:
         volatility_score = score_5 + score_10 + score_15 + score_20
         
         return {
+            'daily_volatility': daily_volatility,
             'volatility_positive_5': total_positive_5,
             'volatility_positive_10': total_positive_10,
             'volatility_positive_15': total_positive_15,

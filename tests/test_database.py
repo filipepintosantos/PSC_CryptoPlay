@@ -52,19 +52,19 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
             {
                 "symbol": "BTC",
                 "name": "Bitcoin",
-                "price_eur": 45000.0,
+                "close_eur": 45000.0,
                 "timestamp": datetime.now() - timedelta(days=2)
             },
             {
                 "symbol": "BTC",
                 "name": "Bitcoin",
-                "price_eur": 46000.0,
+                "close_eur": 46000.0,
                 "timestamp": datetime.now() - timedelta(days=1)
             },
             {
                 "symbol": "ETH",
                 "name": "Ethereum",
-                "price_eur": 3000.0,
+                "close_eur": 3000.0,
                 "timestamp": datetime.now()
             }
         ]
@@ -84,7 +84,7 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
             quote = {
                 "symbol": "BTC",
                 "name": "Bitcoin",
-                "price_eur": 45000.0 + i * 100,
+                "close_eur": 45000.0 + i * 100,
                 "timestamp": base_date - timedelta(days=i)
             }
             self.db.insert_quote("BTC", quote)
@@ -110,14 +110,14 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
             quote = {
                 "symbol": "SOL",
                 "name": "Solana",
-                "price_eur": 100.0 + i * 10,
+                "close_eur": 100.0 + i * 10,
                 "timestamp": date
             }
             self.db.insert_quote("SOL", quote)
         
         latest = self.db.get_latest_quote("SOL")
         self.assertIsNotNone(latest)
-        self.assertEqual(latest["price_eur"], 120.0)
+        self.assertEqual(latest["close_eur"], 120.0)
     
     def test_get_latest_quote_not_found(self):
         """Test getting latest quote for non-existent symbol."""
@@ -130,7 +130,7 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
         quote = {
             "symbol": "ADA",
             "name": "Cardano",
-            "price_eur": 0.5,
+            "close_eur": 0.5,
             "timestamp": now
         }
         self.db.insert_quote("ADA", quote)
@@ -150,7 +150,7 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
             quote = {
                 "symbol": "LINK",
                 "name": "Chainlink",
-                "price_eur": 15.0,
+                "close_eur": 15.0,
                 "timestamp": date
             }
             self.db.insert_quote("LINK", quote)
@@ -169,13 +169,13 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
         quote1 = {
             "symbol": "BTC",
             "name": "Bitcoin",
-            "price_eur": 45000.0,
+            "close_eur": 45000.0,
             "timestamp": now
         }
         quote2 = {
             "symbol": "BTC",
             "name": "Bitcoin",
-            "price_eur": 46000.0,  # Different price, same date
+            "close_eur": 46000.0,  # Different price, same date
             "timestamp": now
         }
         
@@ -190,7 +190,7 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
         # Verify only one quote exists with updated price
         quotes = self.db.get_quotes("BTC")
         self.assertEqual(len(quotes), 1)
-        self.assertEqual(quotes[0]["price_eur"], 46000.0)
+        self.assertEqual(quotes[0]["close_eur"], 46000.0)
     
     def test_add_crypto_info(self):
         """Test adding cryptocurrency info."""
@@ -316,7 +316,7 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
         quote = {
             "symbol": "BTC",
             "name": "Bitcoin",
-            "price_eur": 45000.0,
+            "close_eur": 45000.0,
             "timestamp": now
         }
         
@@ -325,14 +325,14 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
         self.assertTrue(success)
         
         # Update existing quote
-        quote["price_eur"] = 46000.0
+        quote["close_eur"] = 46000.0
         success = self.db.insert_or_update_quote("BTC", quote)
         self.assertTrue(success)
         
         # Verify only one quote exists
         quotes = self.db.get_quotes("BTC")
         self.assertEqual(len(quotes), 1)
-        self.assertEqual(quotes[0]["price_eur"], 46000.0)
+        self.assertEqual(quotes[0]["close_eur"], 46000.0)
     
     def test_get_all_crypto_info_favorites_only(self):
         """Test getting only favorite cryptocurrencies."""
@@ -385,7 +385,7 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
             quote = {
                 "symbol": "BTC",
                 "name": "Bitcoin",
-                "price_eur": 45000.0 + i * 100,
+                "close_eur": 45000.0 + i * 100,
                 "timestamp": now - timedelta(days=i)
             }
             self.db.insert_quote("BTC", quote)
@@ -412,7 +412,7 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
         quote1 = {
             "symbol": "ETH",
             "name": "Ethereum",
-            "price_eur": 3000.0,
+            "close_eur": 3000.0,
             "timestamp": now
         }
         self.db.insert_or_update_quote("ETH", quote1)
@@ -421,7 +421,7 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
         quote2 = {
             "symbol": "ETH",
             "name": "Ethereum",
-            "price_eur": 3100.0,
+            "close_eur": 3100.0,
             "timestamp": now
         }
         self.db.insert_or_update_quote("ETH", quote2)
@@ -430,7 +430,7 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
         quotes = self.db.get_quotes("ETH")
         self.assertEqual(len(quotes), 1)
         # Quotes are returned as dicts, check price_eur key
-        self.assertIn(3100.0, [q['price_eur'] for q in quotes])
+        self.assertIn(3100.0, [q['close_eur'] for q in quotes])
     
     def test_favorite_classification_system(self):
         """Test the new A/B/C favorite classification system."""
@@ -501,13 +501,13 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
         quote1 = {
             "symbol": "BTC",
             "name": "Bitcoin",
-            "price_eur": 45000.0,
+            "close_eur": 45000.0,
             "timestamp": base_date - timedelta(days=2)
         }
         quote2 = {
             "symbol": "BTC",
             "name": "Bitcoin",
-            "price_eur": 46000.0,
+            "close_eur": 46000.0,
             "timestamp": base_date - timedelta(days=1)
         }
         
@@ -538,7 +538,7 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
         quote = {
             "symbol": "ETH",
             "name": "Ethereum",
-            "price_eur": 3000.0,
+            "close_eur": 3000.0,
             "timestamp": base_date - timedelta(days=3)
         }
         self.db.insert_quote("ETH", quote)
@@ -553,7 +553,7 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
         quote2 = {
             "symbol": "ETH",
             "name": "Ethereum",
-            "price_eur": 3100.0,
+            "close_eur": 3100.0,
             "timestamp": base_date - timedelta(days=1)
         }
         self.db.insert_quote("ETH", quote2)

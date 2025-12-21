@@ -267,8 +267,8 @@ class TestQuoteOperations(unittest.TestCase):
         """Test storing quotes with upsert mode."""
         db = CryptoDatabase(":memory:")
         quotes = [
-            {'symbol': 'BTC', 'name': 'Bitcoin', 'price_eur': 45000, 'timestamp': datetime.now()},
-            {'symbol': 'ETH', 'name': 'Ethereum', 'price_eur': 2500, 'timestamp': datetime.now()}
+            {'symbol': 'BTC', 'name': 'Bitcoin', 'close_eur': 45000, 'timestamp': datetime.now()},
+            {'symbol': 'ETH', 'name': 'Ethereum', 'close_eur': 2500, 'timestamp': datetime.now()}
         ]
         
         count = main.store_quotes(db, quotes, upsert=True, fetch_mode="full")
@@ -280,7 +280,7 @@ class TestQuoteOperations(unittest.TestCase):
         """Test storing quotes with batch insert."""
         db = CryptoDatabase(":memory:")
         quotes = [
-            {'symbol': 'BTC', 'name': 'Bitcoin', 'price_eur': 45000, 'timestamp': datetime.now()}
+            {'symbol': 'BTC', 'name': 'Bitcoin', 'close_eur': 45000, 'timestamp': datetime.now()}
         ]
         
         count = main.store_quotes(db, quotes, upsert=False, fetch_mode="incremental")
@@ -321,7 +321,7 @@ class TestQuoteOperations(unittest.TestCase):
         """Test fetching historical range."""
         api = Mock()
         api.fetch_historical_range = Mock(return_value=[
-            {'symbol': 'BTC', 'name': 'Bitcoin', 'price_eur': 45000, 'timestamp': datetime.now()}
+            {'symbol': 'BTC', 'name': 'Bitcoin', 'close_eur': 45000, 'timestamp': datetime.now()}
         ])
         
         db = CryptoDatabase(":memory:")
@@ -340,7 +340,7 @@ class TestQuoteOperations(unittest.TestCase):
         api = Mock()
         api.fetch_historical_range = Mock(side_effect=[
             Exception("Network error"),
-            [{'symbol': 'BTC', 'name': 'Bitcoin', 'price_eur': 45000, 'timestamp': datetime.now()}]
+            [{'symbol': 'BTC', 'name': 'Bitcoin', 'close_eur': 45000, 'timestamp': datetime.now()}]
         ])
         
         db = CryptoDatabase(":memory:")
@@ -361,7 +361,7 @@ class TestQuoteOperations(unittest.TestCase):
         api = Mock()
         last_date = datetime.now() - timedelta(days=5)
         api.fetch_historical_range = Mock(return_value=[
-            {'symbol': 'BTC', 'name': 'Bitcoin', 'price_eur': 45000, 'timestamp': datetime.now() - timedelta(days=1)}
+            {'symbol': 'BTC', 'name': 'Bitcoin', 'close_eur': 45000, 'timestamp': datetime.now() - timedelta(days=1)}
         ])
         
         db = CryptoDatabase(":memory:")
@@ -371,7 +371,7 @@ class TestQuoteOperations(unittest.TestCase):
         db.insert_quote("BTC", {
             'symbol': 'BTC',
             'name': 'Bitcoin',
-            'price_eur': 44000,
+            'close_eur': 44000,
             'timestamp': last_date
         })
         
@@ -392,7 +392,7 @@ class TestQuoteOperations(unittest.TestCase):
         """Test auto-range mode without existing quote data (fallback to 365 days)."""
         api = Mock()
         api.fetch_historical_range = Mock(return_value=[
-            {'symbol': 'ETH', 'name': 'Ethereum', 'price_eur': 3000, 'timestamp': datetime.now()}
+            {'symbol': 'ETH', 'name': 'Ethereum', 'close_eur': 3000, 'timestamp': datetime.now()}
         ])
         
         db = CryptoDatabase(":memory:")

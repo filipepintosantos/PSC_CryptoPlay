@@ -60,16 +60,17 @@ class ExcelReporter:
             col_letter = get_column_letter(18 + i)
             ws.column_dimensions[col_letter].width = 7.86
         
-        # Volatility columns V to Z (5 columns) - 37 pixels = 5.29 units
-        for i in range(5):
-            col_letter = get_column_letter(22 + i)
+        # Volatility columns V to AA (6 columns) - adjust widths
+        ws.column_dimensions['V'].width = 7  # Vol% (volatility)
+        for i in range(5):  # W to AA (±5%, ±10%, ±15%, ±20%, Score/M)
+            col_letter = get_column_letter(23 + i)
             ws.column_dimensions[col_letter].width = 5.29
     
     def _create_title_rows(self, ws):
         """Create title and date rows."""
         ws['A1'] = "Análise de Criptomoedas em EUR"
         ws['A1'].font = Font(bold=True, size=14)
-        ws.merge_cells('A1:Z1')
+        ws.merge_cells('A1:AA1')
         ws.row_dimensions[1].height = 25
         
         ws['A2'] = f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
@@ -83,7 +84,7 @@ class ExcelReporter:
                   "Last-AVG%", "Last-A-S%", "2nd-AVG%", "2nd-A-S%",
                   "MEDIAN", "MAD", "MED-MAD",
                   "Last-MED%", "Last-M-M%", "2nd-MED%", "2nd-M-M%",
-                  "±5%", "±10%", "±15%", "±20%", "Vol/M"]
+                  "Vol%", "±5%", "±10%", "±15%", "±20%", "Score/M"]
         
         for i, header in enumerate(headers):
             col_letter = get_column_letter(i + 1)
@@ -260,46 +261,54 @@ class ExcelReporter:
         
         small_font = Font(size=9)
         
-        # Column V: ±5% (format: positive:negative, e.g. "8:11")
-        positive_5 = volatility_data.get('volatility_positive_5', 0)
-        negative_5 = volatility_data.get('volatility_negative_5', 0)
-        ws[f'V{row}'].value = f"{positive_5}:{negative_5}"
+        # Column V: Daily Volatility (annualized % from daily returns)
+        daily_vol = volatility_data.get('daily_volatility')
+        ws[f'V{row}'].value = daily_vol
+        ws[f'V{row}'].number_format = '#,##0.00"%"'
         ws[f'V{row}'].border = border
         ws[f'V{row}'].alignment = Alignment(horizontal='center')
         ws[f'V{row}'].font = small_font
         
-        # Column W: ±10% (format: positive:negative, e.g. "8:11")
-        positive_10 = volatility_data.get('volatility_positive_10', 0)
-        negative_10 = volatility_data.get('volatility_negative_10', 0)
-        ws[f'W{row}'].value = f"{positive_10}:{negative_10}"
+        # Column W: ±5% (format: positive:negative, e.g. "8:11")
+        positive_5 = volatility_data.get('volatility_positive_5', 0)
+        negative_5 = volatility_data.get('volatility_negative_5', 0)
+        ws[f'W{row}'].value = f"{positive_5}:{negative_5}"
         ws[f'W{row}'].border = border
         ws[f'W{row}'].alignment = Alignment(horizontal='center')
         ws[f'W{row}'].font = small_font
         
-        # Column X: ±15% (format: positive:negative, e.g. "8:11")
-        positive_15 = volatility_data.get('volatility_positive_15', 0)
-        negative_15 = volatility_data.get('volatility_negative_15', 0)
-        ws[f'X{row}'].value = f"{positive_15}:{negative_15}"
+        # Column X: ±10% (format: positive:negative, e.g. "8:11")
+        positive_10 = volatility_data.get('volatility_positive_10', 0)
+        negative_10 = volatility_data.get('volatility_negative_10', 0)
+        ws[f'X{row}'].value = f"{positive_10}:{negative_10}"
         ws[f'X{row}'].border = border
         ws[f'X{row}'].alignment = Alignment(horizontal='center')
         ws[f'X{row}'].font = small_font
         
-        # Column Y: ±20% (format: positive:negative, e.g. "8:11")
-        positive_20 = volatility_data.get('volatility_positive_20', 0)
-        negative_20 = volatility_data.get('volatility_negative_20', 0)
-        ws[f'Y{row}'].value = f"{positive_20}:{negative_20}"
+        # Column Y: ±15% (format: positive:negative, e.g. "8:11")
+        positive_15 = volatility_data.get('volatility_positive_15', 0)
+        negative_15 = volatility_data.get('volatility_negative_15', 0)
+        ws[f'Y{row}'].value = f"{positive_15}:{negative_15}"
         ws[f'Y{row}'].border = border
         ws[f'Y{row}'].alignment = Alignment(horizontal='center')
         ws[f'Y{row}'].font = small_font
         
-        # Column Z: Score/Mês (score por mês)
+        # Column Z: ±20% (format: positive:negative, e.g. "8:11")
+        positive_20 = volatility_data.get('volatility_positive_20', 0)
+        negative_20 = volatility_data.get('volatility_negative_20', 0)
+        ws[f'Z{row}'].value = f"{positive_20}:{negative_20}"
+        ws[f'Z{row}'].border = border
+        ws[f'Z{row}'].alignment = Alignment(horizontal='center')
+        ws[f'Z{row}'].font = small_font
+        
+        # Column AA: Score/Mês (score por mês)
         period_months = {"12_months": 12, "6_months": 6, "3_months": 3, "1_month": 1}
         months = period_months.get(period, 1)
         score = volatility_data.get('volatility_score', 0)
         score_per_month = score / months if months > 0 else 0
-        ws[f'Z{row}'].value = round(score_per_month, 1)
-        ws[f'Z{row}'].border = border
-        ws[f'Z{row}'].alignment = Alignment(horizontal='center')
+        ws[f'AA{row}'].value = round(score_per_month, 1)
+        ws[f'AA{row}'].border = border
+        ws[f'AA{row}'].alignment = Alignment(horizontal='center')
         ws[f'Z{row}'].font = Font(bold=True, size=9)
         # Color code: higher score/month = more volatile
         if score_per_month > 25:

@@ -31,9 +31,9 @@ class TestYFinanceAPI(unittest.TestCase):
         
         if quote:  # May fail if network is down
             self.assertEqual(quote['symbol'], 'BTC')
-            self.assertIn('price_eur', quote)
-            self.assertIsInstance(quote['price_eur'], (int, float))
-            self.assertGreater(quote['price_eur'], 0)
+            self.assertIn('close_eur', quote)
+            self.assertIsInstance(quote['close_eur'], (int, float))
+            self.assertGreater(quote['close_eur'], 0)
             self.assertIn('timestamp', quote)
             self.assertIsInstance(quote['timestamp'], datetime)
     
@@ -57,7 +57,7 @@ class TestYFinanceAPI(unittest.TestCase):
             # Check first quote structure
             quote = quotes[0]
             self.assertEqual(quote['symbol'], 'BTC')
-            self.assertIn('price_eur', quote)
+            self.assertIn('close_eur', quote)
             self.assertIn('timestamp', quote)
             
             # Timestamp should be date only
