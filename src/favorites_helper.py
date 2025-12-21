@@ -3,7 +3,7 @@ Utility functions for managing favorite classifications from config.
 """
 import configparser
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 from database import CryptoDatabase
 
 
@@ -79,7 +79,7 @@ def validate_and_update_favorites(db: CryptoDatabase, config: configparser.Confi
     return updated
 
 
-def get_favorite_class(symbol: str, config: configparser.ConfigParser) -> str:
+def get_favorite_class(symbol: str, config: configparser.ConfigParser) -> Optional[str]:
     """
     Get the favorite class for a specific symbol.
     

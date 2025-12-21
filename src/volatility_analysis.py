@@ -236,7 +236,7 @@ class VolatilityAnalyzer:
             'volatility_score': volatility_score
         }
     
-    def calculate_daily_volatility(self, symbol: str, period_days: int) -> float:
+    def calculate_daily_volatility(self, symbol: str, period_days: int) -> Optional[float]:
         """
         Calculate volatility as standard deviation of daily returns.
         
@@ -245,7 +245,7 @@ class VolatilityAnalyzer:
             period_days: Analysis period in days
             
         Returns:
-            Volatility (annualized standard deviation of returns) or None
+            Volatility (annualized standard deviation of returns) as float, or None if insufficient data
         """
         # Get quotes with daily_returns directly by symbol
         cursor = self.database.conn.cursor()

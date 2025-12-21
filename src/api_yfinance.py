@@ -109,64 +109,51 @@ class YFinanceCryptoAPI:
             List of quote dictionaries with date and close price
         """
         results = []
-        
-        # Calculate date range (end = yesterday to avoid partial data)
         end_date = datetime.now().date() - timedelta(days=1)
-        
         if start_date:
-            # Use provided start date
             calc_start_date = start_date.date() if hasattr(start_date, 'date') else start_date
         elif days > 0:
-            # Calculate from days
             calc_start_date = end_date - timedelta(days=days - 1)
         else:
             return []
-        
         for symbol in symbols:
-            try:
-                ticker = self.get_ticker(symbol)
-                crypto = yf.Ticker(ticker)
-                
-                # Download historical data
-                hist = crypto.history(
-                    start=calc_start_date.isoformat(),
-                    end=(end_date + timedelta(days=1)).isoformat(),  # Include end date
-                    interval='1d'
-                )
-                
-                if hist.empty:
-                    print(f"No historical data for {symbol}")
-                    continue
-                
-                # Extract OHLC data and calculate daily returns
-                prev_close = None
-                for date, row in hist.iterrows():
-                    close_price = row['Close']
-                    
-                    # Calculate daily returns (percentage change from previous close)
-                    daily_return = None
-                    if prev_close is not None and prev_close > 0:
-                        daily_return = ((close_price - prev_close) / prev_close) * 100
-                    
-                    results.append({
-                        'symbol': symbol,
-                        'name': symbol,
-                        'close_eur': close_price,
-                        'low_eur': row.get('Low'),
-                        'high_eur': row.get('High'),
-                        'daily_returns': daily_return,
-                        'price_eur': close_price,  # Backward compatibility
-                        'timestamp': date.to_pydatetime().date()
-                    })
-                    
-                    prev_close = close_price
-                
-                print(f"✓ Fetched {len(hist)} days for {symbol}")
-                
-            except Exception as e:
-                print(f"Error fetching historical data for {symbol}: {e}")
-                continue
-        
+            symbol_results = self._fetch_symbol_history(symbol, calc_start_date, end_date)
+            results.extend(symbol_results)
+        return results
+
+    def _fetch_symbol_history(self, symbol: str, calc_start_date, end_date) -> List[Dict]:
+        results = []
+        try:
+            ticker = self.get_ticker(symbol)
+            crypto = yf.Ticker(ticker)
+            hist = crypto.history(
+                start=calc_start_date.isoformat(),
+                end=(end_date + timedelta(days=1)).isoformat(),
+                interval='1d'
+            )
+            if hist.empty:
+                print(f"No historical data for {symbol}")
+                return results
+            prev_close = None
+            for date, row in hist.iterrows():
+                close_price = row['Close']
+                daily_return = None
+                if prev_close is not None and prev_close > 0:
+                    daily_return = ((close_price - prev_close) / prev_close) * 100
+                results.append({
+                    'symbol': symbol,
+                    'name': symbol,
+                    'close_eur': close_price,
+                    'low_eur': row.get('Low'),
+                    'high_eur': row.get('High'),
+                    'daily_returns': daily_return,
+                    'price_eur': close_price,  # Backward compatibility
+                    'timestamp': date.to_pydatetime().date()
+                })
+                prev_close = close_price
+            print(f"✓ Fetched {len(hist)} days for {symbol}")
+        except Exception as e:
+            print(f"Error fetching historical data for {symbol}: {e}")
         return results
     
     def fetch_and_parse(self, symbols: List[str]) -> List[Dict]:

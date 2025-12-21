@@ -1,5 +1,16 @@
 # Changelog
 
+
+## [3.8.2] - 2025-12-21
+
+### Fixed
+- **🔧 SonarQube/Qualidade de Código**: Refatoração para reduzir complexidade e corrigir tipos de retorno
+  - `fetch_historical_range` (api_yfinance.py): extraída lógica para helper
+  - `calculate_daily_volatility` (volatility_analysis.py): tipo de retorno agora Optional[float]
+  - `create_volatility_detail_sheet` (excel_reporter.py): extração de helpers para reduzir complexidade
+  - Parâmetro não usado removido de `generate_report`
+  - `get_favorite_class` (favorites_helper.py): tipo de retorno agora Optional[str]
+
 ## [3.8.1] - 2025-12-21
 
 ### Fixed

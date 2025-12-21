@@ -554,27 +554,37 @@ class ExcelReporter:
             favorites: List of favorite cryptocurrency symbols
         """
         ws = self.workbook.create_sheet(title="Volatility Detail")
-        
-        # Define styles
-        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-        header_font = Font(bold=True, color="FFFFFF", size=10)
         border = Border(
             left=Side(style='thin'),
             right=Side(style='thin'),
             top=Side(style='thin'),
             bottom=Side(style='thin')
         )
-        
         if favorites is None:
             favorites = []
-        
-        # Title
+        self._write_volatility_detail_title(ws)
+        self._write_volatility_detail_headers(ws, border)
+        self._set_volatility_detail_column_widths(ws)
+        row = 4
+        symbols = list(reports.keys())
+        if market_caps:
+            symbols = sorted(symbols, key=lambda s: market_caps.get(s, 0), reverse=True)
+        else:
+            symbols.sort()
+        row = self._write_volatility_detail_data(ws, row, symbols, reports, favorites, border)
+        if row > 4:
+            ws.auto_filter.ref = f"A3:Q{row-1}"
+        ws.freeze_panes = ws['A4']
+
+    def _write_volatility_detail_title(self, ws):
         ws['A1'] = "Análise Detalhada de Volatilidade por Período"
         ws['A1'].font = Font(bold=True, size=14)
         ws.merge_cells('A1:Q1')
         ws.row_dimensions[1].height = 25
-        
-        # Headers with left alignment - ordered by absolute variation with sum columns
+
+    def _write_volatility_detail_headers(self, ws, border):
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF", size=10)
         headers = ["Fav", "Symbol", "Period", "+5%", "-5%", "±5%", "+10%", "-10%", "±10%",
                   "+15%", "-15%", "±15%", "+20%", "-20%", "±20%", "Score", "Score/M"]
         for i, header in enumerate(headers, start=1):
@@ -584,41 +594,29 @@ class ExcelReporter:
             cell.font = header_font
             cell.border = border
             cell.alignment = Alignment(horizontal='left', vertical='center')
-        
-        # Column widths
+
+    def _set_volatility_detail_column_widths(self, ws):
         ws.column_dimensions['A'].width = 4   # Fav
         ws.column_dimensions['B'].width = 9   # Symbol (63 pixels)
         ws.column_dimensions['C'].width = 6   # Period
-        # All % columns with 52 pixels = 7.43 units
         for col in ['D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O']:
             ws.column_dimensions[col].width = 7.43
         ws.column_dimensions['P'].width = 7.57   # Score
         ws.column_dimensions['Q'].width = 7.57   # Score/M
-        
-        # Write data organized by period
+
+    def _write_volatility_detail_data(self, ws, row, symbols, reports, favorites, border):
         period_map = {
             "12M": "12_months",
             "6M": "6_months",
             "3M": "3_months",
             "1M": "1_month"
         }
-        
-        row = 4
-        # Sort by market cap (same as summary sheet)
-        symbols = list(reports.keys())
-        if market_caps:
-            symbols = sorted(symbols, key=lambda s: market_caps.get(s, 0), reverse=True)
-        else:
-            symbols.sort()
-        
         for symbol in symbols:
             for period_label, period_key in period_map.items():
                 if period_key in reports[symbol].get('periods', {}):
                     period_data = reports[symbol]['periods'][period_key]
                     volatility_data = period_data.get('volatility', {})
-                    
                     if volatility_data:
-                        # Determine favorite class
                         favorite_class = None
                         if isinstance(favorites, dict):
                             for cls in ['A', 'B', 'C']:
@@ -627,20 +625,13 @@ class ExcelReporter:
                                     break
                         elif symbol in favorites:
                             favorite_class = 'A'  # Legacy format
-                        
                         row = self._write_volatility_detail_row(ws, row, favorite_class, symbol, 
                                                                 period_label, volatility_data, border)
                         row += 1
-        
-        # Add auto filter
-        if row > 4:
-            ws.auto_filter.ref = f"A3:Q{row-1}"
-        
-        # Freeze panes (freeze header)
-        ws.freeze_panes = ws['A4']
+        return row
     
     def generate_report(self, reports: Dict[str, Dict], market_caps: Dict[str, float] = None, 
-                       favorites: List[str] = None, volatility_results: Dict[str, Dict] = None):
+                       favorites: List[str] = None):
         """
         Generate complete Excel report.
         
@@ -648,7 +639,7 @@ class ExcelReporter:
             reports: Dictionary with analysis reports from StatisticalAnalyzer
             market_caps: Dictionary with market cap values for sorting
             favorites: List of favorite cryptocurrency symbols
-            volatility_results: Dictionary with detailed volatility analysis (optional)
+            volatility_results: (unused, deprecated)
         """
         # Create summary sheet
         self.create_summary_sheet(reports, market_caps, favorites)
