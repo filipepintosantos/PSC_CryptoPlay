@@ -278,40 +278,59 @@ CoinMarketCap API
 - **SQL Injection Prevention**: Uso de prepared statements
 - **File Permissions**: Criação com permissões padrão
 
+## Estrutura de Colunas do Relatório Excel (21 colunas: A-U)
+
+### Colunas Base (A-E)
+- **A**: Favorito (A, B, C ou vazio)
+- **B**: Símbolo (BTC, ETH, etc.)
+- **C**: Última Cotação
+- **D**: Penúltima Cotação
+- **E**: Período (12M, 6M, 3M, 1M)
+
+### Estatísticas Baseadas em Média (F-J)
+- **F**: Mínimo | **G**: Máximo | **H**: Média
+- **I**: Desvio Padrão | **J**: Média-Desvio (H-I)
+
+### Comparações com Média (K-N)
+- **K**: Last-AVG% = (C-H)/H
+- **L**: Last-A-S% = (C-J)/J
+- **M**: 2nd-AVG% = (D-H)/H
+- **N**: 2nd-A-S% = (D-J)/J
+
+### Estatísticas Baseadas em Mediana (O-Q)
+- **O**: MEDIAN | **P**: MAD | **Q**: MED-MAD (O-P)
+
+### Comparações com Mediana (R-U)
+- **R**: Last-MED% = (C-O)/O
+- **S**: Last-M-M% = (C-Q)/Q
+- **T**: 2nd-MED% = (D-O)/O
+- **U**: 2nd-M-M% = (D-Q)/Q
+
 ## Extensibilidade
 
-**Para adicionar novas criptomoedas:**
-```python
-python main.py --symbols BTC,ETH,NEW_SYMBOL
+**Adicionar criptomoedas:**
+```bash
+python main.py --symbols BTC,ETH,NEW
 ```
 
-**Para alterar período de análise:**
-Editar `ROLLING_PERIODS` em `analysis.py`
-
-**Para adicionar novas métricas:**
+**Adicionar métricas:**
 Estender `calculate_statistics()` em `analysis.py`
 
-**Para mudar formato de report:**
-Modificar `ExcelReporter` em `excel_reporter.py`
+**Modificar relatório:**
+Alterar `ExcelReporter` em `excel_reporter.py`
 
 ## Testes
 
-Executar testes:
 ```bash
-python -m pytest tests/
+# Executar testes
+run_tests.cmd
+
+# Com cobertura
+pytest --cov=src --cov-report=html
 ```
 
-Ou:
-```bash
-python -m unittest tests.test_project
-```
-
-Cobertura de testes:
-- Database operations
-- Statistical calculations
-- DataFrame operations
-- Error handling
+**101 testes** cobrindo: database, análise estatística, API, volatilidade.
 
 ---
 
-**Última atualização**: Dezembro 2024
+**PSC CryptoPlay © 2025**

@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.6.1] - 2025-12-21
+
+### Changed
+- **📚 Consolidação de Documentação**: Reduzido de 11 para 5 arquivos .md essenciais
+  - Removidos: LAST_QUOTE_DATE_UPDATE.md, PROJECT_COMPLETE.md, DEVELOPMENT.md, SONARQUBE.md
+  - FAVORITES_CLASSIFICATION.md incorporado em CONFIGURATION.md
+  - COLUMN_STRUCTURE.md incorporado em TECHNICAL.md
+  - Documentação mais concisa: -55% linhas mantendo informação essencial
+  - Arquivos mantidos: README, QUICKSTART, CHANGELOG, CONFIGURATION, TECHNICAL
+
 ## [3.6.0] - 2025-12-21
 
 ### Added

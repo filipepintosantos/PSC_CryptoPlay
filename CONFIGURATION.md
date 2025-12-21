@@ -155,64 +155,92 @@ path = data/production_crypto.db
 timeout = 60
 ```
 
+## Sistema de Favoritos (Classes A, B, C)
+
+### Classificação por Prioridade
+
+O sistema permite classificar criptomoedas em 3 níveis:
+
+- **Classe A**: Prioridade máxima (top priority)
+- **Classe B**: Prioridade secundária
+- **Classe C**: Prioridade terciária
+
+### Configuração no config.ini
+
+```ini
+[symbols]
+# Classe A: Top priority
+favorites_a = BTC,ETH,SOL,ADA,LINK,ATOM,XTZ
+
+# Classe B: Secondary priority
+favorites_b = XRP,BNB,TRX,DOGE,DOT,AVAX
+
+# Classe C: Tertiary priority
+favorites_c = BCH,XMR,XLM,LTC,AAVE
+```
+
+### Funções de Base de Dados
+
+```python
+# Definir classe
+db.set_favorite_class(code, 'A')  # A, B, C ou None
+
+# Buscar por classe
+db.get_all_crypto_info(favorite_class='A')      # Apenas A
+db.get_all_crypto_info(favorites_only=True)     # Todas as classes
+```
+
+### Visualização no Excel
+
+- Classe A: 🟡 Dourado
+- Classe B: 🟠 Laranja
+- Classe C: 🔵 Azul Claro
+
+### Scripts
+
+```bash
+# Adicionar com classificação
+python scripts/add_symbols.py MATIC ALGO --class B
+
+# Ver favoritos atuais
+python scripts/mark_favorites.py
+```
+
 ## Workflow Recomendado
 
 ### 1. Primeira Execução
 
 ```bash
-# Edite config/config.ini
-# Define suas criptomoedas em [symbols]
-
-# Execute em modo full para recolher histórico
+# Configure config/config.ini
 python main.py --all-symbols --fetch-mode full
-
-# Isto criará:
-# - Banco de dados com histórico
-# - Relatório Excel completo
 ```
 
 ### 2. Execuções Diárias
 
 ```bash
-# Use modo incremental (padrão)
-python main.py --fetch-mode incremental
+# Atualização inteligente (auto-range)
+update_quotes.cmd
 
-# Ou mais simples (usa favorites)
+# Ou manual
 python main.py
 ```
 
 ### 3. Atualização Completa Periódica
 
 ```bash
-# Uma vez por semana/mês, recolha tudo novamente
+# Semanal/mensal
 python main.py --all-symbols --fetch-mode full
 ```
 
 ## Troubleshooting
 
-### Erro: "No such file or directory: 'config/config.ini'"
-
-- Certifique-se de que o ficheiro existe em `config/config.ini`
-- Se não existir, crie-o baseado no exemplo acima
-
-### Símbolos não aparecem no relatório
-
-- Verifique se o símbolo está correto (ex: `BTC`, não `bitcoin`)
-- Certifique-se de que tem dados nesse símbolo na base de dados
-- Use `--report-only` para ver dados existentes
-
-### Modo incremental não funciona como esperado
-
-- Verifique se já tem dados na base de dados: `dir data\crypto_prices.db`
-- Use `--fetch-mode full` para forçar recolha completa
-- Verifique permissões de ficheiro
-
-### Performance lenta
-
-- Aumente `timeout` em `[database]` seção
-- Use `--fetch-only` em hora de pico, `--report-only` depois
-- Reduza número de símbolos em análise
+| Problema | Solução |
+|----------|---------|
+| "No such file config.ini" | Crie o arquivo baseado no exemplo |
+| Símbolos não aparecem | Verifique nome correto (BTC, não bitcoin) |
+| Modo incremental não funciona | Use `--fetch-mode full` |
+| Performance lenta | Reduza número de símbolos |
 
 ---
 
-**Última atualização**: Dezembro 2024
+**PSC CryptoPlay © 2025**
