@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.6.2] - 2025-12-21
+
+### Changed
+- **📊 Relatório Excel - Formato de Volatilidade**: Colunas de volatilidade agora mostram "subidas:descidas"
+  - Colunas V-Y (±5%, ±10%, ±15%, ±20%): Formato alterado de soma total para "positivas:negativas"
+  - Exemplo: "8:11" em vez de "19"
+  - Facilita visualização de tendência (mais subidas vs descidas)
+  - Score/Mês (coluna Z) mantido inalterado
+
 ## [3.6.1] - 2025-12-21
 
 ### Changed
