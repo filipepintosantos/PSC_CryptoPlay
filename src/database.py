@@ -55,6 +55,7 @@ class CryptoDatabase:
                 market_entry TIMESTAMP,
                 market_cap REAL,
                 favorite TEXT DEFAULT NULL,
+                last_quote_date DATE DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -141,6 +142,10 @@ class CryptoDatabase:
                 date_only
             ))
             self.conn.commit()
+            
+            # Update last_quote_date in crypto_info
+            self.update_last_quote_date(symbol)
+            
             return True
         except Exception as e:
             print(f"Error inserting quote for {symbol}: {e}")
@@ -328,10 +333,71 @@ class CryptoDatabase:
                 ))
             
             self.conn.commit()
+            
+            # Update last_quote_date in crypto_info
+            self.update_last_quote_date(symbol)
+            
             return True
         except Exception as e:
             print(f"Error inserting/updating quote for {symbol}: {e}")
             return False
+    
+    def update_last_quote_date(self, symbol: str) -> bool:
+        """
+        Update the last_quote_date in crypto_info table for a symbol.
+        Sets it to the most recent date from price_quotes.
+        
+        Args:
+            symbol: Cryptocurrency symbol/code
+        
+        Returns:
+            True if successful
+        """
+        cursor = self.conn.cursor()
+        try:
+            # Get the most recent quote date for this symbol
+            cursor.execute("""
+                SELECT MAX(timestamp) FROM price_quotes
+                WHERE crypto_id = ?
+            """, (symbol,))
+            
+            result = cursor.fetchone()
+            last_date = result[0] if result and result[0] else None
+            
+            if last_date:
+                # Update crypto_info with the last quote date
+                cursor.execute("""
+                    UPDATE crypto_info 
+                    SET last_quote_date = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE code = ?
+                """, (last_date, symbol))
+                self.conn.commit()
+            
+            return True
+        except Exception as e:
+            print(f"Error updating last_quote_date for {symbol}: {e}")
+            return False
+    
+    def get_last_quote_date_for_symbol(self, symbol: str) -> Optional[datetime]:
+        """
+        Get the last quote date for a symbol from crypto_info table.
+        
+        Args:
+            symbol: Cryptocurrency symbol/code
+        
+        Returns:
+            Last quote date or None if not available
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT last_quote_date FROM crypto_info
+            WHERE code = ?
+        """, (symbol,))
+        
+        result = cursor.fetchone()
+        if result and result[0]:
+            return datetime.fromisoformat(result[0])
+        return None
     
     def add_crypto_info(self, code: str, name: str, market_entry: Optional[datetime] = None, 
                        market_cap: Optional[float] = None, favorite: Optional[str] = None) -> Optional[int]:

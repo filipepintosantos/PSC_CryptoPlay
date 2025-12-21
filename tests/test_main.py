@@ -347,10 +347,67 @@ class TestQuoteOperations(unittest.TestCase):
         symbols = ['BTC']
         
         count = main.fetch_historical_range(api, symbols, days=30, db=db,
-                                           throttle_seconds=0.1, retries=3)
+                                           throttle_seconds=0.1, retries=3, auto_range=False)
         
         self.assertEqual(count, 1)
         self.assertEqual(api.fetch_historical_range.call_count, 2)
+        db.close()
+    
+    @patch('time.sleep')
+    def test_fetch_historical_range_auto_range_with_previous_data(self, mock_sleep):
+        """Test auto-range mode with existing quote data."""
+        from datetime import timedelta
+        
+        api = Mock()
+        last_date = datetime.now() - timedelta(days=5)
+        api.fetch_historical_range = Mock(return_value=[
+            {'symbol': 'BTC', 'name': 'Bitcoin', 'price_eur': 45000, 'timestamp': datetime.now() - timedelta(days=1)}
+        ])
+        
+        db = CryptoDatabase(":memory:")
+        
+        # Add crypto info and a previous quote
+        db.add_crypto_info("BTC", "Bitcoin")
+        db.insert_quote("BTC", {
+            'symbol': 'BTC',
+            'name': 'Bitcoin',
+            'price_eur': 44000,
+            'timestamp': last_date
+        })
+        
+        symbols = ['BTC']
+        
+        # Call with auto_range=True
+        count = main.fetch_historical_range(api, symbols, days=30, db=db,
+                                           throttle_seconds=0.1, retries=3, auto_range=True)
+        
+        # Verify it called with start_date parameter
+        call_args = api.fetch_historical_range.call_args
+        self.assertIn('start_date', call_args[1])
+        
+        db.close()
+    
+    @patch('time.sleep')
+    def test_fetch_historical_range_auto_range_without_previous_data(self, mock_sleep):
+        """Test auto-range mode without existing quote data (fallback to 365 days)."""
+        api = Mock()
+        api.fetch_historical_range = Mock(return_value=[
+            {'symbol': 'ETH', 'name': 'Ethereum', 'price_eur': 3000, 'timestamp': datetime.now()}
+        ])
+        
+        db = CryptoDatabase(":memory:")
+        db.add_crypto_info("ETH", "Ethereum")
+        
+        symbols = ['ETH']
+        
+        # Call with auto_range=True but no previous quotes
+        count = main.fetch_historical_range(api, symbols, days=30, db=db,
+                                           throttle_seconds=0.1, retries=3, auto_range=True)
+        
+        # Should call API (fallback to 365 days when no previous data)
+        self.assertEqual(api.fetch_historical_range.call_count, 1)
+        self.assertEqual(count, 1)
+        
         db.close()
 
 

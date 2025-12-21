@@ -84,6 +84,36 @@ class TestYFinanceAPI(unittest.TestCase):
             # Should have close to 30 days of data
             self.assertGreater(len(quotes), 20)
             self.assertLessEqual(len(quotes), 30)
+    
+    def test_fetch_historical_with_start_date(self):
+        """Test fetching historical data with start_date parameter."""
+        from datetime import timedelta
+        
+        # Fetch from 10 days ago to yesterday
+        start_date = datetime.now() - timedelta(days=10)
+        quotes = self.api.fetch_historical_range(['BTC'], start_date=start_date)
+        
+        if quotes:  # May fail if network is down
+            # Should have around 10 days of data
+            self.assertGreater(len(quotes), 5)
+            self.assertLessEqual(len(quotes), 10)
+            
+            # Verify dates are in expected range
+            for quote in quotes:
+                quote_date = quote['timestamp']
+                self.assertGreaterEqual(quote_date, start_date.date())
+    
+    def test_fetch_historical_start_date_overrides_days(self):
+        """Test that start_date parameter overrides days parameter."""
+        from datetime import timedelta
+        
+        # Provide both start_date and days, start_date should take precedence
+        start_date = datetime.now() - timedelta(days=5)
+        quotes = self.api.fetch_historical_range(['BTC'], days=365, start_date=start_date)
+        
+        if quotes:  # May fail if network is down
+            # Should have around 5 days, not 365
+            self.assertLessEqual(len(quotes), 6)  # 5 days + buffer for weekends
 
 
 if __name__ == '__main__':

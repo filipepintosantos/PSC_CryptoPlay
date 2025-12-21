@@ -490,6 +490,90 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
         
         with self.assertRaises(ValueError):
             self.db.set_favorite_class("XRP", 'D')  # Invalid class
+    
+    def test_update_last_quote_date(self):
+        """Test update_last_quote_date method."""
+        # Add crypto info
+        self.db.add_crypto_info("BTC", "Bitcoin")
+        
+        # Insert quotes
+        base_date = datetime.now()
+        quote1 = {
+            "symbol": "BTC",
+            "name": "Bitcoin",
+            "price_eur": 45000.0,
+            "timestamp": base_date - timedelta(days=2)
+        }
+        quote2 = {
+            "symbol": "BTC",
+            "name": "Bitcoin",
+            "price_eur": 46000.0,
+            "timestamp": base_date - timedelta(days=1)
+        }
+        
+        self.db.insert_quote("BTC", quote1)
+        self.db.insert_quote("BTC", quote2)
+        
+        # update_last_quote_date is called automatically by insert_quote
+        # Verify last_quote_date was updated
+        info = self.db.get_crypto_info("BTC")
+        self.assertIsNotNone(info['last_quote_date'])
+        
+        # The last quote date should be the most recent one
+        expected_date = (base_date - timedelta(days=1)).date()
+        actual_date = datetime.fromisoformat(info['last_quote_date']).date()
+        self.assertEqual(actual_date, expected_date)
+    
+    def test_get_last_quote_date_for_symbol(self):
+        """Test get_last_quote_date_for_symbol method."""
+        # Add crypto info
+        self.db.add_crypto_info("ETH", "Ethereum")
+        
+        # Initially should return None (no quotes)
+        last_date = self.db.get_last_quote_date_for_symbol("ETH")
+        self.assertIsNone(last_date)
+        
+        # Insert a quote
+        base_date = datetime.now()
+        quote = {
+            "symbol": "ETH",
+            "name": "Ethereum",
+            "price_eur": 3000.0,
+            "timestamp": base_date - timedelta(days=3)
+        }
+        self.db.insert_quote("ETH", quote)
+        
+        # Now should return the quote date
+        last_date = self.db.get_last_quote_date_for_symbol("ETH")
+        self.assertIsNotNone(last_date)
+        expected_date = (base_date - timedelta(days=3)).date()
+        self.assertEqual(last_date.date(), expected_date)
+        
+        # Insert a more recent quote
+        quote2 = {
+            "symbol": "ETH",
+            "name": "Ethereum",
+            "price_eur": 3100.0,
+            "timestamp": base_date - timedelta(days=1)
+        }
+        self.db.insert_quote("ETH", quote2)
+        
+        # Should return the most recent date
+        last_date = self.db.get_last_quote_date_for_symbol("ETH")
+        expected_date = (base_date - timedelta(days=1)).date()
+        self.assertEqual(last_date.date(), expected_date)
+    
+    def test_last_quote_date_column_exists(self):
+        """Test that last_quote_date column exists in crypto_info table."""
+        # Add a crypto
+        self.db.add_crypto_info("ADA", "Cardano")
+        
+        # Get crypto info and verify column exists
+        info = self.db.get_crypto_info("ADA")
+        self.assertIn('last_quote_date', info)
+        
+        # Initially should be None
+        self.assertIsNone(info['last_quote_date'])
 
 
 if __name__ == "__main__":

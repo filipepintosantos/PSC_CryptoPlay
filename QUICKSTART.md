@@ -56,24 +56,59 @@ Abra `reports/crypto_analysis.xlsx`:
 ## 5️⃣ Execuções Seguintes (Mais Rápidas)
 
 ```bash
+# Atualizar cotações automaticamente (desde última atualização)
+update_quotes.cmd  # Modo auto-range (recomendado!)
+
 # Apenas favoritos (BTC, ETH, ADA, XRP, SOL)
 python main.py
 
-# Modo incremental: continua de onde parou (30 segundos)
-python main.py --fetch-mode incremental
+# Modo auto-range: busca apenas dados novos (rápido!)
+python main.py --all-from-db --auto-range
+
+# Últimos 7 dias (modo clássico)
+python main.py --all-from-db --days 7
 
 # Apenas gerar novo relatório (5 segundos)
 python main.py --report-only
 ```
 
+## 🔄 Atualização Inteligente (Novo em 3.6.0!)
+
+O modo **auto-range** busca automaticamente apenas as cotações que faltam:
+
+```bash
+# Atualiza desde a última cotação até ontem
+update_quotes.cmd
+
+# Ou manualmente:
+python main.py --all-from-db --auto-range
+```
+
+**Como funciona:**
+- Verifica a data da última cotação de cada moeda
+- Busca apenas dados novos (desde essa data até ontem)
+- Se não houver dados prévios, busca últimos 365 dias
+- **Resultado:** Menos tráfego de API, execução mais rápida!
+
+### Migração de Bases Existentes
+
+Se já usa o PSC CryptoPlay, execute o script de migração:
+
+```bash
+python scripts/add_last_quote_date_column.py
+```
+
+Isto adiciona a coluna `last_quote_date` e popula com dados históricos.
+
 ## 📋 Comandos Frequentes
 
 | Tarefa | Comando |
 |--------|---------|
-| Atualizar dados favoritos | `python main.py` |
+| Atualizar dados (auto) | `update_quotes.cmd` ou `python main.py --all-from-db --auto-range` |
 | Adicionar nova moeda | `python main.py --symbols BTC,ETH,NOVO` |
-| Recolher tudo novamente | `python main.py --all-symbols --fetch-mode full` |
+| Últimos N dias | `python main.py --all-from-db --days 30` |
 | Regenerar só o Excel | `python main.py --report-only` |
+| Migrar BD existente | `python scripts/add_last_quote_date_column.py` |
 | Ver ajuda completa | `python main.py --help` |
 
 ## ⚙️ Personalizações

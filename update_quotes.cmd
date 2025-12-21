@@ -1,6 +1,6 @@
 @echo off
-REM Update cryptocurrency quotes with last 3 days of data
-REM This script fetches the latest quotes for all cryptocurrencies in crypto_info table
+REM Update cryptocurrency quotes automatically from last quote date to yesterday
+REM This script fetches quotes from the last recorded date to yesterday for all cryptocurrencies in crypto_info table
 
 echo ========================================
 echo Updating Cryptocurrency Quotes
@@ -9,12 +9,12 @@ echo.
 
 cd /d "%~dp0"
 
-REM Activate virtual environment and run main.py with --all-from-db and --days 3
-echo Fetching last 3 days of quotes for all cryptocurrencies...
+REM Activate virtual environment and run main.py with --all-from-db and --auto-range
+echo Fetching quotes from last recorded date to yesterday for all cryptocurrencies...
 echo.
 
 call venv\Scripts\activate.bat
-venv\Scripts\python.exe main.py --all-from-db --days 3
+venv\Scripts\python.exe main.py --all-from-db --auto-range
 
 echo.
 echo ========================================

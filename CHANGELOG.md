@@ -1,5 +1,56 @@
 # Changelog
 
+## [3.6.0] - 2025-12-21
+
+### Added
+- **📅 Coluna last_quote_date na Tabela crypto_info**: Nova coluna para rastrear data da última cotação
+  - Tabela `crypto_info`: Nova coluna `last_quote_date` (tipo DATE)
+  - Armazena automaticamente a data mais recente de cotação para cada criptomoeda
+  - Atualizada automaticamente após cada inserção/atualização de cotação
+  - Permite otimização do processo de atualização
+
+- **🚀 Modo Auto-Range de Atualização**: Atualização inteligente de cotações
+  - Novo argumento `--auto-range` para buscar apenas dados novos
+  - Verifica `last_quote_date` e busca desde essa data até ontem
+  - Reduz tráfego de API buscando apenas cotações faltantes
+  - Fallback para 365 dias se não houver dados prévios
+  - Script `update_quotes.cmd` agora usa modo auto-range por padrão
+
+- **🔧 Novos Métodos no CryptoDatabase**:
+  - `update_last_quote_date(symbol)`: Atualiza data da última cotação na crypto_info
+  - `get_last_quote_date_for_symbol(symbol)`: Consulta data da última cotação
+  - Chamados automaticamente pelo `insert_or_update_quote()`
+
+- **🔄 API Estendida com start_date**: yfinance API mais flexível
+  - `fetch_historical_range()`: Novo parâmetro opcional `start_date`
+  - Permite buscar dados desde uma data específica até ontem
+  - Mantém compatibilidade com parâmetro `days` existente
+
+- **📦 Script de Migração**: Ferramenta para bases de dados existentes
+  - `scripts/add_last_quote_date_column.py`: Adiciona coluna em BDs existentes
+  - Popula automaticamente com datas das cotações mais recentes
+  - Idempotente (pode ser executado múltiplas vezes)
+  - Uso: `python scripts/add_last_quote_date_column.py [--db-path PATH]`
+
+- **📖 Nova Documentação**:
+  - `LAST_QUOTE_DATE_UPDATE.md`: Guia completo da nova funcionalidade
+  - Exemplos de uso e casos de migração
+  - Benefícios e notas técnicas detalhadas
+
+### Changed
+- **⚡ Otimização do update_quotes.cmd**: Agora usa modo auto-range
+  - Antes: `--days 3` (sempre busca 3 dias para todas as moedas)
+  - Agora: `--auto-range` (busca apenas dados novos desde última cotação)
+  - Reduz chamadas à API e tempo de execução
+
+### Technical
+- `database.py`: Modificado `create_tables()` para incluir coluna `last_quote_date`
+- `database.py`: `insert_or_update_quote()` atualiza `last_quote_date` automaticamente
+- `main.py`: Função `fetch_historical_range()` aceita parâmetro `auto_range`
+- `main.py`: Argumentos CLI incluem `--auto-range` 
+- `main.py`: Função `_fetch_price_data()` usa auto-range por padrão quando `--days` não especificado
+- `api_yfinance.py`: `fetch_historical_range()` aceita `start_date` opcional
+
 ## [3.5.3] - 2025-12-15
 
 ### Fixed

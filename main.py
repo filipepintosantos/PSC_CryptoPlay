@@ -9,7 +9,7 @@ import configparser
 import time
 import csv
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from typing import Optional
 
@@ -140,16 +140,55 @@ def determine_symbols(args, config: configparser.ConfigParser, db_path: str) -> 
         return [s.strip().upper() for s in symbols_str.split(",")]
 
 
-def fetch_historical_range(api, symbols: list, days: int, db, throttle_seconds: float, retries: int) -> int:
-    """Fetch historical data for a specific number of days."""
-    print(f"Fetching historical range: last {days} days")
+def fetch_historical_range(api, symbols: list, days: int, db, throttle_seconds: float, 
+                          retries: int, auto_range: bool = False) -> int:
+    """
+    Fetch historical data for a specific number of days or automatically from last quote.
+    
+    Args:
+        api: API instance
+        symbols: List of symbols to fetch
+        days: Number of days (ignored if auto_range is True)
+        db: Database instance
+        throttle_seconds: Delay between symbols
+        retries: Number of retries on error
+        auto_range: If True, fetch from last quote date to yesterday for each symbol
+    
+    Returns:
+        Total number of quotes stored
+    """
+    if auto_range:
+        print("Fetching historical range: auto-range mode (from last quote to yesterday)")
+    else:
+        print(f"Fetching historical range: last {days} days")
+    
     total_count = 0
     for idx, sym in enumerate(symbols, start=1):
-        print(f"[{idx}/{len(symbols)}] {sym} → OHLCV daily between-dates")
+        start_date = None
+        
+        if auto_range:
+            # Get last quote date for this symbol from crypto_info
+            last_date = db.get_last_quote_date_for_symbol(sym)
+            if last_date:
+                # Start from the day after the last quote
+                start_date = last_date + timedelta(days=1)
+                print(f"[{idx}/{len(symbols)}] {sym} → OHLCV from {start_date.date()} to yesterday")
+            else:
+                # No previous data, fetch last 365 days
+                start_date = None
+                days_to_fetch = 365
+                print(f"[{idx}/{len(symbols)}] {sym} → No previous data, fetching last {days_to_fetch} days")
+        else:
+            print(f"[{idx}/{len(symbols)}] {sym} → OHLCV daily between-dates")
+            days_to_fetch = days
+        
         attempt = 0
         while True:
             try:
-                sym_quotes = api.fetch_historical_range([sym], days=days)
+                if auto_range and start_date:
+                    sym_quotes = api.fetch_historical_range([sym], start_date=start_date)
+                else:
+                    sym_quotes = api.fetch_historical_range([sym], days=days_to_fetch if not auto_range else 365)
                 break
             except Exception as e:
                 attempt += 1
@@ -330,6 +369,11 @@ def _setup_argument_parser():
         help="Fetch historical quotes for the last N days (e.g. 365)"
     )
     parser.add_argument(
+        "--auto-range",
+        action="store_true",
+        help="Automatically fetch from last quote date to yesterday (default for update_quotes.cmd)"
+    )
+    parser.add_argument(
         "--fetch-only",
         action="store_true",
         help="Only fetch and store data, don't generate report"
@@ -406,8 +450,11 @@ def _fetch_price_data(args, symbols, db, fetch_mode, throttle_seconds, retries, 
     try:
         api = YFinanceCryptoAPI()
         
-        if args.days:
-            fetch_historical_range(api, symbols, args.days, db, throttle_seconds, retries)
+        if args.days or args.auto_range:
+            # Use historical range fetch
+            auto_range = args.auto_range or (not args.days)  # Default to auto-range if neither specified
+            days = args.days if args.days else 365  # Fallback days value
+            fetch_historical_range(api, symbols, days, db, throttle_seconds, retries, auto_range)
         else:
             quotes = fetch_quotes_incremental(api, symbols, db, fetch_mode)
             if quotes:

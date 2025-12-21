@@ -93,25 +93,32 @@ class YFinanceCryptoAPI:
                 quotes.append(quote)
         return quotes
     
-    def fetch_historical_range(self, symbols: List[str], days: int = 365) -> List[Dict]:
+    def fetch_historical_range(self, symbols: List[str], days: int = 365, 
+                              start_date: Optional[datetime] = None) -> List[Dict]:
         """
-        Fetch historical close-of-day quotes for the last N days.
+        Fetch historical close-of-day quotes for the last N days or from a specific start date.
         
         Args:
             symbols: List of cryptocurrency symbols
-            days: Number of days of historical data (default: 365)
+            days: Number of days of historical data (default: 365, ignored if start_date is provided)
+            start_date: Optional start date to fetch from (if provided, overrides days parameter)
         
         Returns:
             List of quote dictionaries with date and close price
         """
-        if days <= 0:
-            return []
-        
         results = []
         
         # Calculate date range (end = yesterday to avoid partial data)
         end_date = datetime.now().date() - timedelta(days=1)
-        start_date = end_date - timedelta(days=days - 1)
+        
+        if start_date:
+            # Use provided start date
+            calc_start_date = start_date.date() if hasattr(start_date, 'date') else start_date
+        elif days > 0:
+            # Calculate from days
+            calc_start_date = end_date - timedelta(days=days - 1)
+        else:
+            return []
         
         for symbol in symbols:
             try:
@@ -120,7 +127,7 @@ class YFinanceCryptoAPI:
                 
                 # Download historical data
                 hist = crypto.history(
-                    start=start_date.isoformat(),
+                    start=calc_start_date.isoformat(),
                     end=(end_date + timedelta(days=1)).isoformat(),  # Include end date
                     interval='1d'
                 )
