@@ -1,7 +1,10 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QListWidget, QLabel
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QTreeWidget, QTreeWidgetItem, QLabel
+from PyQt6.QtGui import QIcon, QPixmap
+import os
 from PyQt6.QtCore import Qt
 import pyqtgraph as pg
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -17,16 +20,36 @@ class MainWindow(QMainWindow):
         main_widget.setLayout(main_layout)
         self.setCentralWidget(main_widget)
 
-        # Sidebar (menu)
-        sidebar = QListWidget()
-        sidebar.addItems([
-            "Atualizar Dados",
-            "Abrir Relatório",
-            "Consultar Base de Dados",
-            "Ver Gráficos"
-        ])
-        sidebar.setMaximumWidth(180)
-        main_layout.addWidget(sidebar)
+        # Sidebar (menu tree)
+        self.sidebar = QTreeWidget()
+        self.sidebar.setHeaderHidden(True)
+        self.sidebar.setMaximumWidth(220)
+
+        # Top-level menu groups
+        icon_dir = os.path.join(os.path.dirname(__file__), "icons")
+        groups = [
+            ("Início", "inicio.png"),
+            ("Atualizar Dados", "atualizar.png"),
+            ("Consultar Base de Dados", "database.png"),
+            ("Relatórios", "relatorio.png"),
+            ("Ver Gráficos", "graficos.png")
+        ]
+        self.group_items = []
+        for group_name, icon_file in groups:
+            group_item = QTreeWidgetItem([group_name])
+            # Submenus específicos para Relatórios
+            if group_name == "Relatórios":
+                atualizar_item = QTreeWidgetItem(["Atualizar relatório"])
+                abrir_item = QTreeWidgetItem(["Abrir relatório"])
+                group_item.addChild(atualizar_item)
+                group_item.addChild(abrir_item)
+            elif group_name != "Início":
+                dummy = QTreeWidgetItem(["(exemplo)"])
+                group_item.addChild(dummy)
+            self.sidebar.addTopLevelItem(group_item)
+            self.group_items.append(group_item)
+
+        main_layout.addWidget(self.sidebar)
 
         # Content area (right)
         self.content_area = QWidget()
@@ -34,41 +57,111 @@ class MainWindow(QMainWindow):
         self.content_area.setLayout(self.content_layout)
         main_layout.addWidget(self.content_area)
 
-        # Placeholder for initial content
-        self.placeholder_label = QLabel("Selecione uma opção no menu à esquerda.")
-        self.placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.content_layout.addWidget(self.placeholder_label)
+        # Placeholder for initial content removido (será controlado pelo menu)
 
         # Connect sidebar selection
-        sidebar.currentRowChanged.connect(self.display_content)
+        self.sidebar.currentItemChanged.connect(self.display_content)
 
-    def display_content(self, index):
+        # Selecionar "Início" por defeito
+        self.sidebar.setCurrentItem(self.group_items[0])
+
+    def display_content(self, current, previous):
         # Clear current content
         for i in reversed(range(self.content_layout.count())):
             widget = self.content_layout.itemAt(i).widget()
             if widget:
                 widget.setParent(None)
 
-        if index == 0:
-            label = QLabel("Função: Atualizar Dados (a implementar)")
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.content_layout.addWidget(label)
-        elif index == 1:
-            label = QLabel("Função: Abrir Relatório (a implementar)")
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.content_layout.addWidget(label)
-        elif index == 2:
-            label = QLabel("Função: Consultar Base de Dados (a implementar)")
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.content_layout.addWidget(label)
-        elif index == 3:
-            plot_widget = pg.PlotWidget()
-            plot_widget.plot([1,2,3,4,5], [10, 20, 15, 30, 25], pen=pg.mkPen(color='b', width=2))
-            self.content_layout.addWidget(plot_widget)
-        else:
+        if current is None:
             label = QLabel("Selecione uma opção no menu à esquerda.")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.content_layout.addWidget(label)
+            return
+
+        # Se for grupo (top-level)
+        if current.parent() is None:
+            group_name = current.text(0)
+            # Imagem sugestiva (se existir)
+            icon_map = {
+                "Início": "inicio.png",
+                "Atualizar Dados": "atualizar.png",
+                "Relatórios": "relatorio.png",
+                "Consultar Base de Dados": "database.png",
+                "Ver Gráficos": "graficos.png"
+            }
+            icon_dir = os.path.join(os.path.dirname(__file__), "icons")
+            icon_file = icon_map.get(group_name, None)
+            img_path = os.path.join(icon_dir, icon_file) if icon_file else None
+            if img_path and os.path.exists(img_path):
+                pixmap = QPixmap(img_path)
+                img_label = QLabel()
+                img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                from PyQt6.QtWidgets import QSizePolicy
+                img_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+                self.content_layout.addWidget(img_label)
+
+                # Função para redimensionar a imagem ao espaço disponível
+                def resize_pixmap():
+                    area_size = self.content_area.size()
+                    w = max(100, area_size.width() - 40)
+                    h = max(100, area_size.height() - 40)
+                    img_label.setPixmap(pixmap.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+
+                # Redimensiona ao abrir
+                resize_pixmap()
+
+                # Redimensiona sempre que a área de conteúdo for redimensionada
+                old_resize_event = self.content_area.resizeEvent
+                def new_resize_event(event):
+                    resize_pixmap()
+                    if old_resize_event:
+                        old_resize_event(event)
+                self.content_area.resizeEvent = new_resize_event
+            else:
+                label = QLabel(f"Imagem sugestiva para: {group_name}")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.content_layout.addWidget(label)
+        else:
+            # Sub-item selecionado
+            parent_name = current.parent().text(0)
+            sub_name = current.text(0)
+            if parent_name == "Relatórios" and sub_name == "Atualizar relatório":
+                # Mostra data de atualização do relatório Excel
+                # Caminho absoluto a partir do diretório do projeto
+                project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+                excel_path = os.path.join(project_dir, "reports", "AnaliseCrypto.xlsx")
+                import datetime
+                if os.path.exists(excel_path):
+                    mtime = os.path.getmtime(excel_path)
+                    dt = datetime.datetime.fromtimestamp(mtime)
+                    label = QLabel(f"Última atualização do relatório: {dt.strftime('%d/%m/%Y %H:%M:%S')}")
+                else:
+                    label = QLabel("Relatório Excel não encontrado.")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.content_layout.addWidget(label)
+            elif parent_name == "Relatórios" and sub_name == "Abrir relatório":
+                base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+                excel_path = os.path.join(base_dir, "reports", "AnaliseCrypto.xlsx")
+                if os.path.exists(excel_path):
+                    label = QLabel("Abrindo relatório no Excel...")
+                    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    self.content_layout.addWidget(label)
+                    import subprocess, sys
+                    try:
+                        if sys.platform.startswith("win"):
+                            os.startfile(excel_path)
+                        else:
+                            subprocess.Popen(["xdg-open", excel_path])
+                    except Exception:
+                        label.setText("Erro ao abrir o relatório.")
+                else:
+                    label = QLabel("Relatório Excel não encontrado.")
+                    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    self.content_layout.addWidget(label)
+            else:
+                label = QLabel(f"Sub-opção '{sub_name}' em '{parent_name}' (dummy)")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.content_layout.addWidget(label)
 
 def main():
     app = QApplication(sys.argv)

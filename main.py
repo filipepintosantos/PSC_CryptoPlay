@@ -170,10 +170,17 @@ def fetch_historical_range(api, symbols: list, days: int, db, throttle_seconds: 
         if auto_range:
             # Get last quote date for this symbol from crypto_info
             last_date = db.get_last_quote_date_for_symbol(sym)
+            today = datetime.now().date()
             if last_date:
-                # Start from the day after the last quote
-                start_date = last_date + timedelta(days=1)
-                print(f"[{idx}/{len(symbols)}] {sym} → OHLCV from {start_date.date()} to yesterday")
+                last_date_only = last_date.date()
+                if last_date_only < today:
+                    # Se última data < hoje, buscar de (last_date+1) até hoje
+                    start_date = last_date + timedelta(days=1)
+                    print(f"[{idx}/{len(symbols)}] {sym} → OHLCV from {start_date.date()} to {today}")
+                else:
+                    # Se última data == hoje, buscar só hoje (idempotente)
+                    start_date = today
+                    print(f"[{idx}/{len(symbols)}] {sym} → OHLCV for today ({today})")
             else:
                 # No previous data, fetch last 365 days
                 start_date = None
@@ -312,7 +319,7 @@ def generate_report(db, symbols: list, report_path: str, db_path: str, config: c
     # Generate Excel report with volatility detail sheet
     print(f"Generating Excel report: {report_path}")
     reporter = ExcelReporter(report_path)
-    reporter.generate_report(reports, market_caps, favorites, volatility_results)
+    reporter.generate_report(reports, market_caps, favorites)
     
     print("✓ Analysis complete!")
     print(f"  Symbols analyzed: {', '.join(symbols)}")

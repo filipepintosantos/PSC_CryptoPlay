@@ -1,3 +1,10 @@
+
+# [4.2.0] - 2025-12-22
+
+### Changed
+- Atualização de versão para 4.2.0
+- Todas as referências ao relatório Excel agora usam `AnaliseCrypto.xlsx`.
+
 # [4.0.0] - 2025-12-22
 
 

@@ -21,7 +21,7 @@ python main.py --all-symbols --fetch-mode full
 
 ## 3️⃣ Relatório Excel
 
-Abra `reports/crypto_analysis.xlsx`:
+Abra `reports/AnaliseCrypto.xlsx`:
 - **Sheet "Resumo"**: Filtros nos cabeçalhos 🔽
 - Verde = preço acima da média | Vermelho = abaixo
 - **Sheets individuais**: Análise por moeda

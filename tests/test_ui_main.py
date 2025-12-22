@@ -31,13 +31,19 @@ class TestUIMain(unittest.TestCase):
         spec = importlib.util.find_spec("src.ui_main")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        from PyQt6.QtWidgets import QApplication
+        from PyQt6.QtWidgets import QApplication, QTreeWidget
         app = QApplication.instance() or QApplication(sys.argv)
         window = module.MainWindow()
-        sidebar = window.findChild(module.QListWidget)
+        sidebar = window.findChild(QTreeWidget)
         self.assertIsNotNone(sidebar)
         # Seleciona cada item do menu e verifica se não lança erro
-        for i in range(sidebar.count()):
+        for i in range(sidebar.topLevelItemCount()):
+            item = sidebar.topLevelItem(i)
+            sidebar.setCurrentItem(item)
+            # Se tiver filhos, testa seleção dos filhos também
+            for j in range(item.childCount()):
+                child = item.child(j)
+                sidebar.setCurrentItem(child)
             sidebar.setCurrentRow(i)
         window.close()
 
