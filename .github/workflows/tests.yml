@@ -40,7 +40,7 @@ jobs:
             libxrender1 \
             libfontconfig1 \
             libfreetype6 \
-            libgl1-mesa-glx \
+            libgl1 libegl1 \
             libglib2.0-0 \
             libnss3 \
             libasound2 \
