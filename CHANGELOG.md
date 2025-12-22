@@ -1,3 +1,13 @@
+# [4.2.4] - 2025-12-22
+
+### Changed
+- Ajuste de versão para 4.2.4
+
+# [4.2.2] - 2025-12-22
+
+### Changed
+- Ajuste de versão para 4.2.2 após fusão de workflows CI
+
 # [4.2.1] - 2025-12-22
 
 ### Changed
