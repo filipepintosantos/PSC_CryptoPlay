@@ -43,7 +43,7 @@ jobs:
             libgl1 libegl1 \
             libglib2.0-0 \
             libnss3 \
-            libasound2 \
+            libasound2t64 \
             xvfb
 
       - name: Install Python dependencies
