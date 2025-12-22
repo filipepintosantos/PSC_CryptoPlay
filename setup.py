@@ -15,7 +15,7 @@ def get_version():
 
 setup(
     name="psc-cryptoplay",
-    version="4.2.0",
+    version="4.2.1",
     packages=find_packages(exclude=["tests*"]),
     python_requires=">=3.8",
     install_requires=[
