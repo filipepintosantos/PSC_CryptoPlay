@@ -8,10 +8,14 @@
 setup.bat
 ```
 
+
 ## 2️⃣ Primeira Execução
 
 ```bash
-# Recolhe histórico completo (5-10 min)
+# Interface gráfica (desktop)
+run_ui.cmd
+
+# Ou modo linha de comando:
 python main.py --all-symbols --fetch-mode full
 ```
 

@@ -1,6 +1,6 @@
 # PSC CryptoPlay - Cryptocurrency Price Tracker & Analysis
 
-**Versão: 3.6.2**
+**Versão: 4.0.0**
 
 Rastreamento de cotações de criptomoedas em EUR, análise estatística de volatilidade e relatórios Excel profissionais.
 
@@ -34,10 +34,14 @@ python scripts\add_symbols.py
 run_tests.cmd
 ```
 
+## 🖥️ Interface Gráfica (Novo)
+
+Execute `run_ui.cmd` para abrir a interface desktop (PyQt6) com barra lateral, área de gráficos e integração futura para atualização de dados, relatórios e consultas.
+
 ## 📊 Features
 
 ✅ Yahoo Finance (gratuito, sem API key)  
-✅ Análise de volatilidade detalhada  
+✅ Análise de volatilidade detalhada
 ✅ Sistema de favoritos A/B/C  
 ✅ Modo auto-range (busca apenas dados novos)  
 ✅ 101 testes automatizados

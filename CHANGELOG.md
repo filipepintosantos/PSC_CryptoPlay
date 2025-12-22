@@ -1,3 +1,15 @@
+# [4.0.0] - 2025-12-22
+
+
+### Added
+- **🖥️ Interface Gráfica PyQt6**: Nova interface desktop com barra lateral, área de gráficos e integração futura para atualização de dados, relatórios e consultas.
+  - Arquivo principal: `src/ui_main.py`
+  - Script de arranque: `run_ui.cmd`
+  - Estrutura pronta para expansão de funcionalidades.
+
+### Breaking
+- Mudança de versão major para 4.0.0 devido à introdução da interface gráfica desktop.
+
 # Changelog
 
 
