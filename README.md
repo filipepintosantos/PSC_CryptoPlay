@@ -1,7 +1,7 @@
 # PSC CryptoPlay - Cryptocurrency Price Tracker & Analysis
 
 
-**Versão: 4.3.3**
+**Versão: 4.3.5**
 
 Rastreamento de cotações de criptomoedas em EUR, análise estatística de volatilidade e relatórios Excel profissionais.
 

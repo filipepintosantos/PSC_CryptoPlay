@@ -48,19 +48,19 @@ class MainWindow(QMainWindow):
             ("Consultar Base de Dados", "database.png"),
             ("Relatórios", "relatorio.png"),
             ("Gráficos", "graficos.png"),
+            ("Ferramentas", "tools.png"),
             ("Outras funcionalidades", "others.png")
         ]
         self.group_items = []
         for group_name, icon_file in groups:
             group_item = QTreeWidgetItem([group_name])
-            # Submenus específicos para Relatórios, Consultar Base de Dados, Gráficos e Atualizar Dados
+            # Submenus específicos para Relatórios, Consultar Base de Dados, Gráficos, Atualizar Dados e Ferramentas
             if group_name == "Relatórios":
                 atualizar_item = QTreeWidgetItem(["Atualizar relatório"])
                 abrir_item = QTreeWidgetItem(["Abrir relatório"])
                 group_item.addChild(atualizar_item)
                 group_item.addChild(abrir_item)
             elif group_name == "Atualizar Dados":
-                # Novas opções para Atualizar Dados v4.3.3
                 diaria_item = QTreeWidgetItem(["Atualização Diária"])
                 reavaliar_item = QTreeWidgetItem(["Reavaliar Moedas"])
                 forcar_item = QTreeWidgetItem(["Forçar Atualização"])
@@ -68,13 +68,11 @@ class MainWindow(QMainWindow):
                 group_item.addChild(reavaliar_item)
                 group_item.addChild(forcar_item)
             elif group_name == "Consultar Base de Dados":
-                # Novas opções adicionadas na v4.3.0
                 lista_moedas = QTreeWidgetItem(["Lista de Moedas"])
                 cotacoes = QTreeWidgetItem(["Cotações"])
                 group_item.addChild(lista_moedas)
                 group_item.addChild(cotacoes)
             elif group_name == "Gráficos":
-                # Novas opções de gráficos adicionadas na v4.3.1
                 graficos_opcoes = [
                     "Candlestick",
                     "Linha",
@@ -89,6 +87,11 @@ class MainWindow(QMainWindow):
                 ]
                 for opcao in graficos_opcoes:
                     group_item.addChild(QTreeWidgetItem([opcao]))
+            elif group_name == "Ferramentas":
+                configuracoes_item = QTreeWidgetItem(["Configurações"])
+                ajuda_item = QTreeWidgetItem(["Ajuda"])
+                group_item.addChild(configuracoes_item)
+                group_item.addChild(ajuda_item)
             elif group_name != "Início":
                 dummy = QTreeWidgetItem(["(exemplo)"])
                 group_item.addChild(dummy)
@@ -134,6 +137,7 @@ class MainWindow(QMainWindow):
                 "Relatórios": "relatorio.png",
                 "Consultar Base de Dados": "database.png",
                 "Gráficos": "graficos.png",
+                "Ferramentas": "tools.png",
                 "Outras funcionalidades": "others.png"
             }
             icon_dir = os.path.join(os.path.dirname(__file__), "icons")
@@ -174,7 +178,6 @@ class MainWindow(QMainWindow):
             sub_name = current.text(0)
             if parent_name == "Relatórios" and sub_name == "Atualizar relatório":
                 # Mostra data de atualização do relatório Excel
-                # Caminho absoluto a partir do diretório do projeto
                 project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
                 excel_path = os.path.join(project_dir, "reports", "AnaliseCrypto.xlsx")
                 import datetime
@@ -207,6 +210,70 @@ class MainWindow(QMainWindow):
                     label = QLabel("Relatório Excel não encontrado.")
                     label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                     self.content_layout.addWidget(label)
+            elif parent_name == "Ferramentas" and sub_name == "Ajuda":
+                # Mostra a documentação do projeto (README.md)
+                readme_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "README.md"))
+                if os.path.exists(readme_path):
+                    with open(readme_path, "r", encoding="utf-8") as f:
+                        doc_text = f.read()
+                    from PyQt6.QtWidgets import QTextEdit
+                    doc_widget = QTextEdit()
+                    doc_widget.setReadOnly(True)
+                    doc_widget.setPlainText(doc_text)
+                    self.content_layout.addWidget(doc_widget)
+                else:
+                    label = QLabel("README.md não encontrado.")
+                    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    self.content_layout.addWidget(label)
+            elif parent_name == "Atualizar Dados" and sub_name == "Atualização Diária":
+                # Executa main.py diretamente e mostra o output na área de trabalho usando QThread
+                from PyQt6.QtWidgets import QTextEdit
+                from PyQt6.QtCore import QThread, pyqtSignal, QObject
+                import subprocess
+                import sys
+                output_widget = QTextEdit()
+                output_widget.setReadOnly(True)
+                output_widget.setPlainText("A atualizar cotações... Aguarde.\n")
+                self.content_layout.addWidget(output_widget)
+
+                class Worker(QObject):
+                    output = pyqtSignal(str)
+                    finished = pyqtSignal()
+
+                    def run(self):
+                        try:
+                            script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "main.py"))
+                            python_exe = sys.executable
+                            process = subprocess.Popen(
+                                [python_exe, script_path, "--all-from-db", "--auto-range"],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,
+                                cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
+                                text=True,
+                                encoding="utf-8",
+                                errors="replace"
+                            )
+                            for line in process.stdout:
+                                self.output.emit(line.rstrip())
+                            process.wait()
+                            self.output.emit("\nAtualização concluída.")
+                        except Exception as e:
+                            self.output.emit(f"Erro ao executar main.py: {e}")
+                        self.finished.emit()
+
+                self.thread = QThread()
+                self.worker = Worker()
+                self.worker.moveToThread(self.thread)
+                self.thread.started.connect(self.worker.run)
+                self.worker.output.connect(output_widget.append)
+                self.worker.finished.connect(self.thread.quit)
+                self.worker.finished.connect(self.worker.deleteLater)
+                self.thread.finished.connect(self.thread.deleteLater)
+                self.thread.start()
+            elif parent_name == "Ferramentas" and sub_name == "Configurações":
+                label = QLabel("Configurações do projeto (em breve)")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.content_layout.addWidget(label)
             else:
                 label = QLabel(f"Sub-opção '{sub_name}' em '{parent_name}' (dummy)")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)

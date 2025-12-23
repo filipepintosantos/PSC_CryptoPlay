@@ -1,3 +1,10 @@
+
+# [4.3.5] - 2025-12-23
+
+### Added
+- Entrada "Ferramentas" no menu lateral, com submenus "Configurações" e "Ajuda" (mostra README.md).
+- "Atualização Diária" executa update_quotes.cmd e mostra o output na área de trabalho.
+
 # [4.3.2] - 2025-12-23
 
 ### Changed

@@ -11,7 +11,18 @@ import csv
 from pathlib import Path
 from datetime import datetime, timedelta
 
+
 from typing import Optional
+
+import sys
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
+def print_flush(*args, **kwargs):
+    print(*args, flush=True, **kwargs)
 
 # Add src directory to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))

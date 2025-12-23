@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 REM Update cryptocurrency quotes automatically from last quote date to yesterday
 REM This script fetches quotes from the last recorded date to yesterday for all cryptocurrencies in crypto_info table
 
