@@ -1,3 +1,13 @@
+# [4.3.2] - 2025-12-23
+
+### Changed
+- Reduzida a indentação dos submenus do menu lateral para metade do valor padrão.
+- Atualização da data da versão para 2025-12-23 em src/__init__.py.
+- Sincronização da versão em sonar-project.properties para 4.3.2.
+
+### Added
+- Submenu "Gráficos" com novas opções: Candlestick, Linha, OHLC, Volume, Volatilidade (%), Média móvel (SMA/EMA), RSI, MACD, Bollinger Bands, Comparativo entre ativos (apenas entradas no menu, sem implementação).
+
 # [4.2.4] - 2025-12-22
 
 ### Changed
