@@ -1,15 +1,28 @@
 import sys
+
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QTreeWidget, QTreeWidgetItem, QLabel
 from PyQt6.QtGui import QIcon, QPixmap
 import os
 from PyQt6.QtCore import Qt
 import pyqtgraph as pg
 
+# Permite importar __version__ mesmo com execução direta
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+from src import __version__
+
+# v4.3.0: Menu lateral agora inclui as opções 'Lista de Moedas' e 'Cotações' no submenu 'Consultar Base de Dados'.
+# O título da janela principal exibe o número da versão automaticamente lido de src.__init__.__version__.
+
+# v4.3.2: A indentação dos submenus foi reduzida para metade do valor padrão usando setIndentation no QTreeWidget.
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("CryptoPlay Dashboard")
+        # O título da janela inclui o número da versão do projeto
+        self.setWindowTitle(f"CryptoPlay Dashboard v{__version__}")
         self.resize(900, 600)
         self.init_ui()
 
@@ -24,6 +37,9 @@ class MainWindow(QMainWindow):
         self.sidebar = QTreeWidget()
         self.sidebar.setHeaderHidden(True)
         self.sidebar.setMaximumWidth(220)
+        # Reduz a indentação dos submenus para metade do padrão
+        default_indent = self.sidebar.indentation()
+        self.sidebar.setIndentation(max(10, default_indent // 2))
 
         # Top-level menu groups
         icon_dir = os.path.join(os.path.dirname(__file__), "icons")
@@ -32,17 +48,39 @@ class MainWindow(QMainWindow):
             ("Atualizar Dados", "atualizar.png"),
             ("Consultar Base de Dados", "database.png"),
             ("Relatórios", "relatorio.png"),
-            ("Ver Gráficos", "graficos.png")
+            ("Gráficos", "graficos.png")
         ]
         self.group_items = []
         for group_name, icon_file in groups:
             group_item = QTreeWidgetItem([group_name])
-            # Submenus específicos para Relatórios
+            # Submenus específicos para Relatórios, Consultar Base de Dados e Gráficos
             if group_name == "Relatórios":
                 atualizar_item = QTreeWidgetItem(["Atualizar relatório"])
                 abrir_item = QTreeWidgetItem(["Abrir relatório"])
                 group_item.addChild(atualizar_item)
                 group_item.addChild(abrir_item)
+            elif group_name == "Consultar Base de Dados":
+                # Novas opções adicionadas na v4.3.0
+                lista_moedas = QTreeWidgetItem(["Lista de Moedas"])
+                cotacoes = QTreeWidgetItem(["Cotações"])
+                group_item.addChild(lista_moedas)
+                group_item.addChild(cotacoes)
+            elif group_name == "Gráficos":
+                # Novas opções de gráficos adicionadas na v4.3.1
+                graficos_opcoes = [
+                    "Candlestick",
+                    "Linha",
+                    "OHLC (Open-High-Low-Close)",
+                    "Volume",
+                    "Volatilidade (%)",
+                    "Média móvel (SMA/EMA)",
+                    "RSI (Relative Strength Index)",
+                    "MACD (Moving Average Convergence Divergence)",
+                    "Bollinger Bands",
+                    "Comparativo entre ativos"
+                ]
+                for opcao in graficos_opcoes:
+                    group_item.addChild(QTreeWidgetItem([opcao]))
             elif group_name != "Início":
                 dummy = QTreeWidgetItem(["(exemplo)"])
                 group_item.addChild(dummy)
