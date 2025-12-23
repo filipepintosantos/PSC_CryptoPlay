@@ -1,6 +1,7 @@
 # PSC CryptoPlay - Cryptocurrency Price Tracker & Analysis
 
-**Versão: 4.2.4**
+
+**Versão: 4.3.3**
 
 Rastreamento de cotações de criptomoedas em EUR, análise estatística de volatilidade e relatórios Excel profissionais.
 
@@ -36,7 +37,14 @@ run_tests.cmd
 
 ## 🖥️ Interface Gráfica (Novo)
 
+
 Execute `run_ui.cmd` para abrir a interface desktop (PyQt6) com barra lateral, área de gráficos e integração futura para atualização de dados, relatórios e consultas.
+
+### Novidades na v4.3.3
+- Menu **Atualizar Dados** agora inclui as opções:
+	- Atualização Diária
+	- Reavaliar Moedas
+	- Forçar Atualização
 
 ## 📊 Features
 

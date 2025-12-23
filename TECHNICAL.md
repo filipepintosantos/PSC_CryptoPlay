@@ -1,4 +1,12 @@
+
 # Documentação Técnica - PSC CryptoPlay
+
+## Novidades v4.3.3
+- O menu lateral "Atualizar Dados" agora possui as opções:
+    - Atualização Diária
+    - Reavaliar Moedas
+    - Forçar Atualização
+    (Entradas de menu, sem implementação funcional nesta versão)
 
 ## Arquitetura do Sistema
 

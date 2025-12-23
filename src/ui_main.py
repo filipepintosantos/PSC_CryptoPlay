@@ -53,12 +53,20 @@ class MainWindow(QMainWindow):
         self.group_items = []
         for group_name, icon_file in groups:
             group_item = QTreeWidgetItem([group_name])
-            # Submenus específicos para Relatórios, Consultar Base de Dados e Gráficos
+            # Submenus específicos para Relatórios, Consultar Base de Dados, Gráficos e Atualizar Dados
             if group_name == "Relatórios":
                 atualizar_item = QTreeWidgetItem(["Atualizar relatório"])
                 abrir_item = QTreeWidgetItem(["Abrir relatório"])
                 group_item.addChild(atualizar_item)
                 group_item.addChild(abrir_item)
+            elif group_name == "Atualizar Dados":
+                # Novas opções para Atualizar Dados v4.3.3
+                diaria_item = QTreeWidgetItem(["Atualização Diária"])
+                reavaliar_item = QTreeWidgetItem(["Reavaliar Moedas"])
+                forcar_item = QTreeWidgetItem(["Forçar Atualização"])
+                group_item.addChild(diaria_item)
+                group_item.addChild(reavaliar_item)
+                group_item.addChild(forcar_item)
             elif group_name == "Consultar Base de Dados":
                 # Novas opções adicionadas na v4.3.0
                 lista_moedas = QTreeWidgetItem(["Lista de Moedas"])
@@ -184,14 +192,16 @@ class MainWindow(QMainWindow):
                     label = QLabel("Abrindo relatório no Excel...")
                     label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                     self.content_layout.addWidget(label)
-                    import subprocess, sys
-                    try:
-                        if sys.platform.startswith("win"):
-                            os.startfile(excel_path)
-                        else:
-                            subprocess.Popen(["xdg-open", excel_path])
-                    except Exception:
-                        label.setText("Erro ao abrir o relatório.")
+                    import subprocess, sys, os
+                    # Não abrir o Excel se estiver em ambiente de teste
+                    if not (os.environ.get("PYTEST_RUNNING") or os.environ.get("TESTING")):
+                        try:
+                            if sys.platform.startswith("win"):
+                                os.startfile(excel_path)
+                            else:
+                                subprocess.Popen(["xdg-open", excel_path])
+                        except Exception:
+                            label.setText("Erro ao abrir o relatório.")
                 else:
                     label = QLabel("Relatório Excel não encontrado.")
                     label.setAlignment(Qt.AlignmentFlag.AlignCenter)

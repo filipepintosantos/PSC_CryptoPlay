@@ -45,18 +45,20 @@
 # Changelog
 
 
-## [3.8.2] - 2025-12-21
 
 ### Fixed
-- **🔧 SonarQube/Qualidade de Código**: Refatoração para reduzir complexidade e corrigir tipos de retorno
-  - `fetch_historical_range` (api_yfinance.py): extraída lógica para helper
-  - `calculate_daily_volatility` (volatility_analysis.py): tipo de retorno agora Optional[float]
   - `create_volatility_detail_sheet` (excel_reporter.py): extração de helpers para reduzir complexidade
   - Parâmetro não usado removido de `generate_report`
-  - `get_favorite_class` (favorites_helper.py): tipo de retorno agora Optional[str]
 
 ## [3.8.1] - 2025-12-21
 
+# [4.3.3] - 2025-12-23
+
+### Added
+- Novas opções no menu **Atualizar Dados**: "Atualização Diária", "Reavaliar Moedas" e "Forçar Atualização" (apenas entradas no menu, sem implementação).
+
+### Changed
+- Atualização da versão para 4.3.3 em src/__init__.py, setup.py e sonar-project.properties.
 ### Fixed
 - **🐛 Cálculo de Volatilidade**: Corrigido query SQL em `calculate_daily_volatility()`
   - Bug: JOIN com `crypto_info` falhava porque `price_quotes.crypto_id` guarda símbolo (texto) não ID numérico

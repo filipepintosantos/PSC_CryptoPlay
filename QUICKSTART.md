@@ -1,4 +1,7 @@
+
 # Quick Start Guide
+
+**Versão: 4.3.3**
 
 **Tempo de setup: ~5 minutos**
 
@@ -12,8 +15,15 @@ setup.bat
 ## 2️⃣ Primeira Execução
 
 ```bash
+
 # Interface gráfica (desktop)
 run_ui.cmd
+
+# Novidades v4.3.3
+- Menu "Atualizar Dados" com:
+	- Atualização Diária
+	- Reavaliar Moedas
+	- Forçar Atualização
 
 # Ou modo linha de comando:
 python main.py --all-symbols --fetch-mode full
