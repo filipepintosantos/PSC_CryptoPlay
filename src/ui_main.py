@@ -6,8 +6,7 @@ import os
 from PyQt6.QtCore import Qt
 import pyqtgraph as pg
 
-# Permite importar __version__ mesmo com execução direta
-import os
+ # Permite importar __version__ mesmo com execução direta
 import sys
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 from src import __version__
@@ -48,7 +47,8 @@ class MainWindow(QMainWindow):
             ("Atualizar Dados", "atualizar.png"),
             ("Consultar Base de Dados", "database.png"),
             ("Relatórios", "relatorio.png"),
-            ("Gráficos", "graficos.png")
+            ("Gráficos", "graficos.png"),
+            ("Outras funcionalidades", "others.png")
         ]
         self.group_items = []
         for group_name, icon_file in groups:
@@ -133,7 +133,8 @@ class MainWindow(QMainWindow):
                 "Atualizar Dados": "atualizar.png",
                 "Relatórios": "relatorio.png",
                 "Consultar Base de Dados": "database.png",
-                "Ver Gráficos": "graficos.png"
+                "Gráficos": "graficos.png",
+                "Outras funcionalidades": "others.png"
             }
             icon_dir = os.path.join(os.path.dirname(__file__), "icons")
             icon_file = icon_map.get(group_name, None)
@@ -192,13 +193,13 @@ class MainWindow(QMainWindow):
                     label = QLabel("Abrindo relatório no Excel...")
                     label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                     self.content_layout.addWidget(label)
-                    import subprocess, sys, os
                     # Não abrir o Excel se estiver em ambiente de teste
                     if not (os.environ.get("PYTEST_RUNNING") or os.environ.get("TESTING")):
                         try:
                             if sys.platform.startswith("win"):
                                 os.startfile(excel_path)
                             else:
+                                import subprocess
                                 subprocess.Popen(["xdg-open", excel_path])
                         except Exception:
                             label.setText("Erro ao abrir o relatório.")
