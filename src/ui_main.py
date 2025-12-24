@@ -1,8 +1,13 @@
+import os
+# Forçar modo offscreen para CI/CD ou ambientes sem display
+if "QT_QPA_PLATFORM" not in os.environ:
+    os.environ["QT_QPA_PLATFORM"] = "offscreen"
+
 import sys
+
 
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QTreeWidget, QTreeWidgetItem, QLabel
 from PyQt6.QtGui import QIcon, QPixmap
-import os
 from PyQt6.QtCore import Qt
 import pyqtgraph as pg
 
