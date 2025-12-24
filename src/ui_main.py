@@ -23,6 +23,16 @@ from src import __version__
 
 
 class MainWindow(QMainWindow):
+        def closeEvent(self, event):
+            # Garante que qualquer QThread criado é terminado corretamente
+            if hasattr(self, 'thread') and self.thread is not None:
+                try:
+                    if self.thread.isRunning():
+                        self.thread.quit()
+                        self.thread.wait()
+                except Exception:
+                    pass
+            super().closeEvent(event)
     def __init__(self):
         super().__init__()
         # O título da janela inclui o número da versão do projeto
