@@ -1,7 +1,7 @@
 
 # Quick Start Guide
 
-**Versão: 4.3.5**
+**Versão: 4.3.6**
 
 **Tempo de setup: ~5 minutos**
 
@@ -19,8 +19,11 @@ setup.bat
 # Interface gráfica (desktop)
 run_ui.cmd
 
-# Novidades v4.3.3
-- Menu "Atualizar Dados" com:
+# Novidades v4.3.6
+- Menu "Consultar Base de Dados":
+	- Lista de Moedas: Visualiza todas as moedas cadastradas
+	- Cotações: Consulta todas as cotações históricas
+- Menu "Atualizar Dados":
 	- Atualização Diária
 	- Reavaliar Moedas
 	- Forçar Atualização

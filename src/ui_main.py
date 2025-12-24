@@ -274,6 +274,66 @@ class MainWindow(QMainWindow):
                 label = QLabel("Configurações do projeto (em breve)")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.content_layout.addWidget(label)
+            elif parent_name == "Consultar Base de Dados" and sub_name == "Lista de Moedas":
+                # Exibe a tabela crypto_info
+                from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
+                import traceback
+                try:
+                    from src.database import CryptoDatabase
+                    db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "crypto_prices.db"))
+                    db = CryptoDatabase(db_path)
+                    rows = db.get_all_crypto_info()
+                    if not rows:
+                        label = QLabel("Nenhuma moeda encontrada na base de dados.")
+                        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                        self.content_layout.addWidget(label)
+                        return
+                    headers = list(rows[0].keys())
+                    table = QTableWidget(len(rows), len(headers))
+                    table.setHorizontalHeaderLabels(headers)
+                    for i, row in enumerate(rows):
+                        for j, key in enumerate(headers):
+                            value = row[key]
+                            table.setItem(i, j, QTableWidgetItem(str(value) if value is not None else ""))
+                    table.resizeColumnsToContents()
+                    self.content_layout.addWidget(table)
+                except Exception as e:
+                    label = QLabel("Erro ao carregar moedas:\n" + str(e) + "\n" + traceback.format_exc())
+                    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    self.content_layout.addWidget(label)
+            elif parent_name == "Consultar Base de Dados" and sub_name == "Cotações":
+                # Exibe a tabela price_quotes (todas as cotações)
+                from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
+                import traceback
+                try:
+                    from src.database import CryptoDatabase
+                    db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "crypto_prices.db"))
+                    db = CryptoDatabase(db_path)
+                    # Buscar todas as cotações de todas as moedas
+                    # Obter todos os símbolos
+                    symbols = db.get_all_symbols()
+                    all_quotes = []
+                    for symbol in symbols:
+                        quotes = db.get_quotes(symbol)
+                        all_quotes.extend(quotes)
+                    if not all_quotes:
+                        label = QLabel("Nenhuma cotação encontrada na base de dados.")
+                        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                        self.content_layout.addWidget(label)
+                        return
+                    headers = list(all_quotes[0].keys())
+                    table = QTableWidget(len(all_quotes), len(headers))
+                    table.setHorizontalHeaderLabels(headers)
+                    for i, row in enumerate(all_quotes):
+                        for j, key in enumerate(headers):
+                            value = row[key]
+                            table.setItem(i, j, QTableWidgetItem(str(value) if value is not None else ""))
+                    table.resizeColumnsToContents()
+                    self.content_layout.addWidget(table)
+                except Exception as e:
+                    label = QLabel("Erro ao carregar cotações:\n" + str(e) + "\n" + traceback.format_exc())
+                    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    self.content_layout.addWidget(label)
             else:
                 label = QLabel(f"Sub-opção '{sub_name}' em '{parent_name}' (dummy)")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)

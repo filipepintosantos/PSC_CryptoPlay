@@ -2,8 +2,11 @@
 # Documentação Técnica - PSC CryptoPlay
 
 
-## Novidades v4.3.5
-- Menu lateral: nova entrada "Ferramentas" com submenus "Configurações" e "Ajuda" (mostra README.md na área de trabalho)
+## Novidades v4.3.6
+- Menu lateral: nova entrada "Consultar Base de Dados" com submenus:
+    - Lista de Moedas: mostra tabela crypto_info
+    - Cotações: mostra tabela price_quotes
+- Menu "Ferramentas" com submenus "Configurações" e "Ajuda" (mostra README.md na área de trabalho)
 - "Atualização Diária" executa update_quotes.cmd e mostra o output na área de trabalho
 
 ## Arquitetura do Sistema
