@@ -1,6 +1,10 @@
+
 import os
-# Forçar modo offscreen para CI/CD ou ambientes sem display
-if "QT_QPA_PLATFORM" not in os.environ:
+# Só força modo offscreen se variável de ambiente CI estiver definida ou se explicitamente solicitado
+if (
+    "QT_QPA_PLATFORM" not in os.environ
+    and (os.environ.get("CI") == "true" or os.environ.get("FORCE_QT_OFFSCREEN") == "1")
+):
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 import sys

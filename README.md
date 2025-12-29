@@ -1,15 +1,11 @@
 # PSC CryptoPlay - Cryptocurrency Price Tracker & Analysis
-**Versão: 4.3.6**
-
-**Versão: 4.3.5**
-
-## 🚀 Setup Rápido
+**Versão: 4.3.7**
 
 ## 🚀 Setup Rápido
 
 ```bash
 setup.cmd
-python main.py --all-from-db --days 700
+python main.py --all-from-db --days 7000
 ```
 
 ## 📚 Documentação

@@ -1,7 +1,7 @@
 
 # Quick Start Guide
 
-**Versão: 4.3.6**
+**Versão: 4.3.7**
 
 **Tempo de setup: ~5 minutos**
 

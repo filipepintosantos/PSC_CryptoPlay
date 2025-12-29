@@ -222,8 +222,17 @@ def fetch_historical_range(api, symbols: list, days: int, db, throttle_seconds: 
         # Always upsert to avoid duplicates when refetching ranges
         inserted = 0
         for q in sym_quotes:
+            # Garante que todos os campos obrigatórios estão presentes
+            q['close_eur'] = q.get('close_eur', 0.0) or 0.0
+            q['low_eur'] = q.get('low_eur', 0.0) or 0.0
+            q['high_eur'] = q.get('high_eur', 0.0) or 0.0
+            q['daily_returns'] = q.get('daily_returns', 0.0) if q.get('daily_returns') is not None else 0.0
+            q['timestamp'] = q.get('timestamp')
             if db.insert_or_update_quote(sym, q):
                 inserted += 1
+
+        # Garante atualização do last_quote_date mesmo se não houver novas cotações
+        db.update_last_quote_date(sym)
         total_count += inserted
         print(f"  ✓ Stored/updated {inserted} quotes for {sym}")
 

@@ -1,3 +1,10 @@
+# [4.3.7] - 2025-12-29
+
+### Changed
+- Atualização da versão para 4.3.7 em toda a documentação e código.
+- Adicionada coluna `first_quote_date` na tabela `crypto_info` para registrar a data da cotação mais antiga de cada moeda (EUR), preenchida automaticamente a partir de `price_quotes`.
+- Criação de triggers SQLite para manter o campo `last_quote_date` sempre sincronizado com a data mais recente de cotação de cada moeda.
+
 
 # [4.3.5] - 2025-12-23
 
