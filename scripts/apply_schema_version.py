@@ -35,12 +35,26 @@ def apply_version(db_path: str, version: str) -> bool:
             cur.execute("INSERT INTO schema_info (version) VALUES (?)", (version,))
         else:
             cur.execute("UPDATE schema_info SET version = ?, applied_at = CURRENT_TIMESTAMP", (version,))
+        # Also set the numeric PRAGMA user_version derived from the textual version
+        try:
+            parts = [int(p) for p in version.split('.')]
+            # compute numeric as x*10000 + y*100 + z
+            while len(parts) < 3:
+                parts.append(0)
+            numeric = parts[0]*10000 + parts[1]*100 + parts[2]
+            cur.execute(f"PRAGMA user_version = {numeric}")
+        except Exception:
+            # If parsing fails, don't block the update; leave PRAGMA unchanged
+            numeric = None
         conn.commit()
         # Read back for verification
         cur.execute("SELECT version, applied_at FROM schema_info LIMIT 1")
         new = cur.fetchone()
         conn.close()
-        print(f"{os.path.basename(db_path)} -> version={new[0]}, applied_at={new[1]}")
+        if numeric is not None:
+            print(f"{os.path.basename(db_path)} -> version={new[0]}, applied_at={new[1]}, user_version={numeric}")
+        else:
+            print(f"{os.path.basename(db_path)} -> version={new[0]}, applied_at={new[1]}")
         return True
     except Exception as e:
         print(f"Failed to update {db_path}: {e}")
