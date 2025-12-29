@@ -1,5 +1,5 @@
 @echo off
-REM Script para atualizar a versão do projeto
+REM Script para atualizar a versão do projeto (tool)
 
 set PYTHON_EXEC=venv\Scripts\python.exe
 if not exist %PYTHON_EXEC% set PYTHON_EXEC=python

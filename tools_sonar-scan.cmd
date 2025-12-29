@@ -1,7 +1,7 @@
+@echo off
 # SonarQube Scanner Configuration for PSC CryptoPlay
 # Windows Batch Script to run SonarQube analysis
 
-@echo off
 setlocal enabledelayedexpansion
 
 echo.
