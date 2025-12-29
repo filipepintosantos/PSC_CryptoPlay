@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS crypto_info (
     market_cap REAL,
     favorite TEXT DEFAULT NULL,
     last_quote_date DATE DEFAULT NULL,
+    first_quote_date DATE DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
