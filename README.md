@@ -1,5 +1,5 @@
 # PSC CryptoPlay - Cryptocurrency Price Tracker & Analysis
-**Versão: 4.3.10**
+**Versão: 4.3.11**
 
 ## 🚀 Setup Rápido
 

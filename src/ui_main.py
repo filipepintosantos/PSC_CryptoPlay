@@ -131,6 +131,8 @@ class MainWindow(QMainWindow):
 
         # Connect sidebar selection
         self.sidebar.currentItemChanged.connect(self.display_content)
+        # Expand top-level group when clicked
+        self.sidebar.itemClicked.connect(self.on_item_clicked)
 
         # Selecionar "Início" por defeito
         self.sidebar.setCurrentItem(self.group_items[0])
@@ -359,6 +361,13 @@ class MainWindow(QMainWindow):
                 label = QLabel(f"Sub-opção '{sub_name}' em '{parent_name}' (dummy)")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.content_layout.addWidget(label)
+    def on_item_clicked(self, item, column):
+        # When a top-level (main) option is clicked, expand its subtree
+        try:
+            if item is not None and item.parent() is None:
+                item.setExpanded(True)
+        except Exception:
+            pass
 
 def main():
     app = QApplication(sys.argv)
