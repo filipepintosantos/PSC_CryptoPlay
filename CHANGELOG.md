@@ -1,15 +1,14 @@
-# [4.3.12] - 2025-12-29
+# [4.3.13] - 2025-12-29
 
 ### Added
-- Schema versioning and canonical schema loading from `scripts/create_schema.sql`.
+- Small improvements: auto-range messaging updates and auto-range behavior to update yesterday and today when last quote date is today.
 
 ### Changed
-- Application now bootstraps the database using `scripts/create_schema.sql` on first run; `PRAGMA foreign_keys` enabled by default.
-- Removed redundant inline DDL and legacy migration stubs; consolidated schema management.
-- Documentation updated to reflect canonical schema and schema_info versioning.
+- Messages and docs updated to refer to "today" when appropriate; `run_update_quotes.cmd` and CLI help aligned.
+- When auto-range detects last quote date == today, the updater will fetch yesterday as start date and also include today's live quote to ensure both dates are updated.
 
 ### Testing
-- Executado: suite de testes unitários (105 testes) — todos passaram (OK).
+- Executed: suite de testes unitários (105 tests) — todos passaram (OK).
 
 # [4.3.9] - 2025-12-29
 

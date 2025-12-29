@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
-REM Update cryptocurrency quotes automatically from last quote date to yesterday
-REM This script fetches quotes from the last recorded date to yesterday for all cryptocurrencies in crypto_info table
+REM Update cryptocurrency quotes automatically from last quote date to today
+REM This script fetches quotes from the last recorded date to today for all cryptocurrencies in crypto_info table
 
 echo ========================================
 echo Updating Cryptocurrency Quotes
@@ -11,7 +11,7 @@ echo.
 cd /d "%~dp0"
 
 REM Activate virtual environment and run main.py with --all-from-db and --auto-range
-echo Fetching quotes from last recorded date to yesterday for all cryptocurrencies...
+echo Fetching quotes from last recorded date to today for all cryptocurrencies...
 echo.
 
 call venv\Scripts\activate.bat

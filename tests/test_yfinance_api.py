@@ -89,7 +89,7 @@ class TestYFinanceAPI(unittest.TestCase):
         """Test fetching historical data with start_date parameter."""
         from datetime import timedelta
         
-        # Fetch from 10 days ago to yesterday
+        # Fetch from 10 days ago to today
         start_date = datetime.now() - timedelta(days=10)
         quotes = self.api.fetch_historical_range(['BTC'], start_date=start_date)
         

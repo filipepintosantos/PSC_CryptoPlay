@@ -164,13 +164,13 @@ def fetch_historical_range(api, symbols: list, days: int, db, throttle_seconds: 
         db: Database instance
         throttle_seconds: Delay between symbols
         retries: Number of retries on error
-        auto_range: If True, fetch from last quote date to yesterday for each symbol
+        auto_range: If True, fetch from last quote date to today for each symbol
     
     Returns:
         Total number of quotes stored
     """
     if auto_range:
-        print("Fetching historical range: auto-range mode (from last quote to yesterday)")
+        print("Fetching historical range: auto-range mode (from last quote to today)")
     else:
         print(f"Fetching historical range: last {days} days")
     
@@ -186,12 +186,14 @@ def fetch_historical_range(api, symbols: list, days: int, db, throttle_seconds: 
                 last_date_only = last_date.date()
                 if last_date_only < today:
                     # Se última data < hoje, buscar de (last_date+1) até hoje
-                    start_date = last_date + timedelta(days=1)
-                    print(f"[{idx}/{len(symbols)}] {sym} → OHLCV from {start_date.date()} to {today}")
+                        start_date = last_date + timedelta(days=1)
+                        print(f"[{idx}/{len(symbols)}] {sym} → OHLCV from {start_date.date()} to {today}")
                 else:
-                    # Se última data == hoje, buscar só hoje (idempotente)
-                    start_date = today
-                    print(f"[{idx}/{len(symbols)}] {sym} → OHLCV for today ({today})")
+                        # Se última data == hoje, buscar ontem como start_date e atualizar ontem e hoje
+                        start_date = today - timedelta(days=1)
+                        # marcamos que depois devemos incluir também o quote de hoje para forçar atualização
+                        include_today = True
+                        print(f"[{idx}/{len(symbols)}] {sym} → OHLCV update for yesterday and today ({start_date} to {today})")
             else:
                 # No previous data, fetch last 365 days
                 start_date = None
@@ -221,6 +223,18 @@ def fetch_historical_range(api, symbols: list, days: int, db, throttle_seconds: 
 
         # Always upsert to avoid duplicates when refetching ranges
         inserted = 0
+        # If needed, include today's live quote to force update when last_quote_date was today
+        if auto_range and 'include_today' in locals() and include_today:
+            try:
+                today_quote = api.get_latest_quote(sym)
+                if today_quote:
+                    # Normalize timestamp to date for consistency with historical results
+                    ts = today_quote.get('timestamp')
+                    if hasattr(ts, 'date'):
+                        today_quote['timestamp'] = ts.date()
+                    sym_quotes.append(today_quote)
+            except Exception:
+                pass
         for q in sym_quotes:
             # Garante que todos os campos obrigatórios estão presentes
             q['close_eur'] = q.get('close_eur', 0.0) or 0.0
@@ -399,7 +413,7 @@ def _setup_argument_parser():
     parser.add_argument(
         "--auto-range",
         action="store_true",
-        help="Automatically fetch from last quote date to yesterday (default for update_quotes.cmd)"
+        help="Automatically fetch from last quote date to today (default for update_quotes.cmd)"
     )
     parser.add_argument(
         "--fetch-only",

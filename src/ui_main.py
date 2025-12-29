@@ -79,8 +79,6 @@ from src import __version__
 
 # v4.3.2: A indentação dos submenus foi reduzida para metade do valor padrão usando setIndentation no QTreeWidget.
 
-
-
 class MainWindow(QMainWindow):
     def closeEvent(self, event):
         # Garante que qualquer QThread criado é terminado corretamente
