@@ -3,14 +3,14 @@ Module for fetching cryptocurrency prices using yfinance.
 Handles EUR quotations for multiple cryptocurrencies.
 """
 
-import yfinance as yf
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
+import yfinance as yf
 
 
 class YFinanceCryptoAPI:
     """Interface to Yahoo Finance for cryptocurrency price data in EUR."""
-    
+
     # Mapping of symbols to Yahoo Finance tickers (crypto pairs with EUR)
     TICKER_MAP = {
         'BTC': 'BTC-EUR',
@@ -28,43 +28,44 @@ class YFinanceCryptoAPI:
         'LTC': 'LTC-EUR',
         'BCH': 'BCH-EUR',
     }
-    
+
     def __init__(self):
         """Initialize the yfinance API client."""
-        pass
-    
+        # no-op initializer
+        return None
+
     def get_ticker(self, symbol: str) -> str:
         """
         Get Yahoo Finance ticker for a cryptocurrency symbol.
-        
+
         Args:
             symbol: Cryptocurrency symbol (e.g., 'BTC')
-        
+
         Returns:
             Yahoo Finance ticker (e.g., 'BTC-EUR')
         """
         return self.TICKER_MAP.get(symbol.upper(), f"{symbol.upper()}-EUR")
-    
+
     def get_latest_quote(self, symbol: str) -> Optional[Dict]:
         """
         Fetch the latest cryptocurrency quote in EUR.
-        
+
         Args:
             symbol: Cryptocurrency symbol (e.g., 'BTC')
-        
+
         Returns:
             Dictionary with quote data or None on failure
         """
         try:
             ticker = self.get_ticker(symbol)
             crypto = yf.Ticker(ticker)
-            
+
             # Get current price
             info = crypto.info
-            
+
             if not info or 'regularMarketPrice' not in info:
                 return None
-            
+
             price = info.get('regularMarketPrice')
             return {
                 'symbol': symbol,
@@ -73,18 +74,18 @@ class YFinanceCryptoAPI:
                 'price_eur': price,  # Backward compatibility
                 'timestamp': datetime.now()
             }
-            
+
         except Exception as e:
             print(f"Error fetching latest quote for {symbol}: {e}")
             return None
-    
+
     def get_latest_quotes(self, symbols: List[str]) -> List[Dict]:
         """
         Fetch latest quotes for multiple cryptocurrencies.
-        
+
         Args:
             symbols: List of cryptocurrency symbols
-        
+
         Returns:
             List of quote dictionaries
         """
@@ -94,17 +95,17 @@ class YFinanceCryptoAPI:
             if quote:
                 quotes.append(quote)
         return quotes
-    
-    def fetch_historical_range(self, symbols: List[str], days: int = 365, 
+
+    def fetch_historical_range(self, symbols: List[str], days: int = 365,
                               start_date: Optional[datetime] = None) -> List[Dict]:
         """
         Fetch historical close-of-day quotes for the last N days or from a specific start date.
-        
+
         Args:
             symbols: List of cryptocurrency symbols
             days: Number of days of historical data (default: 365, ignored if start_date is provided)
             start_date: Optional start date to fetch from (if provided, overrides days parameter)
-        
+
         Returns:
             List of quote dictionaries with date and close price
         """
@@ -155,14 +156,14 @@ class YFinanceCryptoAPI:
         except Exception as e:
             print(f"Error fetching historical data for {symbol}: {e}")
         return results
-    
+
     def fetch_and_parse(self, symbols: List[str]) -> List[Dict]:
         """
         Fetch quotes and parse them (compatibility method).
-        
+
         Args:
             symbols: List of cryptocurrency symbols
-        
+
         Returns:
             List of parsed quote dictionaries
         """

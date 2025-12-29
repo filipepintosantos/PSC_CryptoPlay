@@ -1,4 +1,4 @@
-# [4.3.11] - 2025-12-29
+# [4.3.12] - 2025-12-29
 
 ### Added
 - Schema versioning and canonical schema loading from `scripts/create_schema.sql`.

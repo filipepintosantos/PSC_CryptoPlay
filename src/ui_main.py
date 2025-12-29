@@ -1,6 +1,48 @@
 
+"""Main UI window and sidebar for CryptoPlay application.
+
+Configures offscreen Qt for CI/tests and provides the main application
+window class `MainWindow` used by the UI tests and the desktop app.
+"""
+
 import os
 import sys
+
+# UI constants — centralised to avoid repeated string literals
+INICIO = "Início"
+ATUALIZAR_DADOS = "Atualizar Dados"
+CONSULTAR_DB = "Consultar Base de Dados"
+GRAFICOS = "Gráficos"
+RELATORIOS = "Relatórios"
+FERRAMENTAS = "Ferramentas"
+OUTRAS = "Outras funcionalidades"
+
+# Relatórios submenu
+ATUALIZAR_REL = "Atualizar relatório"
+ABRIR_REL = "Abrir relatório"
+
+# Consultar DB submenu
+LISTA_MOEDAS = "Lista de Moedas"
+COTACOES = "Cotações"
+
+REPORT_FILENAME = "AnaliseCrypto.xlsx"
+
+ICON_MAP = {
+    INICIO: "inicio.png",
+    ATUALIZAR_DADOS: "atualizar.png",
+    CONSULTAR_DB: "database.png",
+    GRAFICOS: "graficos.png",
+    RELATORIOS: "relatorio.png",
+    FERRAMENTAS: "tools.png",
+    OUTRAS: "others.png",
+}
+
+# Additional submenu labels
+ATUALIZACAO_DIARIA = "Atualização Diária"
+REAVALIAR_MOEDAS = "Reavaliar Moedas"
+FORCAR_ATUALIZACAO = "Forçar Atualização"
+CONFIGURACOES = "Configurações"
+AJUDA = "Ajuda"
 # Force offscreen Qt platform during CI, explicit request, or unit test runs
 # This avoids warnings like: QApplication::regClass: Registering window class
 # 'Qt6101ThemeChangeObserverWindow' failed. (Class already exists.)
@@ -22,12 +64,14 @@ if "QT_QPA_FONTDIR" not in os.environ:
         os.environ["QT_QPA_FONTDIR"] = proj_fonts
 
 
+ # Permite importar __version__ mesmo com execução direta
+sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QTreeWidget, QTreeWidgetItem, QLabel
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 
- # Permite importar __version__ mesmo com execução direta
-sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+# Import project version after third-party imports to satisfy import-order checks
 from src import __version__
 
 # v4.3.0: Menu lateral agora inclui as opções 'Lista de Moedas' e 'Cotações' no submenu 'Consultar Base de Dados'.
@@ -73,33 +117,33 @@ class MainWindow(QMainWindow):
 
         # Top-level menu groups
         groups = [
-            ("Início", "inicio.png"),
-            ("Atualizar Dados", "atualizar.png"),
-            ("Consultar Base de Dados", "database.png"),
-            ("Gráficos", "graficos.png"),
-            ("Relatórios", "relatorio.png"),
-            ("Ferramentas", "tools.png"),
-            ("Outras funcionalidades", "others.png")
+            (INICIO, ICON_MAP[INICIO]),
+            (ATUALIZAR_DADOS, ICON_MAP[ATUALIZAR_DADOS]),
+            (CONSULTAR_DB, ICON_MAP[CONSULTAR_DB]),
+            (GRAFICOS, ICON_MAP[GRAFICOS]),
+            (RELATORIOS, ICON_MAP[RELATORIOS]),
+            (FERRAMENTAS, ICON_MAP[FERRAMENTAS]),
+            (OUTRAS, ICON_MAP[OUTRAS]),
         ]
         self.group_items = []
-        for group_name, icon_file in groups:
+        for group_name, _icon_file in groups:
             group_item = QTreeWidgetItem([group_name])
             # Submenus específicos para Relatórios, Consultar Base de Dados, Gráficos, Atualizar Dados e Ferramentas
-            if group_name == "Relatórios":
-                atualizar_item = QTreeWidgetItem(["Atualizar relatório"])
-                abrir_item = QTreeWidgetItem(["Abrir relatório"])
+            if group_name == RELATORIOS:
+                atualizar_item = QTreeWidgetItem([ATUALIZAR_REL])
+                abrir_item = QTreeWidgetItem([ABRIR_REL])
                 group_item.addChild(atualizar_item)
                 group_item.addChild(abrir_item)
-            elif group_name == "Atualizar Dados":
-                diaria_item = QTreeWidgetItem(["Atualização Diária"])
-                reavaliar_item = QTreeWidgetItem(["Reavaliar Moedas"])
-                forcar_item = QTreeWidgetItem(["Forçar Atualização"])
+            elif group_name == ATUALIZAR_DADOS:
+                diaria_item = QTreeWidgetItem([ATUALIZACAO_DIARIA])
+                reavaliar_item = QTreeWidgetItem([REAVALIAR_MOEDAS])
+                forcar_item = QTreeWidgetItem([FORCAR_ATUALIZACAO])
                 group_item.addChild(diaria_item)
                 group_item.addChild(reavaliar_item)
                 group_item.addChild(forcar_item)
-            elif group_name == "Consultar Base de Dados":
-                lista_moedas = QTreeWidgetItem(["Lista de Moedas"])
-                cotacoes = QTreeWidgetItem(["Cotações"])
+            elif group_name == CONSULTAR_DB:
+                lista_moedas = QTreeWidgetItem([LISTA_MOEDAS])
+                cotacoes = QTreeWidgetItem([COTACOES])
                 group_item.addChild(lista_moedas)
                 group_item.addChild(cotacoes)
             elif group_name == "Gráficos":
@@ -117,12 +161,12 @@ class MainWindow(QMainWindow):
                 ]
                 for opcao in graficos_opcoes:
                     group_item.addChild(QTreeWidgetItem([opcao]))
-            elif group_name == "Ferramentas":
+            elif group_name == FERRAMENTAS:
                 configuracoes_item = QTreeWidgetItem(["Configurações"])
                 ajuda_item = QTreeWidgetItem(["Ajuda"])
                 group_item.addChild(configuracoes_item)
                 group_item.addChild(ajuda_item)
-            elif group_name != "Início":
+            elif group_name != INICIO:
                 dummy = QTreeWidgetItem(["(exemplo)"])
                 group_item.addChild(dummy)
             self.sidebar.addTopLevelItem(group_item)
@@ -146,12 +190,188 @@ class MainWindow(QMainWindow):
         # Selecionar "Início" por defeito
         self.sidebar.setCurrentItem(self.group_items[0])
 
-    def display_content(self, current, previous):
-        # Clear current content
+    def _clear_content(self):
         for i in reversed(range(self.content_layout.count())):
             widget = self.content_layout.itemAt(i).widget()
             if widget:
                 widget.setParent(None)
+
+    def _show_group_image(self, group_name: str):
+        icon_dir = os.path.join(os.path.dirname(__file__), "icons")
+        icon_file = ICON_MAP.get(group_name)
+        img_path = os.path.join(icon_dir, icon_file) if icon_file else None
+        if img_path and os.path.exists(img_path):
+            pixmap = QPixmap(img_path)
+            img_label = QLabel()
+            img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            from PyQt6.QtWidgets import QSizePolicy
+            img_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            self.content_layout.addWidget(img_label)
+
+            def resize_pixmap():
+                area_size = self.content_area.size()
+                w = max(100, area_size.width() - 40)
+                h = max(100, area_size.height() - 40)
+                img_label.setPixmap(
+                    pixmap.scaled(
+                        w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+                    )
+                )
+
+            resize_pixmap()
+
+            old_resize_event = getattr(self.content_area, "resizeEvent", None)
+
+            def new_resize_event(event):
+                resize_pixmap()
+                if old_resize_event:
+                    old_resize_event(event)
+
+            self.content_area.resizeEvent = new_resize_event
+        else:
+            label = QLabel(f"Imagem sugestiva para: {group_name}")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.content_layout.addWidget(label)
+
+    def _show_report_update(self):
+        project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        excel_path = os.path.join(project_dir, "reports", REPORT_FILENAME)
+        import datetime
+
+        if os.path.exists(excel_path):
+            mtime = os.path.getmtime(excel_path)
+            dt = datetime.datetime.fromtimestamp(mtime)
+            label = QLabel(f"Última atualização do relatório: {dt.strftime('%d/%m/%Y %H:%M:%S')}")
+        else:
+            label = QLabel("Relatório Excel não encontrado.")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.content_layout.addWidget(label)
+
+    def _open_report(self):
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        excel_path = os.path.join(base_dir, "reports", REPORT_FILENAME)
+        if os.path.exists(excel_path):
+            # In test or CI environments do not actually open external programs
+            is_test_env = (
+                os.environ.get("PYTEST_RUNNING")
+                or os.environ.get("TESTING")
+                or os.environ.get("CI") == "true"
+                or "unittest" in sys.modules
+            )
+            if is_test_env:
+                label = QLabel("(Simulação) Abrindo relatório no Excel (testes) ...")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.content_layout.addWidget(label)
+                return
+
+            label = QLabel("Abrindo relatório no Excel...")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.content_layout.addWidget(label)
+            try:
+                if sys.platform.startswith("win"):
+                    os.startfile(excel_path)
+                else:
+                    import subprocess
+
+                    subprocess.Popen(["xdg-open", excel_path])
+            except Exception:
+                label.setText("Erro ao abrir o relatório.")
+        else:
+            label = QLabel("Relatório Excel não encontrado.")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.content_layout.addWidget(label)
+
+    def _show_readme(self):
+        readme_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "README.md"))
+        if os.path.exists(readme_path):
+            with open(readme_path, "r", encoding="utf-8") as f:
+                doc_text = f.read()
+            from PyQt6.QtWidgets import QTextEdit
+
+            doc_widget = QTextEdit()
+            doc_widget.setReadOnly(True)
+            doc_widget.setPlainText(doc_text)
+            self.content_layout.addWidget(doc_widget)
+        else:
+            label = QLabel("README.md não encontrado.")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.content_layout.addWidget(label)
+
+    def _run_daily_update(self):
+        from PyQt6.QtWidgets import QTextEdit
+        from PyQt6.QtCore import QThread, pyqtSignal, QObject
+        import subprocess
+
+        output_widget = QTextEdit()
+        output_widget.setReadOnly(True)
+        output_widget.setPlainText("A atualizar cotações... Aguarde.\n")
+        self.content_layout.addWidget(output_widget)
+
+        class Worker(QObject):
+            output = pyqtSignal(str)
+            finished = pyqtSignal()
+
+            def run(self):
+                try:
+                    script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "main.py"))
+                    python_exe = sys.executable
+                    process = subprocess.Popen(
+                        [python_exe, script_path, "--all-from-db", "--auto-range"],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
+                        text=True,
+                        encoding="utf-8",
+                        errors="replace",
+                    )
+                    for line in process.stdout:
+                        self.output.emit(line.rstrip())
+                    process.wait()
+                    self.output.emit("\nAtualização concluída.")
+                except Exception as e:
+                    self.output.emit(f"Erro ao executar main.py: {e}")
+                self.finished.emit()
+
+        self.thread = QThread()
+        self.worker = Worker()
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.worker.output.connect(output_widget.append)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.thread.start()
+
+    def _show_db_list(self):
+        from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
+        import traceback
+        try:
+            from src.database import CryptoDatabase
+
+            db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "crypto_prices.db"))
+            db = CryptoDatabase(db_path)
+            rows = db.get_all_crypto_info()
+            if not rows:
+                label = QLabel("Nenhuma moeda encontrada na base de dados.")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.content_layout.addWidget(label)
+                return
+            headers = list(rows[0])
+            table = QTableWidget(len(rows), len(headers))
+            table.setHorizontalHeaderLabels(headers)
+            for i, row in enumerate(rows):
+                for j, key in enumerate(headers):
+                    value = row[key]
+                    table.setItem(i, j, QTableWidgetItem(str(value) if value is not None else ""))
+            table.resizeColumnsToContents()
+            self.content_layout.addWidget(table)
+        except Exception as e:
+            label = QLabel("Erro ao carregar moedas:\n" + str(e) + "\n" + traceback.format_exc())
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.content_layout.addWidget(label)
+
+    def display_content(self, current, previous):
+        self._clear_content()
 
         if current is None:
             label = QLabel("Selecione uma opção no menu à esquerda.")
@@ -159,216 +379,67 @@ class MainWindow(QMainWindow):
             self.content_layout.addWidget(label)
             return
 
-        # Se for grupo (top-level)
+        # Top-level group
         if current.parent() is None:
             group_name = current.text(0)
-            # Imagem sugestiva (se existir)
-            icon_map = {
-                "Início": "inicio.png",
-                "Atualizar Dados": "atualizar.png",
-                "Relatórios": "relatorio.png",
-                "Consultar Base de Dados": "database.png",
-                "Gráficos": "graficos.png",
-                "Ferramentas": "tools.png",
-                "Outras funcionalidades": "others.png"
-            }
-            icon_dir = os.path.join(os.path.dirname(__file__), "icons")
-            icon_file = icon_map.get(group_name, None)
-            img_path = os.path.join(icon_dir, icon_file) if icon_file else None
-            if img_path and os.path.exists(img_path):
-                pixmap = QPixmap(img_path)
-                img_label = QLabel()
-                img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                from PyQt6.QtWidgets import QSizePolicy
-                img_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-                self.content_layout.addWidget(img_label)
+            self._show_group_image(group_name)
+            return
 
-                # Função para redimensionar a imagem ao espaço disponível
-                def resize_pixmap():
-                    area_size = self.content_area.size()
-                    w = max(100, area_size.width() - 40)
-                    h = max(100, area_size.height() - 40)
-                    img_label.setPixmap(pixmap.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        parent_name = current.parent().text(0)
+        sub_name = current.text(0)
 
-                # Redimensiona ao abrir
-                resize_pixmap()
+        if parent_name == RELATORIOS and sub_name == ATUALIZAR_REL:
+            self._show_report_update()
+        elif parent_name == RELATORIOS and sub_name == ABRIR_REL:
+            self._open_report()
+        elif parent_name == FERRAMENTAS and sub_name == AJUDA:
+            self._show_readme()
+        elif parent_name == ATUALIZAR_DADOS and sub_name == ATUALIZACAO_DIARIA:
+            self._run_daily_update()
+        elif parent_name == FERRAMENTAS and sub_name == CONFIGURACOES:
+            label = QLabel("Configurações do projeto (em breve)")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.content_layout.addWidget(label)
+        elif parent_name == "Consultar Base de Dados" and sub_name == "Lista de Moedas":
+            self._show_db_list()
+        elif parent_name == "Consultar Base de Dados" and sub_name == "Cotações":
+            # Exibe a tabela price_quotes (todas as cotações)
+            from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
+            import traceback
+            try:
+                from src.database import CryptoDatabase
 
-                # Redimensiona sempre que a área de conteúdo for redimensionada
-                old_resize_event = self.content_area.resizeEvent
-                def new_resize_event(event):
-                    resize_pixmap()
-                    if old_resize_event:
-                        old_resize_event(event)
-                self.content_area.resizeEvent = new_resize_event
-            else:
-                label = QLabel(f"Imagem sugestiva para: {group_name}")
+                db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "crypto_prices.db"))
+                db = CryptoDatabase(db_path)
+                # Buscar todas as cotações de todas as moedas
+                # Obter todos os símbolos
+                symbols = db.get_all_symbols()
+                all_quotes = []
+                for symbol in symbols:
+                    quotes = db.get_quotes(symbol)
+                    all_quotes.extend(quotes)
+                if not all_quotes:
+                    label = QLabel("Nenhuma cotação encontrada na base de dados.")
+                    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    self.content_layout.addWidget(label)
+                    return
+                headers = list(all_quotes[0])
+                table = QTableWidget(len(all_quotes), len(headers))
+                table.setHorizontalHeaderLabels(headers)
+                for i, row in enumerate(all_quotes):
+                    for j, key in enumerate(headers):
+                        value = row[key]
+                        table.setItem(i, j, QTableWidgetItem(str(value) if value is not None else ""))
+                table.resizeColumnsToContents()
+                self.content_layout.addWidget(table)
+            except Exception as e:
+                label = QLabel("Erro ao carregar cotações:\n" + str(e) + "\n" + traceback.format_exc())
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.content_layout.addWidget(label)
         else:
-            # Sub-item selecionado
-            parent_name = current.parent().text(0)
-            sub_name = current.text(0)
-            if parent_name == "Relatórios" and sub_name == "Atualizar relatório":
-                # Mostra data de atualização do relatório Excel
-                project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-                excel_path = os.path.join(project_dir, "reports", "AnaliseCrypto.xlsx")
-                import datetime
-                if os.path.exists(excel_path):
-                    mtime = os.path.getmtime(excel_path)
-                    dt = datetime.datetime.fromtimestamp(mtime)
-                    label = QLabel(f"Última atualização do relatório: {dt.strftime('%d/%m/%Y %H:%M:%S')}")
-                else:
-                    label = QLabel("Relatório Excel não encontrado.")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.content_layout.addWidget(label)
-            elif parent_name == "Relatórios" and sub_name == "Abrir relatório":
-                base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-                excel_path = os.path.join(base_dir, "reports", "AnaliseCrypto.xlsx")
-                if os.path.exists(excel_path):
-                    label = QLabel("Abrindo relatório no Excel...")
-                    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                    self.content_layout.addWidget(label)
-                    # Não abrir o Excel se estiver em ambiente de teste
-                    if not (os.environ.get("PYTEST_RUNNING") or os.environ.get("TESTING")):
-                        try:
-                            if sys.platform.startswith("win"):
-                                os.startfile(excel_path)
-                            else:
-                                import subprocess
-                                subprocess.Popen(["xdg-open", excel_path])
-                        except Exception:
-                            label.setText("Erro ao abrir o relatório.")
-                else:
-                    label = QLabel("Relatório Excel não encontrado.")
-                    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                    self.content_layout.addWidget(label)
-            elif parent_name == "Ferramentas" and sub_name == "Ajuda":
-                # Mostra a documentação do projeto (README.md)
-                readme_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "README.md"))
-                if os.path.exists(readme_path):
-                    with open(readme_path, "r", encoding="utf-8") as f:
-                        doc_text = f.read()
-                    from PyQt6.QtWidgets import QTextEdit
-                    doc_widget = QTextEdit()
-                    doc_widget.setReadOnly(True)
-                    doc_widget.setPlainText(doc_text)
-                    self.content_layout.addWidget(doc_widget)
-                else:
-                    label = QLabel("README.md não encontrado.")
-                    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                    self.content_layout.addWidget(label)
-            elif parent_name == "Atualizar Dados" and sub_name == "Atualização Diária":
-                # Executa main.py diretamente e mostra o output na área de trabalho usando QThread
-                from PyQt6.QtWidgets import QTextEdit
-                from PyQt6.QtCore import QThread, pyqtSignal, QObject
-                import subprocess
-                output_widget = QTextEdit()
-                output_widget.setReadOnly(True)
-                output_widget.setPlainText("A atualizar cotações... Aguarde.\n")
-                self.content_layout.addWidget(output_widget)
-
-                class Worker(QObject):
-                    output = pyqtSignal(str)
-                    finished = pyqtSignal()
-
-                    def run(self):
-                        try:
-                            script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "main.py"))
-                            python_exe = sys.executable
-                            process = subprocess.Popen(
-                                [python_exe, script_path, "--all-from-db", "--auto-range"],
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT,
-                                cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
-                                text=True,
-                                encoding="utf-8",
-                                errors="replace"
-                            )
-                            for line in process.stdout:
-                                self.output.emit(line.rstrip())
-                            process.wait()
-                            self.output.emit("\nAtualização concluída.")
-                        except Exception as e:
-                            self.output.emit(f"Erro ao executar main.py: {e}")
-                        self.finished.emit()
-
-                self.thread = QThread()
-                self.worker = Worker()
-                self.worker.moveToThread(self.thread)
-                self.thread.started.connect(self.worker.run)
-                self.worker.output.connect(output_widget.append)
-                self.worker.finished.connect(self.thread.quit)
-                self.worker.finished.connect(self.worker.deleteLater)
-                self.thread.finished.connect(self.thread.deleteLater)
-                self.thread.start()
-            elif parent_name == "Ferramentas" and sub_name == "Configurações":
-                label = QLabel("Configurações do projeto (em breve)")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.content_layout.addWidget(label)
-            elif parent_name == "Consultar Base de Dados" and sub_name == "Lista de Moedas":
-                # Exibe a tabela crypto_info
-                from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
-                import traceback
-                try:
-                    from src.database import CryptoDatabase
-                    db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "crypto_prices.db"))
-                    db = CryptoDatabase(db_path)
-                    rows = db.get_all_crypto_info()
-                    if not rows:
-                        label = QLabel("Nenhuma moeda encontrada na base de dados.")
-                        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                        self.content_layout.addWidget(label)
-                        return
-                    headers = list(rows[0].keys())
-                    table = QTableWidget(len(rows), len(headers))
-                    table.setHorizontalHeaderLabels(headers)
-                    for i, row in enumerate(rows):
-                        for j, key in enumerate(headers):
-                            value = row[key]
-                            table.setItem(i, j, QTableWidgetItem(str(value) if value is not None else ""))
-                    table.resizeColumnsToContents()
-                    self.content_layout.addWidget(table)
-                except Exception as e:
-                    label = QLabel("Erro ao carregar moedas:\n" + str(e) + "\n" + traceback.format_exc())
-                    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                    self.content_layout.addWidget(label)
-            elif parent_name == "Consultar Base de Dados" and sub_name == "Cotações":
-                # Exibe a tabela price_quotes (todas as cotações)
-                from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
-                import traceback
-                try:
-                    from src.database import CryptoDatabase
-                    db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "crypto_prices.db"))
-                    db = CryptoDatabase(db_path)
-                    # Buscar todas as cotações de todas as moedas
-                    # Obter todos os símbolos
-                    symbols = db.get_all_symbols()
-                    all_quotes = []
-                    for symbol in symbols:
-                        quotes = db.get_quotes(symbol)
-                        all_quotes.extend(quotes)
-                    if not all_quotes:
-                        label = QLabel("Nenhuma cotação encontrada na base de dados.")
-                        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                        self.content_layout.addWidget(label)
-                        return
-                    headers = list(all_quotes[0].keys())
-                    table = QTableWidget(len(all_quotes), len(headers))
-                    table.setHorizontalHeaderLabels(headers)
-                    for i, row in enumerate(all_quotes):
-                        for j, key in enumerate(headers):
-                            value = row[key]
-                            table.setItem(i, j, QTableWidgetItem(str(value) if value is not None else ""))
-                    table.resizeColumnsToContents()
-                    self.content_layout.addWidget(table)
-                except Exception as e:
-                    label = QLabel("Erro ao carregar cotações:\n" + str(e) + "\n" + traceback.format_exc())
-                    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                    self.content_layout.addWidget(label)
-            else:
-                label = QLabel(f"Sub-opção '{sub_name}' em '{parent_name}' (dummy)")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.content_layout.addWidget(label)
+            label = QLabel(f"Sub-opção '{sub_name}' em '{parent_name}' (dummy)")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.content_layout.addWidget(label)
     def on_item_clicked(self, item, column):
         # When a top-level (main) option is clicked, expand its subtree
         try:
