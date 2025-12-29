@@ -1,5 +1,5 @@
 # PSC CryptoPlay - Cryptocurrency Price Tracker & Analysis
-**Versão: 4.3.7**
+**Versão: 4.3.9**
 
 ## 🚀 Setup Rápido
 
@@ -29,6 +29,8 @@ python scripts\add_symbols.py
 
 # Testes
 run_tests.cmd
+
+Nota: a suite de testes regista um handler de limpeza que remove automaticamente quaisquer ficheiros de BD de teste `data/test*.db` ao terminar. Se quiseres preservar um DB de teste, mova-o antes de executar os testes.
 ## 🖥️ Interface Gráfica (Atualizado)
 
 Execute `run_ui.cmd` para abrir a interface desktop (PyQt6) com barra lateral.

@@ -7,14 +7,44 @@ This script is called during setup.bat to create the database structure.
 import sys
 import subprocess
 import argparse
+import os
 from datetime import datetime
 from src.database import CryptoDatabase
 
 
-def init_database(db_path: str = "data/crypto_prices.db"):
-    """Initialize the database with default cryptocurrency information."""
+def init_database(db_path: str = "data/crypto_prices.db", apply_sql_if_missing: bool = True):
+    """Initialize the database with default cryptocurrency information.
+
+    If `scripts/create_schema.sql` exists and the DB file does not exist, this
+    function will apply the SQL script to create the schema before seeding
+    default data. This allows creating the DB from a standalone SQL file
+    for new installations.
+    """
     try:
         print("Initializing database...")
+
+        # If DB file does not exist and a SQL schema is provided, apply it first
+        sql_path = "scripts/create_schema.sql"
+        db_dir = os.path.dirname(db_path)
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
+
+        if apply_sql_if_missing and os.path.exists(sql_path) and not os.path.exists(db_path):
+            print(f"Applying SQL schema from {sql_path} to {db_path}...")
+            try:
+                import sqlite3 as _sqlite3
+
+                conn = _sqlite3.connect(db_path)
+                with open(sql_path, "r", encoding="utf-8") as f:
+                    script = f.read()
+                conn.executescript(script)
+                conn.commit()
+                conn.close()
+                print("✓ SQL schema applied successfully.")
+            except Exception as e:
+                print(f"ERROR: Failed to apply SQL schema: {e}")
+                # Fall back to Python-based creation below
+
         db = CryptoDatabase(db_path)
 
         # List of default cryptocurrencies with their market entry dates

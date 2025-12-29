@@ -1,7 +1,7 @@
 
 # Quick Start Guide
 
-**Versão: 4.3.7**
+**Versão: 4.3.9**
 
 **Tempo de setup: ~5 minutos**
 
@@ -10,6 +10,18 @@
 ```bash
 setup.bat
 ```
+
+### Criação da base de dados a partir do SQL
+
+Se preferir criar a base de dados diretamente a partir de um script SQL, o ficheiro
+`scripts/create_schema.sql` contém o DDL necessário. O `setup.bat` (via `init_db.py`) irá
+aplicar automaticamente esse script quando a BD ainda não existir. Para forçar a criação
+manual, execute:
+
+```bash
+python init_db.py --db-path data/crypto_prices.db
+```
+
 
 
 ## 2️⃣ Primeira Execução
@@ -103,6 +115,11 @@ mode = incremental
 | Muito lento | Use `--fetch-only`, gere relatório depois |
 
 ## ✨ Features Principais
+
+## 🧪 Testes
+
+- A suite de testes (`run_tests.cmd` / `python -m unittest discover`) executa um handler de limpeza que remove automaticamente quaisquer ficheiros de BD de teste `data/test*.db` ao terminar. Para preservar um DB de teste, mova-o antes de executar os testes.
+
 
 ✅ Cotações em EUR via Yahoo Finance  
 ✅ Estatísticas: min, max, média, desvio padrão  
