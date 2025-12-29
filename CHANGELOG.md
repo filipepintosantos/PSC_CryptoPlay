@@ -1,17 +1,17 @@
-# [4.3.9] - 2025-12-29
+# [4.3.10] - 2025-12-29
 
 ### Added
-- `scripts/create_schema.sql`: DDL completo para criar o esquema do zero em novas instalações.
+- Schema versioning and canonical schema loading from `scripts/create_schema.sql`.
 
 ### Changed
-- `init_db.py` agora aplica `scripts/create_schema.sql` quando o ficheiro de BD não existe, depois semeia as criptomoedas padrão.
-- `scripts/create_schema.sql` inclui triggers para manter `crypto_info.last_quote_date` sincronizado.
-- Integração de limpeza automática de DBs de teste durante a execução da suite de testes (`tests/test_cleanup.py`).
-- Arquivadas migrações antigas em `scripts/legacy/` e convertidos os scripts originais em stubs para evitar execuções acidentais.
-- Atualizado `QUICKSTART.md` e `README.md` com instruções e notas sobre criação de BD e testes.
+- Application now bootstraps the database using `scripts/create_schema.sql` on first run; `PRAGMA foreign_keys` enabled by default.
+- Removed redundant inline DDL and legacy migration stubs; consolidated schema management.
+- Documentation updated to reflect canonical schema and schema_info versioning.
 
 ### Testing
 - Executado: suite de testes unitários (105 testes) — todos passaram (OK).
+
+# [4.3.9] - 2025-12-29
 
 # [4.3.8] - 2025-12-29
 

@@ -1,6 +1,12 @@
 -- Schema de criação para PSC_CryptoPlay
 -- Gerado a partir de src/database.py
 
+-- Schema version variables (update here for new releases)
+-- SCHEMA_VERSION = '1.0.0'
+-- SCHEMA_VERSION_NUMBER = 10000  -- integer representation (x*10000 + y*100 + z)
+
+PRAGMA user_version = 10000;
+
 PRAGMA foreign_keys = OFF;
 
 BEGIN TRANSACTION;
@@ -88,6 +94,14 @@ CREATE TABLE IF NOT EXISTS schema_info (
     applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Set initial schema version (format: x.y.z). Current schema version: 1.0.0
+-- NOTE: keep the numeric version in sync with the PRAGMA user_version above.
+-- The SQL below formats an integer version (x*10000 + y*100 + z) into 'x.y.z'.
+WITH sv(v) AS (VALUES(10000))
 INSERT INTO schema_info (version)
-SELECT '1'
+SELECT printf('%d.%d.%d', 
+              CAST(v/10000 AS INTEGER), 
+              CAST((v/100)%100 AS INTEGER), 
+              CAST(v%100 AS INTEGER))
+FROM sv
 WHERE NOT EXISTS (SELECT 1 FROM schema_info);
