@@ -5,7 +5,6 @@ Calculates events based on rolling windows and percentage thresholds.
 
 import pandas as pd
 from typing import Dict, List, Optional
-from datetime import datetime, timedelta
 
 
 class VolatilityAnalyzer:

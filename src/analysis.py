@@ -5,7 +5,7 @@ Calculates min, max, mean, standard deviation, and mean-std metrics.
 
 import pandas as pd
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List
 import numpy as np
 
 class StatisticalAnalyzer:

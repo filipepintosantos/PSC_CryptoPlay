@@ -1,22 +1,32 @@
 
 import os
-# Só força modo offscreen se variável de ambiente CI estiver definida ou se explicitamente solicitado
+import sys
+# Force offscreen Qt platform during CI, explicit request, or unit test runs
+# This avoids warnings like: QApplication::regClass: Registering window class
+# 'Qt6101ThemeChangeObserverWindow' failed. (Class already exists.)
 if (
     "QT_QPA_PLATFORM" not in os.environ
-    and (os.environ.get("CI") == "true" or os.environ.get("FORCE_QT_OFFSCREEN") == "1")
+    and (
+        os.environ.get("CI") == "true"
+        or os.environ.get("FORCE_QT_OFFSCREEN") == "1"
+        or "unittest" in sys.modules
+        or os.environ.get("PYTEST_RUNNING") == "1"
+    )
 ):
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-import sys
+# Prefer project-local fonts directory to avoid Qt warnings when PyQt cannot find system fonts
+if "QT_QPA_FONTDIR" not in os.environ:
+    proj_fonts = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "fonts"))
+    if os.path.isdir(proj_fonts):
+        os.environ["QT_QPA_FONTDIR"] = proj_fonts
 
 
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QTreeWidget, QTreeWidgetItem, QLabel
-from PyQt6.QtGui import QIcon, QPixmap
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QTreeWidget, QTreeWidgetItem, QLabel
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
-import pyqtgraph as pg
 
  # Permite importar __version__ mesmo com execução direta
-import sys
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 from src import __version__
 
@@ -62,7 +72,6 @@ class MainWindow(QMainWindow):
         self.sidebar.setIndentation(max(10, default_indent // 2))
 
         # Top-level menu groups
-        icon_dir = os.path.join(os.path.dirname(__file__), "icons")
         groups = [
             ("Início", "inicio.png"),
             ("Atualizar Dados", "atualizar.png"),
@@ -253,7 +262,6 @@ class MainWindow(QMainWindow):
                 from PyQt6.QtWidgets import QTextEdit
                 from PyQt6.QtCore import QThread, pyqtSignal, QObject
                 import subprocess
-                import sys
                 output_widget = QTextEdit()
                 output_widget.setReadOnly(True)
                 output_widget.setPlainText("A atualizar cotações... Aguarde.\n")

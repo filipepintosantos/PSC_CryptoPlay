@@ -2,7 +2,6 @@
 Utility functions for managing favorite classifications from config.
 """
 import configparser
-from pathlib import Path
 from typing import Dict, List, Optional
 from database import CryptoDatabase
 
