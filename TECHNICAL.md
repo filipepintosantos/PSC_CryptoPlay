@@ -106,6 +106,22 @@ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 - `get_latest_quote(symbol)`: Obtém quotação mais recente
 - `get_all_symbols()`: Lista todas as criptomoedas
 
+**Schema Versioning**
+
+- **Canonical DDL**: The authoritative database creation SQL lives in `scripts/create_schema.sql`. Use this file to change table definitions, triggers or the schema initialisation flow.
+- **Schema textual & numeric versions**: The SQL file exposes the textual version (e.g. 1.0.0) and a numeric representation used by SQLite's `PRAGMA user_version` (e.g. 10000 for 1.0.0). Keep both in sync when releasing schema changes.
+- **Table `schema_info`**: A single-row table `schema_info(version, applied_at)` is used so the application can read the human-friendly schema version from the DB.
+- **PRAGMA `user_version`**: We also store a numeric version in `PRAGMA user_version` to allow fast programmatic checks without parsing tables.
+- **Applying the schema version**: Use the helper script `scripts/apply_schema_version.py` to apply/update the textual version in `schema_info` and the numeric `PRAGMA user_version` for all DB files under `data/`:
+
+```powershell
+venv\Scripts\python.exe scripts\apply_schema_version.py --dir data --version 1.0.0
+```
+
+- **Behaviour**: the script will create `schema_info` if missing, insert or update the single-row `version`, and derive/assign `PRAGMA user_version` from the textual `x.y.z` value (computed as `x*10000 + y*100 + z`).
+- **Tests**: A unit test was added at `tests/test_schema_version.py` that verifies the script sets both `schema_info` and `PRAGMA user_version` correctly.
+- **When bumping schema**: Update the `SCHEMA_VERSION` / `SCHEMA_VERSION_NUMBER` comments at the top of `scripts/create_schema.sql`, then run `scripts/apply_schema_version.py` on target DBs and include the change in your release notes.
+
 ### 3. analysis.py - StatisticalAnalyzer
 
 **Responsabilidades:**
