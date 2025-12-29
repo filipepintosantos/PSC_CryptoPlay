@@ -10,10 +10,10 @@ python main.py --all-from-db --days 7000
 
 ## 📚 Documentação
 
-- **[QUICKSTART.md](QUICKSTART.md)** - Guia de início rápido
-- **[CONFIGURATION.md](CONFIGURATION.md)** - Opções de configuração
-- **[CHANGELOG.md](CHANGELOG.md)** - Histórico de versões
-- **[TECHNICAL.md](TECHNICAL.md)** - Arquitetura técnica
+ - Database schema is now canonicalized in `scripts/create_schema.sql`.
+     - On first run the application executes this script to create the database schema.
+     - The schema includes a `schema_info` table with a `version` value.
+     - Application code (`src/database.py`) no longer contains the full DDL; it loads the canonical SQL file.
 
 ## 🎯 Comandos Principais
 

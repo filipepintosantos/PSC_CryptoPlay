@@ -81,3 +81,13 @@ BEGIN
     updated_at = CURRENT_TIMESTAMP
     WHERE code = OLD.crypto_id;
 END;
+
+-- Schema versioning: single-row table with applied schema version
+CREATE TABLE IF NOT EXISTS schema_info (
+    version TEXT NOT NULL,
+    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO schema_info (version)
+SELECT '1'
+WHERE NOT EXISTS (SELECT 1 FROM schema_info);

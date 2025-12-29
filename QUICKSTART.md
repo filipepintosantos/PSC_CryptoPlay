@@ -9,6 +9,19 @@
 
 ```bash
 setup.bat
+ 
+### Criação da base de dados a partir do SQL
+
+Se preferir criar a base de dados diretamente a partir de um script SQL, o ficheiro
+`scripts/create_schema.sql` contém o DDL necessário. O `setup.bat` (via `init_db.py`) irá
+aplicar automaticamente esse script quando a BD ainda não existir. Para forçar a criação
+manual, execute:
+
+```bash
+python init_db.py --db-path data/crypto_prices.db
+```
+
+Nota: o esquema agora contém uma tabela `schema_info` com uma coluna `version`.
 ```
 
 ### Criação da base de dados a partir do SQL

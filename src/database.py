@@ -30,61 +30,32 @@ class CryptoDatabase:
         """Connect to the database and create tables if needed."""
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
+        # Ensure foreign keys are enabled and create schema from canonical SQL when needed
+        try:
+            self.conn.execute("PRAGMA foreign_keys = ON")
+        except Exception:
+            pass
         self.create_tables()
     
     def create_tables(self):
         """Create necessary tables if they don't exist."""
         cursor = self.conn.cursor()
-        
-        # Table for cryptocurrency metadata with additional fields
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS cryptocurrencies (
-                id INTEGER PRIMARY KEY,
-                symbol TEXT UNIQUE NOT NULL,
-                name TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # Table for cryptocurrency information (code, name, marketEntry, marketCap, favorite)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS crypto_info (
-                id INTEGER PRIMARY KEY,
-                code TEXT UNIQUE NOT NULL,
-                name TEXT NOT NULL,
-                market_entry TIMESTAMP,
-                market_cap REAL,
-                favorite TEXT DEFAULT NULL,
-                last_quote_date DATE DEFAULT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # Table for price quotes (OHLC data + daily returns)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS price_quotes (
-                id INTEGER PRIMARY KEY,
-                crypto_id TEXT NOT NULL,
-                close_eur REAL NOT NULL,
-                low_eur REAL,
-                high_eur REAL,
-                daily_returns REAL,
-                timestamp DATE NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                -- crypto_id stores the cryptocurrency code (symbol), e.g. 'BTC'
-                -- timestamp is DATE only (YYYY-MM-DD) to identify unique days
-                UNIQUE(crypto_id, timestamp)
-            )
-        """)
-        
-        # Create index for faster queries
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_crypto_timestamp 
-            ON price_quotes(crypto_id, timestamp)
-        """)
-        
-        self.conn.commit()
+        # Use canonical SQL script to create the schema if `crypto_info` table is missing
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='crypto_info'")
+        exists = cursor.fetchone()
+        if exists:
+            return
+
+        # Locate the create_schema.sql relative to this file
+        base_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
+        schema_path = os.path.join(base_dir, 'scripts', 'create_schema.sql')
+        if os.path.exists(schema_path):
+            with open(schema_path, 'r', encoding='utf-8') as f:
+                sql = f.read()
+            # executescript runs the whole file in a single transaction
+            self.conn.executescript(sql)
+        else:
+            raise RuntimeError(f"Schema file not found: {schema_path}; cannot create database schema")
     
     def add_cryptocurrency(self, symbol: str, name: str) -> int:
         """
@@ -152,9 +123,6 @@ class CryptoDatabase:
                 date_only
             ))
             self.conn.commit()
-            
-            # Update last_quote_date in crypto_info
-            self.update_last_quote_date(symbol)
             
             return True
         except Exception as e:
@@ -352,9 +320,7 @@ class CryptoDatabase:
                 ))
             
             self.conn.commit()
-            
-            # Update last_quote_date in crypto_info
-            self.update_last_quote_date(symbol)
+            self.conn.commit()
             
             return True
         except Exception as e:
