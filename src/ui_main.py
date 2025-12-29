@@ -67,8 +67,8 @@ class MainWindow(QMainWindow):
             ("Início", "inicio.png"),
             ("Atualizar Dados", "atualizar.png"),
             ("Consultar Base de Dados", "database.png"),
-            ("Relatórios", "relatorio.png"),
             ("Gráficos", "graficos.png"),
+            ("Relatórios", "relatorio.png"),
             ("Ferramentas", "tools.png"),
             ("Outras funcionalidades", "others.png")
         ]
