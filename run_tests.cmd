@@ -68,4 +68,14 @@ echo ====================================================
 echo Test run completed
 echo ====================================================
 echo.
-pause
+REM Automatic cleanup: remove test database files created during tests
+echo Cleaning test database files...
+if exist "data\test*.db*" (
+    del /q "data\test*.db*"
+    echo Removed test database files matching data\test*.db*
+) else (
+    echo No test database files found (data\test*.db*)
+)
+
+rem pause
+echo Cleanup complete.

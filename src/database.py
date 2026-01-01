@@ -80,7 +80,30 @@ class CryptoDatabase:
 
         cursor.execute("SELECT id FROM cryptocurrencies WHERE symbol = ?", (symbol,))
         result = cursor.fetchone()
+        # Ensure corresponding crypto_info row exists for compatibility with other methods/tests
+        try:
+            self.get_or_create_crypto_info_id(symbol, name)
+        except Exception:
+            pass
         return result[0] if result else None
+
+    def get_or_create_crypto_info_id(self, code: str, name: str = "") -> Optional[int]:
+        """
+        Ensure there is a row in `crypto_info` for `code` and return its `id`.
+        If missing, insert a new row.
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT id FROM crypto_info WHERE code = ?", (code,))
+        row = cursor.fetchone()
+        if row:
+            return row[0]
+        try:
+            cursor.execute("INSERT INTO crypto_info (code, name) VALUES (?, ?)", (code, name))
+            self.conn.commit()
+            return cursor.lastrowid
+        except Exception as e:
+            print(f"Error creating crypto_info for {code}: {e}")
+            return None
 
     def insert_quote(self, symbol: str, quote_data: Dict) -> bool:
         """
@@ -95,9 +118,11 @@ class CryptoDatabase:
         """
         cursor = self.conn.cursor()
 
-        # Ensure cryptocurrency metadata exists (store symbol/name)
-        self.add_cryptocurrency(symbol, quote_data.get("name", ""))
-
+        # Ensure cryptocurrency metadata exists in crypto_info and get its numeric id
+        crypto_id = self.get_or_create_crypto_info_id(symbol, quote_data.get("name", ""))
+        if crypto_id is None:
+            print(f"Error: cannot resolve crypto id for {symbol}")
+            return False
         try:
             # Normalize timestamp to date only (YYYY-MM-DD)
             ts = quote_data.get("timestamp", datetime.now())
@@ -113,9 +138,8 @@ class CryptoDatabase:
                     low_eur = excluded.low_eur,
                     high_eur = excluded.high_eur,
                     daily_returns = excluded.daily_returns
-                    -- created_at is NOT updated, preserves original insert time
             """, (
-                symbol,
+                crypto_id,
                 quote_data.get("close_eur") or quote_data.get("price_eur"),  # Backward compatibility
                 quote_data.get("low_eur"),
                 quote_data.get("high_eur"),
@@ -123,6 +147,12 @@ class CryptoDatabase:
                 date_only
             ))
             self.conn.commit()
+
+            # Ensure last_quote_date is synchronized (covers cases where triggers are missing)
+            try:
+                self.update_last_quote_date(symbol)
+            except Exception:
+                pass
 
             return True
         except Exception as e:
@@ -159,10 +189,10 @@ class CryptoDatabase:
         cursor = self.conn.cursor()
 
         query = """
-            SELECT pq.*, c.symbol, c.name
+            SELECT pq.*, ci.code as symbol, ci.name
             FROM price_quotes pq
-            JOIN cryptocurrencies c ON pq.crypto_id = c.symbol
-            WHERE c.symbol = ?
+            JOIN crypto_info ci ON pq.crypto_id = ci.id
+            WHERE ci.code = ?
         """
 
         params = [symbol]
@@ -191,10 +221,10 @@ class CryptoDatabase:
         """
         cursor = self.conn.cursor()
         cursor.execute("""
-            SELECT pq.*, c.symbol, c.name
+            SELECT pq.*, ci.code as symbol, ci.name
             FROM price_quotes pq
-            JOIN cryptocurrencies c ON pq.crypto_id = c.symbol
-            WHERE c.symbol = ?
+            JOIN crypto_info ci ON pq.crypto_id = ci.id
+            WHERE ci.code = ?
             ORDER BY pq.timestamp DESC
             LIMIT 1
         """, (symbol,))
@@ -210,7 +240,8 @@ class CryptoDatabase:
             List of cryptocurrency symbols
         """
         cursor = self.conn.cursor()
-        cursor.execute("SELECT symbol FROM cryptocurrencies ORDER BY symbol")
+        # Return union of crypto_info.code and cryptocurrencies.symbol to maintain compatibility
+        cursor.execute("SELECT code FROM crypto_info UNION SELECT symbol FROM cryptocurrencies ORDER BY 1")
         return [row[0] for row in cursor.fetchall()]
 
     def get_latest_timestamp(self, symbol: str) -> Optional[datetime]:
@@ -224,13 +255,12 @@ class CryptoDatabase:
             Most recent datetime or None if no data exists
         """
         cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT MAX(pq.timestamp)
-            FROM price_quotes pq
-            JOIN cryptocurrencies c ON pq.crypto_id = c.symbol
-            WHERE c.symbol = ?
-        """, (symbol,))
-
+        cursor.execute("SELECT id FROM crypto_info WHERE code = ?", (symbol,))
+        r = cursor.fetchone()
+        if not r:
+            return None
+        crypto_id = r[0]
+        cursor.execute("SELECT MAX(timestamp) FROM price_quotes WHERE crypto_id = ?", (crypto_id,))
         result = cursor.fetchone()
         if result and result[0]:
             return datetime.fromisoformat(result[0])
@@ -247,13 +277,12 @@ class CryptoDatabase:
             Oldest datetime or None if no data exists
         """
         cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT MIN(pq.timestamp)
-            FROM price_quotes pq
-            JOIN cryptocurrencies c ON pq.crypto_id = c.symbol
-            WHERE c.symbol = ?
-        """, (symbol,))
-
+        cursor.execute("SELECT id FROM crypto_info WHERE code = ?", (symbol,))
+        r = cursor.fetchone()
+        if not r:
+            return None
+        crypto_id = r[0]
+        cursor.execute("SELECT MIN(timestamp) FROM price_quotes WHERE crypto_id = ?", (crypto_id,))
         result = cursor.fetchone()
         if result and result[0]:
             return datetime.fromisoformat(result[0])
@@ -272,19 +301,18 @@ class CryptoDatabase:
         """
         cursor = self.conn.cursor()
 
-        # Ensure cryptocurrency metadata exists (store symbol/name)
-        self.add_cryptocurrency(symbol, quote_data.get("name", ""))
-
+        # Ensure cryptocurrency metadata exists in crypto_info and get its numeric id
+        crypto_id = self.get_or_create_crypto_info_id(symbol, quote_data.get("name", ""))
+        if crypto_id is None:
+            print(f"Error: cannot resolve crypto id for {symbol}")
+            return False
         try:
             # Normalize timestamp to date only (YYYY-MM-DD)
             ts = quote_data.get("timestamp", datetime.now())
             timestamp = ts.date() if hasattr(ts, 'date') else ts
 
-            # Check if quote with same timestamp exists
-            cursor.execute("""
-                SELECT id FROM price_quotes
-                WHERE crypto_id = ? AND timestamp = ?
-            """, (symbol, timestamp))
+            # Check if quote with same timestamp exists (crypto_id is numeric)
+            cursor.execute("SELECT id FROM price_quotes WHERE crypto_id = ? AND timestamp = ?", (crypto_id, timestamp))
 
             existing = cursor.fetchone()
 
@@ -311,7 +339,7 @@ class CryptoDatabase:
                         crypto_id, close_eur, low_eur, high_eur, daily_returns, timestamp
                     ) VALUES (?, ?, ?, ?, ?, ?)
                 """, (
-                    symbol,
+                    crypto_id,
                     quote_data.get("close_eur") or quote_data.get("price_eur"),  # Backward compatibility
                     quote_data.get("low_eur"),
                     quote_data.get("high_eur"),
@@ -320,7 +348,12 @@ class CryptoDatabase:
                 ))
 
             self.conn.commit()
-            self.conn.commit()
+
+            # Ensure last_quote_date is synchronized after upsert
+            try:
+                self.update_last_quote_date(symbol)
+            except Exception:
+                pass
 
             return True
         except Exception as e:
@@ -341,11 +374,14 @@ class CryptoDatabase:
         cursor = self.conn.cursor()
         try:
             # Get the most recent quote date for this symbol
-            cursor.execute("""
-                SELECT MAX(timestamp) FROM price_quotes
-                WHERE crypto_id = ?
-            """, (symbol,))
+            # Resolve numeric id for symbol
+            cursor.execute("SELECT id FROM crypto_info WHERE code = ?", (symbol,))
+            r = cursor.fetchone()
+            if not r:
+                return False
+            crypto_id = r[0]
 
+            cursor.execute("SELECT MAX(timestamp) FROM price_quotes WHERE crypto_id = ?", (crypto_id,))
             result = cursor.fetchone()
             last_date = result[0] if result and result[0] else None
 
@@ -354,8 +390,8 @@ class CryptoDatabase:
                 cursor.execute("""
                     UPDATE crypto_info
                     SET last_quote_date = ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE code = ?
-                """, (last_date, symbol))
+                    WHERE id = ?
+                """, (last_date, crypto_id))
                 self.conn.commit()
 
             return True
@@ -374,6 +410,7 @@ class CryptoDatabase:
             Last quote date or None if not available
         """
         cursor = self.conn.cursor()
+        # Prefer explicit last_quote_date from crypto_info when available
         cursor.execute("""
             SELECT last_quote_date FROM crypto_info
             WHERE code = ?
@@ -381,7 +418,24 @@ class CryptoDatabase:
 
         result = cursor.fetchone()
         if result and result[0]:
-            return datetime.fromisoformat(result[0])
+            try:
+                return datetime.fromisoformat(result[0])
+            except Exception:
+                pass
+
+        # Fallback: derive last quote date from price_quotes table
+        try:
+            cursor.execute("SELECT id FROM crypto_info WHERE code = ?", (symbol,))
+            rr = cursor.fetchone()
+            if rr:
+                crypto_id = rr[0]
+                cursor.execute("SELECT MAX(timestamp) FROM price_quotes WHERE crypto_id = ?", (crypto_id,))
+                r = cursor.fetchone()
+                if r and r[0]:
+                    return datetime.fromisoformat(r[0])
+        except Exception:
+            pass
+
         return None
 
     def add_crypto_info(self, code: str, name: str, market_entry: Optional[datetime] = None,

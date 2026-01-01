@@ -1,14 +1,19 @@
-# [4.3.13] - 2025-12-29
+# [4.3.14] - 2026-01-01
 
-### Added
-- Small improvements: auto-range messaging updates and auto-range behavior to update yesterday and today when last quote date is today.
+### Fixed
+- Resolved FOREIGN KEY failures when inserting `price_quotes` by using the numeric `id` from `crypto_info` as `crypto_id` and ensuring `crypto_info` rows are created when missing.
+- Fixed leakage of `include_today` state in `main.py` so auto-range updates per-symbol behave correctly when `last_quote_date == today`.
+- Ensured `update_last_quote_date` and related helpers consistently use `crypto_info.id` and derive fallback dates from `price_quotes` when needed.
 
 ### Changed
-- Messages and docs updated to refer to "today" when appropriate; `run_update_quotes.cmd` and CLI help aligned.
-- When auto-range detects last quote date == today, the updater will fetch yesterday as start date and also include today's live quote to ensure both dates are updated.
+- Improved robustness of database inserts and joins; added `get_or_create_crypto_info_id()` helper in `src/database.py`.
+- Added automatic cleanup of test DB files in `run_tests.cmd`.
+- Minor UI startup fix: provide a minimal `ICON_MAP` fallback in `src/ui_main.py`.
 
 ### Testing
-- Executed: suite de testes unitários (105 tests) — todos passaram (OK).
+- Executed full update and unit tests locally; updated report generated at `reports/AnaliseCrypto.xlsx`.
+
+# [4.3.13] - 2025-12-29
 
 # [4.3.9] - 2025-12-29
 

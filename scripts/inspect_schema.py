@@ -1,0 +1,12 @@
+import sqlite3
+conn=sqlite3.connect('data/crypto_prices.db')
+cur=conn.cursor()
+print('PRAGMA table_info(price_quotes):')
+for r in cur.execute("PRAGMA table_info(price_quotes)"): print(r)
+print('\nPRAGMA foreign_key_list(price_quotes):')
+for r in cur.execute("PRAGMA foreign_key_list('price_quotes')"): print(r)
+print('\nPRAGMA table_info(cryptocurrencies):')
+for r in cur.execute("PRAGMA table_info(cryptocurrencies)"): print(r)
+print('\nPRAGMA table_info(crypto_info):')
+for r in cur.execute("PRAGMA table_info(crypto_info)"): print(r)
+conn.close()

@@ -1,5 +1,5 @@
 # PSC CryptoPlay - Cryptocurrency Price Tracker & Analysis
-**Versão: 4.3.13**
+**Versão: 4.3.14**
 
 ## 🚀 Setup Rápido
 
@@ -55,4 +55,4 @@ Execute `run_ui.cmd` para abrir a interface desktop (PyQt6) com barra lateral.
 
 ---
 
-**Pinto Santos Consulting © 2025**
+**Pinto Santos Consulting © 2026**

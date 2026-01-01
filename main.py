@@ -177,6 +177,7 @@ def fetch_historical_range(api, symbols: list, days: int, db, throttle_seconds: 
     total_count = 0
     for idx, sym in enumerate(symbols, start=1):
         start_date = None
+        include_today = False
         
         if auto_range:
             # Get last quote date for this symbol from crypto_info
@@ -186,14 +187,14 @@ def fetch_historical_range(api, symbols: list, days: int, db, throttle_seconds: 
                 last_date_only = last_date.date()
                 if last_date_only < today:
                     # Se última data < hoje, buscar de (last_date+1) até hoje
-                        start_date = last_date + timedelta(days=1)
-                        print(f"[{idx}/{len(symbols)}] {sym} → OHLCV from {start_date.date()} to {today}")
+                    start_date = last_date + timedelta(days=1)
+                    print(f"[{idx}/{len(symbols)}] {sym} → OHLCV from {start_date.date()} to {today}")
                 else:
-                        # Se última data == hoje, buscar ontem como start_date e atualizar ontem e hoje
-                        start_date = today - timedelta(days=1)
-                        # marcamos que depois devemos incluir também o quote de hoje para forçar atualização
-                        include_today = True
-                        print(f"[{idx}/{len(symbols)}] {sym} → OHLCV update for yesterday and today ({start_date} to {today})")
+                    # Se última data == hoje, buscar ontem como start_date e atualizar ontem e hoje
+                    start_date = today - timedelta(days=1)
+                    # marcamos que depois devemos incluir também o quote de hoje para forçar atualização
+                    include_today = True
+                    print(f"[{idx}/{len(symbols)}] {sym} → OHLCV update for yesterday and today ({start_date} to {today})")
             else:
                 # No previous data, fetch last 365 days
                 start_date = None
@@ -224,7 +225,7 @@ def fetch_historical_range(api, symbols: list, days: int, db, throttle_seconds: 
         # Always upsert to avoid duplicates when refetching ranges
         inserted = 0
         # If needed, include today's live quote to force update when last_quote_date was today
-        if auto_range and 'include_today' in locals() and include_today:
+        if auto_range and include_today:
             try:
                 today_quote = api.get_latest_quote(sym)
                 if today_quote:
