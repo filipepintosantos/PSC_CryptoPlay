@@ -1,7 +1,7 @@
 
 # Quick Start Guide
 
-**Versão: 4.3.13**
+**Versão: 4.3.15**
 
 **Tempo de setup: ~5 minutos**
 

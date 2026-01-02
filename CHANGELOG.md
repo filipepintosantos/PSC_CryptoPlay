@@ -1,3 +1,11 @@
+# [4.3.15] - 2026-01-02
+
+### Fixed
+- Corrected report period statistics that were identical across periods due to a database join mismatch: some `price_quotes.crypto_id` values were stored as symbol text while queries expected numeric `crypto_info.id`. Updated query matching in `src/database.py` to accept either `ci.code` or `CAST(ci.id AS TEXT)`, regenerated the full historical data and the Excel report.
+- Hardened data parsing and statistics in `src/analysis.py` (coerce numeric fields, drop invalid rows) and fixed an indentation bug affecting calculations.
+- Minor Excel reporter fixes in `src/excel_reporter.py` (auto-filter range and Score column alignment).
+- Regenerated `reports/AnaliseCrypto.xlsx` and ran unit tests to validate the fixes.
+
 # [4.3.14] - 2026-01-01
 
 ### Fixed

@@ -309,12 +309,12 @@ class ExcelReporter:
         ws[f'AA{row}'].value = round(score_per_month, 1)
         ws[f'AA{row}'].border = border
         ws[f'AA{row}'].alignment = Alignment(horizontal='center')
-        ws[f'Z{row}'].font = Font(bold=True, size=9)
-        # Color code: higher score/month = more volatile
+        ws[f'AA{row}'].font = Font(bold=True, size=9)
+        # Color code: higher score/month = more volatile (apply to AA)
         if score_per_month > 25:
-            ws[f'Z{row}'].fill = PatternFill(start_color="FFA500", end_color="FFA500", fill_type="solid")
+            ws[f'AA{row}'].fill = PatternFill(start_color="FFA500", end_color="FFA500", fill_type="solid")
         elif score_per_month > 15:
-            ws[f'Z{row}'].fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")
+            ws[f'AA{row}'].fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")
 
     def create_summary_sheet(self, reports: Dict[str, Dict], market_caps: Dict[str, float] = None, favorites: List[str] = None):
         """
@@ -375,8 +375,8 @@ class ExcelReporter:
 
                 row += 1
 
-        # Add auto filter to the table
-        ws.auto_filter.ref = f"A4:Z{row - 1}"
+        # Add auto filter to the table (include AA column)
+        ws.auto_filter.ref = f"A4:AA{row - 1}"
 
         # Freeze panes (freeze columns A-D and header row)
         ws.freeze_panes = ws['E5']

@@ -188,10 +188,12 @@ class CryptoDatabase:
         """
         cursor = self.conn.cursor()
 
+        # Join price_quotes to crypto_info allowing crypto_id to be stored
+        # either as the numeric `id` (legacy) or as the `code` text value.
         query = """
             SELECT pq.*, ci.code as symbol, ci.name
             FROM price_quotes pq
-            JOIN crypto_info ci ON pq.crypto_id = ci.id
+            JOIN crypto_info ci ON (pq.crypto_id = ci.code OR pq.crypto_id = CAST(ci.id AS TEXT))
             WHERE ci.code = ?
         """
 
@@ -223,7 +225,7 @@ class CryptoDatabase:
         cursor.execute("""
             SELECT pq.*, ci.code as symbol, ci.name
             FROM price_quotes pq
-            JOIN crypto_info ci ON pq.crypto_id = ci.id
+            JOIN crypto_info ci ON (pq.crypto_id = ci.code OR pq.crypto_id = CAST(ci.id AS TEXT))
             WHERE ci.code = ?
             ORDER BY pq.timestamp DESC
             LIMIT 1
@@ -260,7 +262,8 @@ class CryptoDatabase:
         if not r:
             return None
         crypto_id = r[0]
-        cursor.execute("SELECT MAX(timestamp) FROM price_quotes WHERE crypto_id = ?", (crypto_id,))
+        # Match rows where price_quotes.crypto_id is stored as numeric id or as the symbol code
+        cursor.execute("SELECT MAX(timestamp) FROM price_quotes WHERE crypto_id = ? OR crypto_id = ?", (str(crypto_id), symbol))
         result = cursor.fetchone()
         if result and result[0]:
             return datetime.fromisoformat(result[0])
@@ -282,7 +285,8 @@ class CryptoDatabase:
         if not r:
             return None
         crypto_id = r[0]
-        cursor.execute("SELECT MIN(timestamp) FROM price_quotes WHERE crypto_id = ?", (crypto_id,))
+        # Match rows where price_quotes.crypto_id is stored as numeric id or as the symbol code
+        cursor.execute("SELECT MIN(timestamp) FROM price_quotes WHERE crypto_id = ? OR crypto_id = ?", (str(crypto_id), symbol))
         result = cursor.fetchone()
         if result and result[0]:
             return datetime.fromisoformat(result[0])

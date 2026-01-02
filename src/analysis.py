@@ -39,7 +39,26 @@ class StatisticalAnalyzer:
                 "count": 0,
             }
 
-        prices_array = np.array(prices, dtype=float)
+        # Convert to numpy array of floats and drop NaN values (robust to non-numeric entries)
+        try:
+            prices_array = np.array(prices, dtype=float)
+        except Exception:
+            # Fallback: coerce using pandas to_numeric if numpy conversion fails
+            prices_array = pd.to_numeric(pd.Series(prices), errors='coerce').to_numpy(dtype=float)
+
+        # Remove NaN values
+        prices_array = prices_array[~np.isnan(prices_array)]
+
+        if prices_array.size == 0:
+            return {
+                "min": None,
+                "max": None,
+                "mean": None,
+                "std": None,
+                "mean_minus_std": None,
+                "count": 0,
+            }
+
         mean_val = float(np.mean(prices_array))
         std_val = float(np.std(prices_array))
         median_val = float(np.median(prices_array))
@@ -55,7 +74,7 @@ class StatisticalAnalyzer:
             "mad": mad_val,
             "mean_minus_std": mean_val - std_val,
             "median_minus_mad": median_val - mad_val,
-            "count": len(prices),
+            "count": int(prices_array.size),
         }
 
     @staticmethod
@@ -222,12 +241,25 @@ class StatisticalAnalyzer:
 
         df = pd.DataFrame(quotes)
 
+        if df.empty:
+            return df
+
         # Ensure timestamp is datetime
         if 'timestamp' in df.columns:
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
+
+        # Ensure close_eur is numeric and drop rows with invalid or missing prices
+        if 'close_eur' in df.columns:
+            df['close_eur'] = pd.to_numeric(df['close_eur'], errors='coerce')
+            df = df.dropna(subset=['close_eur'])
+
+        # Drop rows with invalid timestamps
+        if 'timestamp' in df.columns:
+            df = df.dropna(subset=['timestamp'])
 
         # Sort by timestamp in descending order (most recent first)
-        df = df.sort_values('timestamp', ascending=False).reset_index(drop=True)
+        if 'timestamp' in df.columns:
+            df = df.sort_values('timestamp', ascending=False).reset_index(drop=True)
 
         return df
 
