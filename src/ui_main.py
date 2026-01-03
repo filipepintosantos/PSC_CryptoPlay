@@ -401,6 +401,14 @@ class MainWindow(QMainWindow):
                             except ValueError:
                                 return 0.0
 
+                        def format_decimal(value):
+                            """Format float as decimal string without scientific notation (e.g., 2e-08 → '0.00000002')."""
+                            if value == 0:
+                                return "0"
+                            # Use format with enough precision and no exponent
+                            formatted = f"{value:.20f}".rstrip("0").rstrip(".")
+                            return formatted
+
                         reader = csv.DictReader(f)
                         count = 0
                         skipped = 0
@@ -496,6 +504,7 @@ class MainWindow(QMainWindow):
                                 price_eur, ts_open = fetch_price_eur(coin, dt_utc)
                                 binance_ts = ts_open if ts_open is not None else int(dt_utc.timestamp() * 1000)
                                 value_eur = price_eur * change_val if price_eur is not None else None
+                                change_str = format_decimal(change_val)  # Convert to decimal string without scientific notation
 
                                 cursor = db.conn.cursor()
                                 # Check duplicate: user_id+utc_time+account+operation+coin+change+remark
@@ -503,7 +512,7 @@ class MainWindow(QMainWindow):
                                     """SELECT 1 FROM binance_transactions
                                            WHERE user_id = ? AND utc_time = ? AND account = ? AND operation = ?
                                                  AND coin = ? AND change = ? AND remark = ?""",
-                                    (user_id, utc_time_str, account, operation, coin, change_val, remark)
+                                    (user_id, utc_time_str, account, operation, coin, change_str, remark)
                                 )
                                 if cursor.fetchone():
                                     skipped += 1
@@ -520,7 +529,7 @@ class MainWindow(QMainWindow):
                                     account,
                                     operation,
                                     coin,
-                                    change_val,
+                                    change_str,
                                     remark,
                                     price_eur,
                                     value_eur,
