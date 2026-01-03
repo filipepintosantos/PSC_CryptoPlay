@@ -1,3 +1,14 @@
+# [5.0.2] - 2026-01-03
+
+### Added
+- **Binance API client** (`src/api_binance.py`)
+  - Função `get_price_at_second()` usando klines de 1s
+  - Helper `get_klines()` com limites protegidos e tratamento de erros
+  - 11 testes unitários em `tests/test_api_binance.py`
+
+### Changed
+- Importação de transações Binance no UI passa a abrir por defeito em `external/in`
+
 # [5.0.1] - 2026-01-03
 
 ### Added

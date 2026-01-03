@@ -1,5 +1,5 @@
 # PSC CryptoPlay - Cryptocurrency Price Tracker & Analysis
-**Versão: 5.0.0**
+**Versão: 5.0.2**
 
 ## 🚀 Setup Rápido
 
@@ -48,10 +48,8 @@ Execute `run_ui.cmd` para abrir a interface desktop (PyQt6) com barra lateral.
 ✅ Análise de volatilidade detalhada
 ✅ Sistema de favoritos A/B/C
 ✅ Modo auto-range (busca apenas dados novos)
-✅ 101 testes automatizados
-✅ Sistema de favoritos A/B/C  
-✅ Modo auto-range (busca apenas dados novos)  
-✅ 101 testes automatizados
+✅ Cliente Binance API (`src/api_binance.py`) com `get_price_at_second`
+✅ 135 testes automatizados (inclui testes para Binance API)
 
 ---
 
