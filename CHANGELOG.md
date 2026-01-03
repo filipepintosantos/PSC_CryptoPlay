@@ -1,3 +1,13 @@
+# [5.0.0] - 2026-01-03
+
+### Added
+- Versão major 5.0.0: introduzida a nova tabela `binance_transactions`. Esta tabela marca o início de uma nova linha de funcionalidades relacionadas com transacções e análises adicionais; ver `scripts/apply_migration_binance.py` e `scripts/create_schema.sql` para detalhes da migração.
+
+# [Schema 1.1.0] - 2026-01-03
+
+### Added
+- Adicionada tabela `binance_transactions` ao esquema de base de dados; incrementado `PRAGMA user_version` para `10100` (versão legível `1.1.0`).
+
 # [4.3.15] - 2026-01-02
 
 ### Fixed
