@@ -38,8 +38,8 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
     
     def test_get_all_symbols_with_data(self):
         """Test getting all symbols after adding cryptocurrencies."""
-        self.db.add_cryptocurrency("BTC", "Bitcoin")
-        self.db.add_cryptocurrency("ETH", "Ethereum")
+        self.db.add_crypto_info("BTC", "Bitcoin")
+        self.db.add_crypto_info("ETH", "Ethereum")
         
         symbols = self.db.get_all_symbols()
         self.assertEqual(len(symbols), 2)
@@ -306,7 +306,7 @@ class TestCryptoDatabaseComprehensive(unittest.TestCase):
     def test_context_manager(self):
         """Test database as context manager."""
         with CryptoDatabase(":memory:") as db:
-            db.add_cryptocurrency("BTC", "Bitcoin")
+            db.add_crypto_info("BTC", "Bitcoin")
             symbols = db.get_all_symbols()
             self.assertIn("BTC", symbols)
     

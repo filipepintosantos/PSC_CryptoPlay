@@ -38,17 +38,7 @@ class TestDatabase(unittest.TestCase):
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
         tables = [row[0] for row in cursor.fetchall()]
         
-        self.assertIn("cryptocurrencies", tables)
         self.assertIn("price_quotes", tables)
-    
-    def test_add_cryptocurrency(self):
-        """Test adding a cryptocurrency."""
-        crypto_id = self.db.add_cryptocurrency("BTC", "Bitcoin")
-        self.assertIsNotNone(crypto_id)
-        
-        # Add same cryptocurrency again (should not create duplicate)
-        crypto_id_2 = self.db.add_cryptocurrency("BTC", "Bitcoin")
-        self.assertEqual(crypto_id, crypto_id_2)
     
     def test_insert_quote(self):
         """Test inserting a price quote."""
@@ -68,8 +58,8 @@ class TestDatabase(unittest.TestCase):
     
     def test_get_all_symbols(self):
         """Test retrieving all symbols."""
-        self.db.add_cryptocurrency("BTC", "Bitcoin")
-        self.db.add_cryptocurrency("ETH", "Ethereum")
+        self.db.add_crypto_info("BTC", "Bitcoin")
+        self.db.add_crypto_info("ETH", "Ethereum")
         
         symbols = self.db.get_all_symbols()
         self.assertIn("BTC", symbols)

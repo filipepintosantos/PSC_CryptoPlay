@@ -99,7 +99,7 @@ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ```
 
 **Métodos principais:**
-- `add_cryptocurrency(symbol, name)`: Adiciona criptomoeda
+- `add_crypto_info(code, name)`: Adiciona criptomoeda (metadados)
 - `insert_quote(symbol, quote_data)`: Insere quotação
 - `insert_quotes_batch(quotes)`: Insere múltiplas quotações
 - `get_quotes(symbol, days)`: Recupera quotações por período

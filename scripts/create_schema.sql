@@ -2,22 +2,14 @@
 -- Gerado a partir de src/database.py
 
 -- Schema version variables (update here for new releases)
--- SCHEMA_VERSION = '1.0.0'
--- SCHEMA_VERSION_NUMBER = 10000  -- integer representation (x*10000 + y*100 + z)
+-- SCHEMA_VERSION = '1.2.0'
+-- SCHEMA_VERSION_NUMBER = 10200  -- integer representation (x*10000 + y*100 + z)
 
-PRAGMA user_version = 10000;
+PRAGMA user_version = 10200;
 
 PRAGMA foreign_keys = OFF;
 
 BEGIN TRANSACTION;
-
--- Tabela de metadados das criptomoedas
-CREATE TABLE IF NOT EXISTS cryptocurrencies (
-    id INTEGER PRIMARY KEY,
-    symbol TEXT UNIQUE NOT NULL,
-    name TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
 
 -- Informações adicionais sobre as criptomoedas
 CREATE TABLE IF NOT EXISTS crypto_info (
@@ -48,6 +40,22 @@ CREATE TABLE IF NOT EXISTS price_quotes (
 
 -- Índices
 CREATE INDEX IF NOT EXISTS idx_crypto_timestamp ON price_quotes(crypto_id, timestamp);
+
+-- Tabela de transações da Binance
+CREATE TABLE IF NOT EXISTS binance_transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT,
+    utc_time TEXT,
+    account TEXT,
+    operation TEXT,
+    coin TEXT,
+    change REAL,
+    remark TEXT,
+    price_eur REAL,
+    value_eur REAL,
+    binance_timestamp INTEGER,
+    source TEXT
+);
 
 COMMIT;
 
@@ -94,10 +102,10 @@ CREATE TABLE IF NOT EXISTS schema_info (
     applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Set initial schema version (format: x.y.z). Current schema version: 1.0.0
+-- Set initial schema version (format: x.y.z). Current schema version: 1.2.0
 -- NOTE: keep the numeric version in sync with the PRAGMA user_version above.
 -- The SQL below formats an integer version (x*10000 + y*100 + z) into 'x.y.z'.
-WITH sv(v) AS (VALUES(10000))
+WITH sv(v) AS (VALUES(10200))
 INSERT INTO schema_info (version)
 SELECT printf('%d.%d.%d', 
               CAST(v/10000 AS INTEGER), 

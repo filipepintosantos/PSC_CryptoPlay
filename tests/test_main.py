@@ -294,7 +294,7 @@ class TestQuoteOperations(unittest.TestCase):
         api.fetch_and_parse = Mock(return_value=[])
         
         db = CryptoDatabase(":memory:")
-        db.add_cryptocurrency('BTC', 'Bitcoin')
+        db.add_crypto_info('BTC', 'Bitcoin')
         
         symbols = ['BTC']
         quotes = main.fetch_quotes_incremental(api, symbols, db, "incremental")

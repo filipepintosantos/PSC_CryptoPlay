@@ -78,15 +78,6 @@ class CryptoDatabase:
         except sqlite3.IntegrityError:
             pass  # Already exists
 
-        cursor.execute("SELECT id FROM cryptocurrencies WHERE symbol = ?", (symbol,))
-        result = cursor.fetchone()
-        # Ensure corresponding crypto_info row exists for compatibility with other methods/tests
-        try:
-            self.get_or_create_crypto_info_id(symbol, name)
-        except Exception:
-            pass
-        return result[0] if result else None
-
     def get_or_create_crypto_info_id(self, code: str, name: str = "") -> Optional[int]:
         """
         Ensure there is a row in `crypto_info` for `code` and return its `id`.
@@ -242,8 +233,8 @@ class CryptoDatabase:
             List of cryptocurrency symbols
         """
         cursor = self.conn.cursor()
-        # Return union of crypto_info.code and cryptocurrencies.symbol to maintain compatibility
-        cursor.execute("SELECT code FROM crypto_info UNION SELECT symbol FROM cryptocurrencies ORDER BY 1")
+        # Get symbols from crypto_info table
+        cursor.execute("SELECT code FROM crypto_info ORDER BY code")
         return [row[0] for row in cursor.fetchall()]
 
     def get_latest_timestamp(self, symbol: str) -> Optional[datetime]:
