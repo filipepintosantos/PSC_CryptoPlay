@@ -392,6 +392,15 @@ class MainWindow(QMainWindow):
                                     return row_dict.get(name, "")
                             return ""
 
+                        def parse_float_scientific(value_str):
+                            """Parse float from string, handling scientific notation (e.g., '2E-8', '1.5E-7')."""
+                            if not value_str or not value_str.strip():
+                                return 0.0
+                            try:
+                                return float(value_str.strip())
+                            except ValueError:
+                                return 0.0
+
                         reader = csv.DictReader(f)
                         count = 0
                         skipped = 0
@@ -466,7 +475,7 @@ class MainWindow(QMainWindow):
                                 operation = pick(row, 'Operation').strip()
                                 coin = pick(row, 'Coin').strip().upper()
                                 remark = pick(row, 'Remark').strip()
-                                change_val = float(pick(row, 'Change') or 0)
+                                change_val = parse_float_scientific(pick(row, 'Change'))
 
                                 if not utc_time_str:
                                     output_widget.setPlainText(output_widget.toPlainText() + "UTC Time vazio – linha ignorada\n")

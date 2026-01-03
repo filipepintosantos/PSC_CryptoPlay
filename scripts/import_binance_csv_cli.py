@@ -20,6 +20,16 @@ def pick(row_dict, *names: str) -> str:
     return ""
 
 
+def parse_float_scientific(value_str: str) -> float:
+    """Parse float from string, handling scientific notation (e.g., '2E-8', '1.5E-7')."""
+    if not value_str or not value_str.strip():
+        return 0.0
+    try:
+        return float(value_str.strip())
+    except ValueError:
+        return 0.0
+
+
 def import_csv(csv_path: Path, db_path: Path) -> tuple[int, int]:
     db = CryptoDatabase(db_path)
     cursor = db.conn.cursor()
@@ -41,7 +51,7 @@ def import_csv(csv_path: Path, db_path: Path) -> tuple[int, int]:
                 operation = pick(row, "Operation").strip()
                 coin = pick(row, "Coin").strip().upper()
                 remark = pick(row, "Remark").strip()
-                change_val = float(pick(row, "Change") or 0)
+                change_val = parse_float_scientific(pick(row, "Change"))
 
                 if not utc_time_str:
                     print("Skip: UTC Time vazio")
