@@ -74,6 +74,9 @@ reports/*.xls
 # Temporary data exports
 exports/
 
+# External dependencies/libraries
+external/
+
 # Logs
 logs/
 *.log

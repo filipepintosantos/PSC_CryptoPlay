@@ -1,6 +1,56 @@
+# [5.0.1] - 2026-01-03
+
+### Added
+- **Nova funcionalidade: CSV Reader module** (`src/csv_reader.py`)
+  - Módulo robusto para leitura de ficheiros CSV com suporte a múltiplos formatos
+  - Auto-detecção de formatos de data (ISO, DD-MM-YYYY, etc.)
+  - Parsing inteligente de preços com símbolos de moeda (€, $, £, ¥)
+  - Configuração flexível via classe `CSVConfig`
+  - Classe `CSVReader` para processamento de ficheiros CSV
+  - Função `import_crypto_data()` para importação directa
+  - 18 testes unitários cobrindo parsing, I/O de ficheiros e validação
+- **Script CLI para importação CSV** (`scripts/import_from_csv.py`)
+  - Interface amigável para importação de dados de preços
+  - Suporte para delimitadores customizados, encodings e formatos de data
+  - Modo dry-run para validação sem importar
+  - Help detalhado com exemplos de uso
+- **Documentação CSV** (`CSV_READER.md`)
+  - Guia completo de uso do módulo CSV Reader
+  - Exemplos de ficheiros CSV em diferentes formatos
+  - API completa e descrição de todas as opções
+- **Ficheiro de exemplo CSV** (`reports/BTC_sample.csv`)
+  - Dados de exemplo para testes do importador CSV
+
+### Changed
+- Melhoradas funcionalidades de importação de dados CSV com novo módulo dedicado
+
 # [5.0.0] - 2026-01-03
 
 ### Added
+- **Nova funcionalidade: CSV Reader module** (`src/csv_reader.py`)
+  - Módulo robusto para leitura de ficheiros CSV com suporte a múltiplos formatos
+  - Auto-detecção de formatos de data (ISO, DD-MM-YYYY, etc.)
+  - Parsing inteligente de preços com símbolos de moeda (€, $, £, ¥)
+  - Configuração flexível via classe `CSVConfig`
+  - Classe `CSVReader` para processamento de ficheiros CSV
+  - Função `import_crypto_data()` para importação directa
+  - 18 testes unitários cobrindo parsing, I/O de ficheiros e validação
+- **Script CLI para importação CSV** (`scripts/import_from_csv.py`)
+  - Interface amigável para importação de dados de preços
+  - Suporte para delimitadores customizados, encodings e formatos de data
+  - Modo dry-run para validação sem importar
+  - Help detalhado com exemplos de uso
+- **Documentação CSV** (`CSV_READER.md`)
+  - Guia completo de uso do módulo CSV Reader
+  - Exemplos de ficheiros CSV em diferentes formatos
+  - API completa e descrição de todas as opções
+- **Refactoring de schema**: Versão bumped para 1.2.0
+  - Removida tabela redundante `cryptocurrencies`
+  - Consolidação completa de metadados em `crypto_info`
+  - Atualizado `PRAGMA user_version` para 10200
+  - Remoção de método deprecado `add_cryptocurrency()`
+
+### Changed
 - Versão major 5.0.0: introduzida a nova tabela `binance_transactions`. Esta tabela marca o início de uma nova linha de funcionalidades relacionadas com transacções e análises adicionais; ver `scripts/apply_migration_binance.py` e `scripts/create_schema.sql` para detalhes da migração.
 
 # [Schema 1.1.0] - 2026-01-03
@@ -27,6 +77,7 @@
 - Improved robustness of database inserts and joins; added `get_or_create_crypto_info_id()` helper in `src/database.py`.
 - Added automatic cleanup of test DB files in `run_tests.cmd`.
 - Minor UI startup fix: provide a minimal `ICON_MAP` fallback in `src/ui_main.py`.
+
 
 ### Testing
 - Executed full update and unit tests locally; updated report generated at `reports/AnaliseCrypto.xlsx`.
