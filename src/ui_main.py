@@ -351,6 +351,7 @@ class MainWindow(QMainWindow):
     def _import_binance_transactions(self):
         """Interface para importar transações Binance."""
         from PyQt6.QtWidgets import QVBoxLayout, QPushButton, QLabel, QFileDialog, QTextEdit
+        from datetime import datetime, timezone
         
         layout = QVBoxLayout()
         
@@ -376,6 +377,7 @@ class MainWindow(QMainWindow):
                 
                 try:
                     from src.database import CryptoDatabase
+                    from src.api_binance import get_price_at_second
                     
                     db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "crypto_prices.db"))
                     db = CryptoDatabase(db_path)
@@ -383,39 +385,144 @@ class MainWindow(QMainWindow):
                     # Importar transações
                     with open(file_path, 'r', encoding='utf-8') as f:
                         import csv
+
+                        def pick(row_dict, *names):
+                            for name in names:
+                                if name in row_dict and row_dict[name] != "":
+                                    return row_dict.get(name, "")
+                            return ""
+
                         reader = csv.DictReader(f)
                         count = 0
-                        
+                        skipped = 0
+                        price_cache = {}
+
+                        def fetch_price_eur(coin_symbol, dt_utc):
+                            key = (coin_symbol, dt_utc.replace(microsecond=0))
+                            if key in price_cache:
+                                return price_cache[key]
+
+                            if coin_symbol == 'EUR':
+                                result = (1.0, int(dt_utc.timestamp() * 1000))
+                                price_cache[key] = result
+                                return result
+
+                            # Try direct EUR pair first
+                            symbol_pair = f"{coin_symbol}EUR"
+                            try:
+                                price_eur, ts_open = get_price_at_second(symbol_pair, dt_utc)
+                                if price_eur is not None:
+                                    result = (price_eur, ts_open)
+                                    price_cache[key] = result
+                                    return result
+                            except Exception as e:  # noqa: BLE001
+                                output_widget.setPlainText(output_widget.toPlainText() + f"Erro API {symbol_pair}: {e}\n")
+
+                            # Fallback 1: coin/USDT * USDT/EUR
+                            try:
+                                price_coin_usdt, ts_coin = get_price_at_second(f"{coin_symbol}USDT", dt_utc)
+                                price_eur_usdt, ts_usdt = get_price_at_second("EURUSDT", dt_utc)
+                                if (
+                                    price_coin_usdt is not None
+                                    and price_eur_usdt is not None
+                                    and price_eur_usdt != 0
+                                ):
+                                    price_usdt_eur = 1 / price_eur_usdt
+                                    ts = ts_coin if ts_coin is not None else ts_usdt
+                                    result = (price_coin_usdt * price_usdt_eur, ts)
+                                    price_cache[key] = result
+                                    return result
+                            except Exception as e:  # noqa: BLE001
+                                output_widget.setPlainText(output_widget.toPlainText() + f"Erro API fallback1 {coin_symbol}: {e}\n")
+
+                            # Fallback 2: coin/USDC * USDC/EUR
+                            try:
+                                price_coin_usdc, ts_coin = get_price_at_second(f"{coin_symbol}USDC", dt_utc)
+                                price_eur_usdc, ts_usdc = get_price_at_second("EURUSDC", dt_utc)
+                                if (
+                                    price_coin_usdc is not None
+                                    and price_eur_usdc is not None
+                                    and price_eur_usdc != 0
+                                ):
+                                    price_usdc_eur = 1 / price_eur_usdc
+                                    ts = ts_coin if ts_coin is not None else ts_usdc
+                                    result = (price_coin_usdc * price_usdc_eur, ts)
+                                    price_cache[key] = result
+                                    return result
+                            except Exception as e:  # noqa: BLE001
+                                output_widget.setPlainText(output_widget.toPlainText() + f"Erro API fallback2 {coin_symbol}: {e}\n")
+
+                            return None, None
+
                         for row in reader:
                             try:
-                                # Inserir transação na base de dados
+                                user_id = pick(row, 'User ID', 'User_ID').strip()
+                                utc_time_str = pick(row, 'UTC Time', 'UTC_Time').strip()
+                                account = pick(row, 'Account').strip()
+                                operation = pick(row, 'Operation').strip()
+                                coin = pick(row, 'Coin').strip().upper()
+                                remark = pick(row, 'Remark').strip()
+                                change_val = float(pick(row, 'Change') or 0)
+
+                                if not utc_time_str:
+                                    output_widget.setPlainText(output_widget.toPlainText() + "UTC Time vazio – linha ignorada\n")
+                                    skipped += 1
+                                    continue
+                                
+                                # Parse UTC time
+                                try:
+                                    dt = datetime.fromisoformat(utc_time_str.replace('Z', '+00:00'))
+                                    if dt.tzinfo is None:
+                                        dt = dt.replace(tzinfo=timezone.utc)
+                                    dt_utc = dt.astimezone(timezone.utc)
+                                except Exception:
+                                    output_widget.setPlainText(output_widget.toPlainText() + f"UTC Time inválido: {utc_time_str}\n")
+                                    skipped += 1
+                                    continue
+                                
+                                price_eur, ts_open = fetch_price_eur(coin, dt_utc)
+                                binance_ts = ts_open if ts_open is not None else int(dt_utc.timestamp() * 1000)
+                                value_eur = price_eur * change_val if price_eur is not None else None
+
                                 cursor = db.conn.cursor()
+                                # Check duplicate: user_id+utc_time+account+operation+coin+change+remark
+                                cursor.execute(
+                                    """SELECT 1 FROM binance_transactions
+                                           WHERE user_id = ? AND utc_time = ? AND account = ? AND operation = ?
+                                                 AND coin = ? AND change = ? AND remark = ?""",
+                                    (user_id, utc_time_str, account, operation, coin, change_val, remark)
+                                )
+                                if cursor.fetchone():
+                                    skipped += 1
+                                    continue
+                                
                                 cursor.execute("""
-                                    INSERT OR REPLACE INTO binance_transactions 
+                                    INSERT INTO binance_transactions 
                                     (user_id, utc_time, account, operation, coin, change, remark, 
                                      price_eur, value_eur, binance_timestamp, source)
                                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                                 """, (
-                                    row.get('User ID', ''),
-                                    row.get('UTC Time', ''),
-                                    row.get('Account', ''),
-                                    row.get('Operation', ''),
-                                    row.get('Coin', ''),
-                                    float(row.get('Change', 0)),
-                                    row.get('Remark', ''),
-                                    float(row.get('Price', 0)) if row.get('Price') else None,
-                                    float(row.get('Total', 0)) if row.get('Total') else None,
-                                    int(float(row.get('Timestamp', 0))) if row.get('Timestamp') else None,
-                                    'csv_import'
+                                    user_id,
+                                    utc_time_str,
+                                    account,
+                                    operation,
+                                    coin,
+                                    change_val,
+                                    remark,
+                                    price_eur,
+                                    value_eur,
+                                    binance_ts,
+                                    'BinanceCSV'
                                 ))
                                 count += 1
                             except Exception as e:
                                 output_widget.setPlainText(output_widget.toPlainText() + f"Erro na linha: {e}\n")
+                                skipped += 1
                         
                         db.conn.commit()
                         db.close()
                         
-                        output_widget.setPlainText(output_widget.toPlainText() + f"\n✓ {count} transações importadas com sucesso!")
+                        output_widget.setPlainText(output_widget.toPlainText() + f"\n✓ {count} transações importadas com sucesso! ({skipped} ignoradas)")
                 except Exception as e:
                     output_widget.setPlainText(output_widget.toPlainText() + f"Erro ao importar: {str(e)}")
         
