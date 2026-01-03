@@ -1,3 +1,36 @@
+# [5.1.0] - 2026-01-03
+
+### Added
+- **New menu entry "Analisar Transações"** in Binance menu
+  - Advanced filtering interface for Binance transactions analysis
+  - Filter by: Coins (multi-select), Operations (multi-select), Date range (from/to)
+  - Additional filters:
+    - Sign filter: All / Only Positive / Only Negative values (based on change column)
+    - "Group without Operation" option to aggregate by coin and account only
+  - Quick select buttons: "All" / "None" for each filter group
+  - Compact filter area (max 40% of screen, with scrolling)
+  - Results table with dynamic columns:
+    - With operation: Coin, Operation, Account, # Rows, Total Change, Total Value EUR
+    - Without operation: Coin, Account, # Rows, Total Change, Total Value EUR
+  - Summary statistics: Total transactions, Total Change, Total Value EUR
+  - Right-aligned numeric values for better readability
+
+### Changed
+- **Menu reorganization**:
+  - Moved "Consultar Transações" from Binance menu to "Consultar Base de Dados" menu
+  - Renamed to "Transações Binance" for consistency
+  - Binance menu now focused on data operations: Import and Analysis
+- **Database schema update** (`scripts/create_schema.sql`):
+  - Changed `binance_timestamp` column type from INTEGER to TEXT (ISO 8601 format)
+  - Improved timestamp readability in database queries
+
+### Fixed
+- Fixed "Cannot operate on a closed database" error in transaction analysis
+  - Database connection now maintained for filter operations
+  - Proper connection lifecycle management
+- Corrected ORDER BY clause when grouping without operation
+- Fixed column alignment and visibility when toggling operation grouping
+
 # [5.0.3] - 2026-01-03
 
 ### Added
@@ -14,6 +47,12 @@
   - Fallback 2: coin/USDC × (1/EUR/USDC)
   - If all fail: insert with NULL price_eur/value_eur
 - Added caching for API calls by (coin, datetime) to reduce redundant requests
+- **Fixed `change` column storage**: now correctly stores numeric values (REAL) instead of formatted strings
+  - Scientific notation (e.g., "2E-8") is parsed to float and stored as-is
+  - Duplicate detection now uses numeric value comparison
+- **Converted `binance_timestamp` to ISO 8601 format** (TEXT column)
+  - Millisecond timestamp converted to readable date/time format (e.g., "2023-01-03T09:00:00+00:00")
+  - Implemented `timestamp_ms_to_iso()` function in both UI and CLI
 
 ### Changed
 - Binance import now allows NULL prices instead of skipping rows without price data

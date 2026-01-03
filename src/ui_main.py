@@ -25,10 +25,11 @@ ABRIR_REL = "Abrir relatório"
 # Consultar DB submenu
 LISTA_MOEDAS = "Lista de Moedas"
 COTACOES = "Cotações"
+TRANSACOES_BINANCE = "Transações Binance"
 
 # Binance submenu
-CONSULTAR_TRANSACOES = "Consultar Transações"
 IMPORTAR_TRANSACOES = "Importar Transações"
+ANALISAR_TRANSACOES = "Analisar Transações"
 
 REPORT_FILENAME = "AnaliseCrypto.xlsx"
 
@@ -149,13 +150,15 @@ class MainWindow(QMainWindow):
             elif group_name == CONSULTAR_DB:
                 lista_moedas = QTreeWidgetItem([LISTA_MOEDAS])
                 cotacoes = QTreeWidgetItem([COTACOES])
+                transacoes_binance = QTreeWidgetItem([TRANSACOES_BINANCE])
                 group_item.addChild(lista_moedas)
                 group_item.addChild(cotacoes)
+                group_item.addChild(transacoes_binance)
             elif group_name == BINANCE:
-                consultar_item = QTreeWidgetItem([CONSULTAR_TRANSACOES])
                 importar_item = QTreeWidgetItem([IMPORTAR_TRANSACOES])
-                group_item.addChild(consultar_item)
+                analisar_item = QTreeWidgetItem([ANALISAR_TRANSACOES])
                 group_item.addChild(importar_item)
+                group_item.addChild(analisar_item)
             elif group_name == "Gráficos":
                 graficos_opcoes = [
                     "Candlestick",
@@ -414,13 +417,15 @@ class MainWindow(QMainWindow):
                             except ValueError:
                                 return 0.0
 
-                        def format_decimal(value):
-                            """Format float as decimal string without scientific notation (e.g., 2e-08 → '0.00000002')."""
-                            if value == 0:
-                                return "0"
-                            # Use format with enough precision and no exponent
-                            formatted = f"{value:.20f}".rstrip("0").rstrip(".")
-                            return formatted
+                        def timestamp_ms_to_iso(ts_ms):
+                            """Convert millisecond timestamp to ISO 8601 format string."""
+                            if not ts_ms:
+                                return ""
+                            try:
+                                dt = datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc)
+                                return dt.isoformat()
+                            except (ValueError, OSError):
+                                return ""
 
                         reader = csv.DictReader(f)
                         count = 0
@@ -517,7 +522,6 @@ class MainWindow(QMainWindow):
                                 price_eur, ts_open = fetch_price_eur(coin, dt_utc)
                                 binance_ts = ts_open if ts_open is not None else int(dt_utc.timestamp() * 1000)
                                 value_eur = price_eur * change_val if price_eur is not None else None
-                                change_str = format_decimal(change_val)  # Convert to decimal string without scientific notation
 
                                 cursor = db.conn.cursor()
                                 # Check duplicate: user_id+utc_time+account+operation+coin+change+remark
@@ -525,7 +529,7 @@ class MainWindow(QMainWindow):
                                     """SELECT rowid FROM binance_transactions
                                            WHERE user_id = ? AND utc_time = ? AND account = ? AND operation = ?
                                                  AND coin = ? AND change = ? AND remark = ?""",
-                                    (user_id, utc_time_str, account, operation, coin, change_str, remark)
+                                    (user_id, utc_time_str, account, operation, coin, change_val, remark)
                                 )
                                 dup_row = cursor.fetchone()
                                 
@@ -548,11 +552,11 @@ class MainWindow(QMainWindow):
                                     account,
                                     operation,
                                     coin,
-                                    change_str,
+                                    change_val,
                                     remark,
                                     price_eur,
                                     value_eur,
-                                    binance_ts,
+                                    timestamp_ms_to_iso(binance_ts),
                                     'BinanceCSV'
                                 ))
                                 count += 1
@@ -656,6 +660,297 @@ class MainWindow(QMainWindow):
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.content_layout.addWidget(label)
 
+    def _analyze_binance_transactions(self):
+        """Analisa as transações Binance com filtros."""
+        from PyQt6.QtWidgets import (QLabel, QTableWidget, QTableWidgetItem, QPushButton, 
+                                      QVBoxLayout, QHBoxLayout, QGroupBox, QCheckBox, 
+                                      QDateEdit, QScrollArea, QWidget)
+        from PyQt6.QtCore import QDate
+        import traceback
+        
+        try:
+            from src.database import CryptoDatabase
+
+            db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "crypto_prices.db"))
+            db = CryptoDatabase(db_path)
+            cursor = db.conn.cursor()
+            
+            # Buscar valores únicos para filtros
+            cursor.execute("SELECT DISTINCT coin FROM binance_transactions WHERE coin IS NOT NULL ORDER BY coin")
+            all_coins = [row[0] for row in cursor.fetchall()]
+            
+            cursor.execute("SELECT DISTINCT operation FROM binance_transactions WHERE operation IS NOT NULL ORDER BY operation")
+            all_operations = [row[0] for row in cursor.fetchall()]
+            
+            cursor.execute("SELECT MIN(utc_time), MAX(utc_time) FROM binance_transactions")
+            min_date, max_date = cursor.fetchone()
+            
+            # Container principal
+            main_container = QWidget()
+            main_layout = QVBoxLayout(main_container)
+            
+            # Título
+            title = QLabel("Análise de Transações Binance com Filtros")
+            title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            main_layout.addWidget(title)
+            
+            # ScrollArea para filtros (máximo 40% da altura)
+            filters_scroll = QScrollArea()
+            filters_scroll.setWidgetResizable(True)
+            filters_scroll.setMaximumHeight(300)  # Limita altura dos filtros
+            filters_container = QWidget()
+            filters_main_layout = QVBoxLayout(filters_container)
+            
+            # Painel de filtros horizontal
+            filters_layout = QHBoxLayout()
+            
+            # Helper para criar grupo de filtros com botões
+            def create_filter_group(title, items, max_height=200):
+                group = QGroupBox(title)
+                group_layout = QVBoxLayout()
+                
+                # Botões marcar/desmarcar todos
+                btn_layout = QHBoxLayout()
+                btn_all = QPushButton("Todos")
+                btn_none = QPushButton("Nenhum")
+                btn_all.setMaximumWidth(80)
+                btn_none.setMaximumWidth(80)
+                btn_layout.addWidget(btn_all)
+                btn_layout.addWidget(btn_none)
+                btn_layout.addStretch()
+                group_layout.addLayout(btn_layout)
+                
+                # ScrollArea para checkboxes
+                scroll = QScrollArea()
+                scroll.setWidgetResizable(True)
+                scroll.setMaximumHeight(max_height)
+                scroll_widget = QWidget()
+                scroll_layout = QVBoxLayout(scroll_widget)
+                
+                checks = {}
+                for item in items:
+                    cb = QCheckBox(item)
+                    cb.setChecked(True)
+                    checks[item] = cb
+                    scroll_layout.addWidget(cb)
+                
+                scroll_layout.addStretch()
+                scroll.setWidget(scroll_widget)
+                group_layout.addWidget(scroll)
+                
+                # Conectar botões
+                btn_all.clicked.connect(lambda: [cb.setChecked(True) for cb in checks.values()])
+                btn_none.clicked.connect(lambda: [cb.setChecked(False) for cb in checks.values()])
+                
+                group.setLayout(group_layout)
+                return group, checks
+            
+            # Criar grupos de filtros
+            coin_group, coin_checks = create_filter_group("Moedas", all_coins)
+            filters_layout.addWidget(coin_group)
+            
+            op_group, op_checks = create_filter_group("Operações", all_operations)
+            # Adicionar checkbox "Agrupar sem Operação" ao grupo de operações
+            hide_operation_cb = QCheckBox("Agrupar sem Operação")
+            op_group.layout().addWidget(hide_operation_cb)
+            filters_layout.addWidget(op_group)
+            
+            # Filtro Datas
+            date_group = QGroupBox("Intervalo de Datas")
+            date_layout = QVBoxLayout()
+            date_from_label = QLabel("De:")
+            date_from = QDateEdit()
+            date_from.setCalendarPopup(True)
+            if min_date:
+                date_from.setDate(QDate.fromString(min_date[:10], "yyyy-MM-dd"))
+            date_to_label = QLabel("Até:")
+            date_to = QDateEdit()
+            date_to.setCalendarPopup(True)
+            if max_date:
+                date_to.setDate(QDate.fromString(max_date[:10], "yyyy-MM-dd"))
+            date_layout.addWidget(date_from_label)
+            date_layout.addWidget(date_from)
+            date_layout.addWidget(date_to_label)
+            date_layout.addWidget(date_to)
+            
+            # Filtro Positivos/Negativos
+            date_layout.addWidget(QLabel(""))  # Espaçador
+            sign_label = QLabel("Valores Change:")
+            date_layout.addWidget(sign_label)
+            sign_all = QCheckBox("Todos")
+            sign_all.setChecked(True)
+            sign_positive = QCheckBox("Apenas Positivos")
+            sign_negative = QCheckBox("Apenas Negativos")
+            date_layout.addWidget(sign_all)
+            date_layout.addWidget(sign_positive)
+            date_layout.addWidget(sign_negative)
+            
+            # Conectar checkboxes de sinal
+            def on_sign_all_changed(state):
+                if state:
+                    sign_positive.setChecked(False)
+                    sign_negative.setChecked(False)
+            
+            def on_sign_specific_changed():
+                if sign_positive.isChecked() or sign_negative.isChecked():
+                    sign_all.setChecked(False)
+            
+            sign_all.stateChanged.connect(on_sign_all_changed)
+            sign_positive.stateChanged.connect(on_sign_specific_changed)
+            sign_negative.stateChanged.connect(on_sign_specific_changed)
+            
+            date_group.setLayout(date_layout)
+            filters_layout.addWidget(date_group)
+            
+            filters_main_layout.addLayout(filters_layout)
+            filters_scroll.setWidget(filters_container)
+            main_layout.addWidget(filters_scroll)
+            
+            # Botão Aplicar Filtros
+            apply_btn = QPushButton("Aplicar Filtros")
+            main_layout.addWidget(apply_btn)
+            
+            # Label para resultados
+            results_label = QLabel("")
+            results_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            main_layout.addWidget(results_label)
+            
+            # Tabela para resultados
+            results_table = QTableWidget()
+            main_layout.addWidget(results_table)
+            
+            def apply_filters():
+                try:
+                    # Construir query com filtros
+                    selected_coins = [coin for coin, cb in coin_checks.items() if cb.isChecked()]
+                    selected_ops = [op for op, cb in op_checks.items() if cb.isChecked()]
+                    date_from_str = date_from.date().toString("yyyy-MM-dd")
+                    date_to_str = date_to.date().toString("yyyy-MM-dd")
+                    hide_operation = hide_operation_cb.isChecked()
+                    
+                    where_clauses = []
+                    params = []
+                    
+                    if selected_coins:
+                        placeholders = ','.join(['?' for _ in selected_coins])
+                        where_clauses.append(f"coin IN ({placeholders})")
+                        params.extend(selected_coins)
+                    
+                    if selected_ops and not hide_operation:
+                        placeholders = ','.join(['?' for _ in selected_ops])
+                        where_clauses.append(f"operation IN ({placeholders})")
+                        params.extend(selected_ops)
+                    
+                    where_clauses.append("utc_time >= ?")
+                    params.append(date_from_str)
+                    where_clauses.append("utc_time <= ?")
+                    params.append(date_to_str + "T23:59:59")
+                    
+                    # Filtro por sinal (positivo/negativo)
+                    if sign_positive.isChecked() and not sign_negative.isChecked():
+                        where_clauses.append("change > 0")
+                    elif sign_negative.isChecked() and not sign_positive.isChecked():
+                        where_clauses.append("change < 0")
+                    
+                    where_sql = " AND ".join(where_clauses)
+                    
+                    # Query com agrupamento (com ou sem operação)
+                    if hide_operation:
+                        group_by = "coin, account"
+                        select_cols = "coin, NULL as operation, account"
+                        order_by = "coin, account"
+                    else:
+                        group_by = "coin, operation, account"
+                        select_cols = "coin, operation, account"
+                        order_by = "coin, operation, account"
+                    
+                    query = f"""
+                        SELECT {select_cols},
+                               COUNT(*) as num_rows,
+                               SUM(change) as total_change,
+                               SUM(value_eur) as total_value_eur
+                        FROM binance_transactions
+                        WHERE {where_sql}
+                        GROUP BY {group_by}
+                        ORDER BY {order_by}
+                    """
+                    
+                    cursor.execute(query, params)
+                    results = cursor.fetchall()
+                    
+                    if not results:
+                        results_label.setText("Nenhuma transação encontrada com os filtros selecionados.")
+                        results_table.setRowCount(0)
+                        return
+                    
+                    # Calcular totais gerais
+                    total_rows = sum(r[3] for r in results)
+                    total_change_all = sum(r[4] for r in results if r[4] is not None)
+                    total_value_all = sum(r[5] for r in results if r[5] is not None)
+                    
+                    results_label.setText(
+                        f"Total: {total_rows} transações | "
+                        f"Change Total: {total_change_all:.8f} | "
+                        f"Valor EUR Total: {total_value_all:.2f} €"
+                    )
+                    
+                    # Preencher tabela
+                    if hide_operation:
+                        headers = ["Moeda", "Conta", "Nº Linhas", "Total Change", "Total Value EUR"]
+                        col_indices = {"coin": 0, "account": 1, "num_rows": 2, "change": 3, "value": 4}
+                    else:
+                        headers = ["Moeda", "Operação", "Conta", "Nº Linhas", "Total Change", "Total Value EUR"]
+                        col_indices = {"coin": 0, "operation": 1, "account": 2, "num_rows": 3, "change": 4, "value": 5}
+                    
+                    results_table.setRowCount(len(results))
+                    results_table.setColumnCount(len(headers))
+                    results_table.setHorizontalHeaderLabels(headers)
+                    
+                    for i, (coin, operation, account, num_rows, total_change, total_value) in enumerate(results):
+                        col = 0
+                        results_table.setItem(i, col, QTableWidgetItem(str(coin) if coin else ""))
+                        col += 1
+                        
+                        if not hide_operation:
+                            results_table.setItem(i, col, QTableWidgetItem(str(operation) if operation else ""))
+                            col += 1
+                        
+                        results_table.setItem(i, col, QTableWidgetItem(str(account) if account else ""))
+                        col += 1
+                        results_table.setItem(i, col, QTableWidgetItem(str(num_rows)))
+                        col += 1
+                        results_table.setItem(i, col, QTableWidgetItem(f"{total_change:.8f}" if total_change else "0"))
+                        col += 1
+                        
+                        # Alinhar valor EUR à direita
+                        value_item = QTableWidgetItem(f"{total_value:.2f}" if total_value else "0")
+                        value_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                        results_table.setItem(i, col, value_item)
+                    
+                    results_table.resizeColumnsToContents()
+                    
+                except Exception as e:
+                    results_label.setText(f"Erro ao aplicar filtros: {e}")
+                    import traceback
+                    traceback.print_exc()
+            
+            apply_btn.clicked.connect(apply_filters)
+            
+            # Aplicar filtros inicialmente
+            apply_filters()
+            
+            self.content_layout.addWidget(main_container)
+            
+            # Não fechar o DB aqui - será usado pelos filtros
+            # Guardar referência para fechar depois se necessário
+            if not hasattr(self, '_binance_db'):
+                self._binance_db = db
+            
+        except Exception as e:
+            label = QLabel("Erro ao analisar transações:\n" + str(e) + "\n" + traceback.format_exc())
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.content_layout.addWidget(label)
+
     def display_content(self, current, previous):
         self._clear_content()
 
@@ -722,10 +1017,12 @@ class MainWindow(QMainWindow):
                 label = QLabel("Erro ao carregar cotações:\n" + str(e) + "\n" + traceback.format_exc())
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.content_layout.addWidget(label)
-        elif parent_name == BINANCE and sub_name == CONSULTAR_TRANSACOES:
+        elif parent_name == CONSULTAR_DB and sub_name == TRANSACOES_BINANCE:
             self._show_binance_transactions()
         elif parent_name == BINANCE and sub_name == IMPORTAR_TRANSACOES:
             self._import_binance_transactions()
+        elif parent_name == BINANCE and sub_name == ANALISAR_TRANSACOES:
+            self._analyze_binance_transactions()
         else:
             label = QLabel(f"Sub-opção '{sub_name}' em '{parent_name}' (dummy)")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)

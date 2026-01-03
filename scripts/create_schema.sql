@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS binance_transactions (
     remark TEXT,
     price_eur REAL,
     value_eur REAL,
-    binance_timestamp INTEGER,
+    binance_timestamp TEXT,
     source TEXT
 );
 

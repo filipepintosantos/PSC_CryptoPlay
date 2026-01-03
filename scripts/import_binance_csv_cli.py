@@ -30,13 +30,15 @@ def parse_float_scientific(value_str: str) -> float:
         return 0.0
 
 
-def format_decimal(value: float) -> str:
-    """Format float as decimal string without scientific notation (e.g., 2e-08 → '0.00000002')."""
-    if value == 0:
-        return "0"
-    # Use format with enough precision and no exponent
-    formatted = f"{value:.20f}".rstrip("0").rstrip(".")
-    return formatted
+def timestamp_ms_to_iso(ts_ms: int) -> str:
+    """Convert millisecond timestamp to ISO 8601 format string."""
+    if not ts_ms:
+        return ""
+    try:
+        dt = datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc)
+        return dt.isoformat()
+    except (ValueError, OSError):
+        return ""
 
 
 def import_csv(csv_path: Path, db_path: Path, on_duplicate: str = "skip") -> tuple[int, int, int]:
@@ -137,13 +139,11 @@ def import_csv(csv_path: Path, db_path: Path, on_duplicate: str = "skip") -> tup
 
                 binance_ts = ts_open if ts_open is not None else int(dt_utc.timestamp() * 1000)
                 value_eur = price_eur * change_val
-                change_str = format_decimal(change_val)  # Convert to decimal string without scientific notation
-
                 cursor.execute(
                     """SELECT rowid FROM binance_transactions
                            WHERE user_id = ? AND utc_time = ? AND account = ? AND operation = ?
                                  AND coin = ? AND change = ? AND remark = ?""",
-                    (user_id, utc_time_str, account, operation, coin, change_str, remark),
+                    (user_id, utc_time_str, account, operation, coin, change_val, remark),
                 )
                 dup_row = cursor.fetchone()
                 
@@ -168,11 +168,11 @@ def import_csv(csv_path: Path, db_path: Path, on_duplicate: str = "skip") -> tup
                         account,
                         operation,
                         coin,
-                        change_str,
+                        change_val,
                         remark,
                         price_eur,
                         value_eur,
-                        binance_ts,
+                        timestamp_ms_to_iso(binance_ts),
                         "BinanceCSV",
                     ),
                 )
