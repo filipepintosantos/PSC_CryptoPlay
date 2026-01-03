@@ -15,6 +15,7 @@ CONSULTAR_DB = "Consultar Base de Dados"
 GRAFICOS = "Gráficos"
 RELATORIOS = "Relatórios"
 FERRAMENTAS = "Ferramentas"
+BINANCE = "Binance"
 OUTRAS = "Outras funcionalidades"
 
 # Relatórios submenu
@@ -25,6 +26,10 @@ ABRIR_REL = "Abrir relatório"
 LISTA_MOEDAS = "Lista de Moedas"
 COTACOES = "Cotações"
 
+# Binance submenu
+CONSULTAR_TRANSACOES = "Consultar Transações"
+IMPORTAR_TRANSACOES = "Importar Transações"
+
 REPORT_FILENAME = "AnaliseCrypto.xlsx"
 
 ICON_MAP = {
@@ -34,6 +39,7 @@ ICON_MAP = {
     GRAFICOS: "graficos.png",
     RELATORIOS: "relatorio.png",
     FERRAMENTAS: "tools.png",
+    BINANCE: "binance.png",
     OUTRAS: "others.png",
 }
 
@@ -120,6 +126,7 @@ class MainWindow(QMainWindow):
             (CONSULTAR_DB, ICON_MAP[CONSULTAR_DB]),
             (GRAFICOS, ICON_MAP[GRAFICOS]),
             (RELATORIOS, ICON_MAP[RELATORIOS]),
+            (BINANCE, ICON_MAP[BINANCE]),
             (FERRAMENTAS, ICON_MAP[FERRAMENTAS]),
             (OUTRAS, ICON_MAP[OUTRAS]),
         ]
@@ -144,6 +151,11 @@ class MainWindow(QMainWindow):
                 cotacoes = QTreeWidgetItem([COTACOES])
                 group_item.addChild(lista_moedas)
                 group_item.addChild(cotacoes)
+            elif group_name == BINANCE:
+                consultar_item = QTreeWidgetItem([CONSULTAR_TRANSACOES])
+                importar_item = QTreeWidgetItem([IMPORTAR_TRANSACOES])
+                group_item.addChild(consultar_item)
+                group_item.addChild(importar_item)
             elif group_name == "Gráficos":
                 graficos_opcoes = [
                     "Candlestick",
@@ -295,6 +307,128 @@ class MainWindow(QMainWindow):
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.content_layout.addWidget(label)
 
+    def _show_binance_transactions(self):
+        """Exibe as transações Binance da base de dados."""
+        from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
+        import traceback
+        try:
+            from src.database import CryptoDatabase
+
+            db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "crypto_prices.db"))
+            db = CryptoDatabase(db_path)
+            
+            # Buscar todas as transações da tabela binance_transactions
+            cursor = db.conn.cursor()
+            cursor.execute("SELECT * FROM binance_transactions ORDER BY binance_timestamp DESC")
+            transactions = cursor.fetchall()
+            
+            if not transactions:
+                label = QLabel("Nenhuma transação Binance encontrada na base de dados.")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.content_layout.addWidget(label)
+                return
+            
+            # Obter nomes das colunas
+            column_names = [desc[0] for desc in cursor.description]
+            
+            # Criar tabela
+            table = QTableWidget(len(transactions), len(column_names))
+            table.setHorizontalHeaderLabels(column_names)
+            
+            for i, transaction in enumerate(transactions):
+                for j, value in enumerate(transaction):
+                    table.setItem(i, j, QTableWidgetItem(str(value) if value is not None else ""))
+            
+            table.resizeColumnsToContents()
+            self.content_layout.addWidget(table)
+            
+            db.close()
+        except Exception as e:
+            label = QLabel("Erro ao carregar transações Binance:\n" + str(e) + "\n" + traceback.format_exc())
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.content_layout.addWidget(label)
+
+    def _import_binance_transactions(self):
+        """Interface para importar transações Binance."""
+        from PyQt6.QtWidgets import QVBoxLayout, QPushButton, QLabel, QFileDialog, QTextEdit
+        
+        layout = QVBoxLayout()
+        
+        info_label = QLabel("Importe transações Binance de um ficheiro CSV")
+        info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(info_label)
+        
+        # Botão para selecionar ficheiro
+        def select_file():
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Selecione ficheiro CSV de transações Binance",
+                os.path.expanduser("~"),
+                "CSV Files (*.csv);;All Files (*)"
+            )
+            
+            if file_path:
+                output_widget.setPlainText(f"Ficheiro selecionado: {file_path}\n")
+                output_widget.setPlainText(output_widget.toPlainText() + "Processando ficheiro...\n")
+                
+                try:
+                    from src.database import CryptoDatabase
+                    
+                    db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "crypto_prices.db"))
+                    db = CryptoDatabase(db_path)
+                    
+                    # Importar transações
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        import csv
+                        reader = csv.DictReader(f)
+                        count = 0
+                        
+                        for row in reader:
+                            try:
+                                # Inserir transação na base de dados
+                                cursor = db.conn.cursor()
+                                cursor.execute("""
+                                    INSERT OR REPLACE INTO binance_transactions 
+                                    (user_id, utc_time, account, operation, coin, change, remark, 
+                                     price_eur, value_eur, binance_timestamp, source)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                """, (
+                                    row.get('User ID', ''),
+                                    row.get('UTC Time', ''),
+                                    row.get('Account', ''),
+                                    row.get('Operation', ''),
+                                    row.get('Coin', ''),
+                                    float(row.get('Change', 0)),
+                                    row.get('Remark', ''),
+                                    float(row.get('Price', 0)) if row.get('Price') else None,
+                                    float(row.get('Total', 0)) if row.get('Total') else None,
+                                    int(float(row.get('Timestamp', 0))) if row.get('Timestamp') else None,
+                                    'csv_import'
+                                ))
+                                count += 1
+                            except Exception as e:
+                                output_widget.setPlainText(output_widget.toPlainText() + f"Erro na linha: {e}\n")
+                        
+                        db.conn.commit()
+                        db.close()
+                        
+                        output_widget.setPlainText(output_widget.toPlainText() + f"\n✓ {count} transações importadas com sucesso!")
+                except Exception as e:
+                    output_widget.setPlainText(output_widget.toPlainText() + f"Erro ao importar: {str(e)}")
+        
+        select_button = QPushButton("Selecionar Ficheiro CSV")
+        select_button.clicked.connect(select_file)
+        layout.addWidget(select_button)
+        
+        output_widget = QTextEdit()
+        output_widget.setReadOnly(True)
+        output_widget.setPlainText("Selecione um ficheiro CSV para importar transações Binance")
+        layout.addWidget(output_widget)
+        
+        container = QWidget()
+        container.setLayout(layout)
+        self.content_layout.addWidget(container)
+
     def _run_daily_update(self):
         from PyQt6.QtWidgets import QTextEdit
         from PyQt6.QtCore import QThread, pyqtSignal, QObject
@@ -434,6 +568,10 @@ class MainWindow(QMainWindow):
                 label = QLabel("Erro ao carregar cotações:\n" + str(e) + "\n" + traceback.format_exc())
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.content_layout.addWidget(label)
+        elif parent_name == BINANCE and sub_name == CONSULTAR_TRANSACOES:
+            self._show_binance_transactions()
+        elif parent_name == BINANCE and sub_name == IMPORTAR_TRANSACOES:
+            self._import_binance_transactions()
         else:
             label = QLabel(f"Sub-opção '{sub_name}' em '{parent_name}' (dummy)")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
