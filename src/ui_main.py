@@ -360,10 +360,13 @@ class MainWindow(QMainWindow):
         
         # Botão para selecionar ficheiro
         def select_file():
+            # Pasta por defeito é external\in
+            default_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "external", "in"))
+            
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
                 "Selecione ficheiro CSV de transações Binance",
-                os.path.expanduser("~"),
+                default_dir,
                 "CSV Files (*.csv);;All Files (*)"
             )
             
