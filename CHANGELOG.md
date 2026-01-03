@@ -1,3 +1,23 @@
+# [5.0.3] - 2026-01-03
+
+### Added
+- **CLI helper script for Binance CSV import** (`scripts/import_binance_csv_cli.py`)
+  - Standalone importer for batch processing Binance transaction exports
+  - Same price-fetching logic as UI (fallback conversions + caching)
+
+### Fixed
+- Binance CSV import now supports headers with underscores (User_ID, UTC_Time)
+- Added explicit header row detection to prevent accidental insertion
+- Price lookup with fallback conversions:
+  - Primary: coin/EUR direct pair
+  - Fallback 1: coin/USDT × (1/EUR/USDT)
+  - Fallback 2: coin/USDC × (1/EUR/USDC)
+  - If all fail: insert with NULL price_eur/value_eur
+- Added caching for API calls by (coin, datetime) to reduce redundant requests
+
+### Changed
+- Binance import now allows NULL prices instead of skipping rows without price data
+
 # [5.0.2] - 2026-01-03
 
 ### Added

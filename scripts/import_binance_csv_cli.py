@@ -30,6 +30,10 @@ def import_csv(csv_path: Path, db_path: Path) -> tuple[int, int]:
     with csv_path.open("r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
+            # Skip header row if present (shouldn't happen with DictReader, but be safe)
+            if row.get("User ID") == "User ID" or row.get("User_ID") == "User_ID":
+                continue
+
             try:
                 user_id = pick(row, "User ID", "User_ID").strip()
                 utc_time_str = pick(row, "UTC Time", "UTC_Time").strip()

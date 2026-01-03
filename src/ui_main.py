@@ -455,6 +455,10 @@ class MainWindow(QMainWindow):
                             return None, None
 
                         for row in reader:
+                            # Skip header row if present (shouldn't happen with DictReader, but be safe)
+                            if row.get("User ID") == "User ID" or row.get("User_ID") == "User_ID":
+                                continue
+
                             try:
                                 user_id = pick(row, 'User ID', 'User_ID').strip()
                                 utc_time_str = pick(row, 'UTC Time', 'UTC_Time').strip()
