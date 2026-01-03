@@ -39,11 +39,23 @@ def format_decimal(value: float) -> str:
     return formatted
 
 
-def import_csv(csv_path: Path, db_path: Path) -> tuple[int, int]:
+def import_csv(csv_path: Path, db_path: Path, on_duplicate: str = "skip") -> tuple[int, int, int]:
+    """
+    Import Binance CSV to database.
+    
+    Args:
+        csv_path: Path to CSV file
+        db_path: Path to database
+        on_duplicate: What to do when duplicate found: "skip" (default) or "replace"
+    
+    Returns:
+        Tuple of (inserted, skipped, replaced)
+    """
     db = CryptoDatabase(db_path)
     cursor = db.conn.cursor()
     count = 0
     skipped = 0
+    replaced = 0
     cache: dict[tuple[str, datetime], tuple[float, int | None]] = {}
 
     with csv_path.open("r", encoding="utf-8") as f:
@@ -128,14 +140,22 @@ def import_csv(csv_path: Path, db_path: Path) -> tuple[int, int]:
                 change_str = format_decimal(change_val)  # Convert to decimal string without scientific notation
 
                 cursor.execute(
-                    """SELECT 1 FROM binance_transactions
+                    """SELECT rowid FROM binance_transactions
                            WHERE user_id = ? AND utc_time = ? AND account = ? AND operation = ?
                                  AND coin = ? AND change = ? AND remark = ?""",
                     (user_id, utc_time_str, account, operation, coin, change_str, remark),
                 )
-                if cursor.fetchone():
-                    skipped += 1
-                    continue
+                dup_row = cursor.fetchone()
+                
+                if dup_row:
+                    if on_duplicate == "replace":
+                        # Delete and re-insert
+                        cursor.execute("DELETE FROM binance_transactions WHERE rowid = ?", (dup_row[0],))
+                        replaced += 1
+                    else:
+                        # Skip
+                        skipped += 1
+                        continue
 
                 cursor.execute(
                     """INSERT INTO binance_transactions
@@ -163,22 +183,26 @@ def import_csv(csv_path: Path, db_path: Path) -> tuple[int, int]:
 
     db.conn.commit()
     db.close()
-    return count, skipped
+    return count, skipped, replaced
 
 
 def main(argv: list[str]) -> int:
     if len(argv) < 2:
-        print("Usage: import_binance_csv_cli.py <csv_path> [db_path]")
+        print("Usage: import_binance_csv_cli.py <csv_path> [db_path] [--replace]")
+        print("  --replace: replace duplicates instead of skipping them")
         return 1
     csv_path = Path(argv[1]).expanduser().resolve()
-    db_path = Path(argv[2]).expanduser().resolve() if len(argv) > 2 else Path(__file__).resolve().parent.parent / "data" / "crypto_prices.db"
+    db_path = Path(argv[2]).expanduser().resolve() if len(argv) > 2 and not argv[2].startswith("--") else Path(__file__).resolve().parent.parent / "data" / "crypto_prices.db"
+    on_duplicate = "replace" if "--replace" in argv else "skip"
+    
     if not csv_path.exists():
         print(f"CSV not found: {csv_path}")
         return 1
     print(f"CSV: {csv_path}")
     print(f"DB:  {db_path}")
-    count, skipped = import_csv(csv_path, db_path)
-    print(f"Inserted: {count}, skipped: {skipped}")
+    print(f"Mode: {'replace duplicates' if on_duplicate == 'replace' else 'skip duplicates'}")
+    count, skipped, replaced = import_csv(csv_path, db_path, on_duplicate)
+    print(f"Inserted: {count}, skipped: {skipped}, replaced: {replaced}")
     return 0
 
 

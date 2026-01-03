@@ -350,7 +350,7 @@ class MainWindow(QMainWindow):
 
     def _import_binance_transactions(self):
         """Interface para importar transações Binance."""
-        from PyQt6.QtWidgets import QVBoxLayout, QPushButton, QLabel, QFileDialog, QTextEdit
+        from PyQt6.QtWidgets import QVBoxLayout, QPushButton, QLabel, QFileDialog, QTextEdit, QComboBox, QHBoxLayout
         from datetime import datetime, timezone
         
         layout = QVBoxLayout()
@@ -358,6 +358,17 @@ class MainWindow(QMainWindow):
         info_label = QLabel("Importe transações Binance de um ficheiro CSV")
         info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(info_label)
+        
+        # Opção para duplicados
+        dup_layout = QHBoxLayout()
+        dup_label = QLabel("Se encontrar duplicados:")
+        dup_combo = QComboBox()
+        dup_combo.addItem("Ignorar", "skip")
+        dup_combo.addItem("Substituir", "replace")
+        dup_layout.addWidget(dup_label)
+        dup_layout.addWidget(dup_combo)
+        dup_layout.addStretch()
+        layout.addLayout(dup_layout)
         
         # Botão para selecionar ficheiro
         def select_file():
@@ -372,7 +383,9 @@ class MainWindow(QMainWindow):
             )
             
             if file_path:
+                on_duplicate = dup_combo.currentData()
                 output_widget.setPlainText(f"Ficheiro selecionado: {file_path}\n")
+                output_widget.setPlainText(output_widget.toPlainText() + f"Modo: {'substituir duplicados' if on_duplicate == 'replace' else 'ignorar duplicados'}\n")
                 output_widget.setPlainText(output_widget.toPlainText() + "Processando ficheiro...\n")
                 
                 try:
@@ -509,14 +522,20 @@ class MainWindow(QMainWindow):
                                 cursor = db.conn.cursor()
                                 # Check duplicate: user_id+utc_time+account+operation+coin+change+remark
                                 cursor.execute(
-                                    """SELECT 1 FROM binance_transactions
+                                    """SELECT rowid FROM binance_transactions
                                            WHERE user_id = ? AND utc_time = ? AND account = ? AND operation = ?
                                                  AND coin = ? AND change = ? AND remark = ?""",
                                     (user_id, utc_time_str, account, operation, coin, change_str, remark)
                                 )
-                                if cursor.fetchone():
-                                    skipped += 1
-                                    continue
+                                dup_row = cursor.fetchone()
+                                
+                                if dup_row:
+                                    if on_duplicate == 'replace':
+                                        cursor.execute('DELETE FROM binance_transactions WHERE rowid = ?', (dup_row[0],))
+                                        # Will be re-inserted below
+                                    else:
+                                        skipped += 1
+                                        continue
                                 
                                 cursor.execute("""
                                     INSERT INTO binance_transactions 
@@ -544,7 +563,10 @@ class MainWindow(QMainWindow):
                         db.conn.commit()
                         db.close()
                         
-                        output_widget.setPlainText(output_widget.toPlainText() + f"\n✓ {count} transações importadas com sucesso! ({skipped} ignoradas)")
+                        msg = f"\n✓ {count} transações importadas com sucesso!"
+                        if skipped > 0:
+                            msg += f" ({skipped} ignoradas)"
+                        output_widget.setPlainText(output_widget.toPlainText() + msg)
                 except Exception as e:
                     output_widget.setPlainText(output_widget.toPlainText() + f"Erro ao importar: {str(e)}")
         
