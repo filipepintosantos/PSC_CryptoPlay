@@ -2,10 +2,10 @@
 -- Gerado a partir de src/database.py
 
 -- Schema version variables (update here for new releases)
--- SCHEMA_VERSION = '1.3.0'
--- SCHEMA_VERSION_NUMBER = 10300  -- integer representation (x*10000 + y*100 + z)
+-- SCHEMA_VERSION = '1.4.0'
+-- SCHEMA_VERSION_NUMBER = 10400  -- integer representation (x*10000 + y*100 + z)
 
-PRAGMA user_version = 10300;
+PRAGMA user_version = 10400;
 
 PRAGMA foreign_keys = OFF;
 
@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS binance_transactions (
     price_eur REAL,
     value_eur REAL,
     binance_timestamp TEXT,
-    source TEXT
+    source TEXT,
+    update_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Carteira Binance (FIFO): controla lotes comprados e remanescentes
@@ -64,7 +65,8 @@ CREATE TABLE IF NOT EXISTS binance_wallet (
     utc_time TEXT NOT NULL,         -- ISO 8601: '2024-01-15T10:32:00'
     amount_total REAL NOT NULL,     -- Quantidade comprada no lote
     price_eur REAL NOT NULL,        -- Preço unitário em EUR no momento da compra
-    amount_remaining REAL NOT NULL  -- Quantidade ainda disponível para FIFO
+    amount_remaining REAL NOT NULL, -- Quantidade ainda disponível para FIFO
+    update_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Índice auxiliar para buscas FIFO por moeda e tempo
@@ -87,6 +89,23 @@ BEGIN
     WHERE code = NEW.crypto_id;
 END;
 
+-- Triggers para atualizar `update_date` em binance_transactions
+CREATE TRIGGER IF NOT EXISTS trg_binance_transactions_update_date_insert
+AFTER INSERT ON binance_transactions
+BEGIN
+    UPDATE binance_transactions
+    SET update_date = CURRENT_TIMESTAMP
+    WHERE id = NEW.id AND update_date IS NULL;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_binance_transactions_update_date_update
+AFTER UPDATE ON binance_transactions
+BEGIN
+    UPDATE binance_transactions
+    SET update_date = CURRENT_TIMESTAMP
+    WHERE id = NEW.id;
+END;
+
 CREATE TRIGGER IF NOT EXISTS trg_update_last_quote_date_after_update
 AFTER UPDATE ON price_quotes
 BEGIN
@@ -96,6 +115,23 @@ BEGIN
     ),
     updated_at = CURRENT_TIMESTAMP
     WHERE code = NEW.crypto_id;
+END;
+
+-- Triggers para atualizar `update_date` em binance_wallet
+CREATE TRIGGER IF NOT EXISTS trg_binance_wallet_update_date_insert
+AFTER INSERT ON binance_wallet
+BEGIN
+    UPDATE binance_wallet
+    SET update_date = CURRENT_TIMESTAMP
+    WHERE id = NEW.id AND update_date IS NULL;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_binance_wallet_update_date_update
+AFTER UPDATE ON binance_wallet
+BEGIN
+    UPDATE binance_wallet
+    SET update_date = CURRENT_TIMESTAMP
+    WHERE id = NEW.id;
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_update_last_quote_date_after_delete
@@ -115,7 +151,7 @@ CREATE TABLE IF NOT EXISTS schema_info (
     applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Set initial schema version (format: x.y.z). Current schema version: 1.2.0
+-- Set initial schema version (format: x.y.z). Current schema version: 1.4.0
 -- NOTE: keep the numeric version in sync with the PRAGMA user_version above.
 -- The SQL below formats an integer version (x*10000 + y*100 + z) into 'x.y.z'.
 WITH sv(v) AS (VALUES(10300))

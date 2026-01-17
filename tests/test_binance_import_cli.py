@@ -108,7 +108,8 @@ class TestBinanceImportIntegration(unittest.TestCase):
                 price_eur REAL,
                 value_eur REAL,
                 binance_timestamp TEXT,
-                source TEXT
+                source TEXT,
+                update_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         conn.commit()
@@ -176,7 +177,8 @@ class TestImportCSVFunction(unittest.TestCase):
                 price_eur REAL,
                 value_eur REAL,
                 binance_timestamp TEXT,
-                source TEXT
+                source TEXT,
+                update_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         conn.commit()

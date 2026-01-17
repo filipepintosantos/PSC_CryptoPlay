@@ -1,3 +1,19 @@
+# [5.6.0] - 2026-01-17
+
+### Database Schema v1.4.0 Update 📊
+- **Added `update_date` field** to `binance_transactions` and `binance_wallet` tables
+  - Auto-populated with `CURRENT_TIMESTAMP` on INSERT
+  - Auto-updated on every record modification (UPDATE)
+  - Enables incremental updates: fetch only records modified after last update
+  - Improves wallet rebuild performance for large datasets
+
+### Schema Changes
+- `binance_transactions.update_date`: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+- `binance_wallet.update_date`: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+- **4 Auto-update Triggers**: `trg_binance_transactions_update_date_*` and `trg_binance_wallet_update_date_*`
+
+---
+
 # [5.5.0] - 2026-01-17
 
 ### Sprint 2 Complete ✅
