@@ -229,5 +229,201 @@ class TestImportCryptoData(unittest.TestCase):
         self.assertIsInstance(data[0]['timestamp'], datetime)
 
 
+class TestCSVReaderEdgeCases(unittest.TestCase):
+    """Tests for edge cases and error handling."""
+    
+    def setUp(self):
+        """Create temporary files for testing."""
+        self.temp_dir = tempfile.mkdtemp()
+    
+    def tearDown(self):
+        """Clean up temporary files."""
+        import shutil
+        shutil.rmtree(self.temp_dir)
+    
+    def _create_csv_file(self, content: str) -> Path:
+        """Helper to create CSV file."""
+        path = Path(self.temp_dir) / 'test.csv'
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        return path
+    
+    def test_read_csv_header_missing(self):
+        """Test error when header expected but missing."""
+        content = """2025-01-01,100.50
+2025-01-02,101.00"""
+        path = self._create_csv_file(content)
+        
+        config = CSVConfig(has_header=True, date_column='Date', price_column='Price')
+        reader = CSVReader(config)
+        
+        with self.assertRaises(ValueError):
+            reader.read_file(path)
+    
+    def test_read_csv_missing_date_column(self):
+        """Test error when date column not found."""
+        content = """Amount,Price
+100,100.50"""
+        path = self._create_csv_file(content)
+        
+        config = CSVConfig(date_column='Date', price_column='Price')
+        reader = CSVReader(config)
+        
+        with self.assertRaises(ValueError):
+            reader.read_file(path)
+    
+    def test_read_csv_missing_price_column(self):
+        """Test error when price column not found."""
+        content = """Date,Amount
+2025-01-01,100"""
+        path = self._create_csv_file(content)
+        
+        config = CSVConfig(date_column='Date', price_column='Price')
+        reader = CSVReader(config)
+        
+        with self.assertRaises(ValueError):
+            reader.read_file(path)
+    
+    def test_read_csv_insufficient_columns(self):
+        """Test handling of rows with insufficient columns."""
+        content = """Date,Price
+2025-01-01
+2025-01-02,101.00"""
+        path = self._create_csv_file(content)
+        
+        config = CSVConfig(date_column='Date', price_column='Price')
+        reader = CSVReader(config)
+        rows = reader.read_file(path)
+        
+        # Should skip row with insufficient columns
+        self.assertEqual(len(rows), 1)
+    
+    def test_read_csv_invalid_dates_skipped(self):
+        """Test that rows with invalid dates are skipped."""
+        content = """Date,Price
+2025-01-01,100.50
+INVALID_DATE,101.00
+2025-01-03,102.00"""
+        path = self._create_csv_file(content)
+        
+        config = CSVConfig(date_column='Date', price_column='Price')
+        reader = CSVReader(config)
+        rows = reader.read_file(path)
+        
+        # Should skip invalid date row
+        self.assertEqual(len(rows), 2)
+    
+    def test_read_csv_invalid_prices_skipped(self):
+        """Test that rows with invalid prices are skipped."""
+        content = """Date,Price
+2025-01-01,100.50
+2025-01-02,NOT_A_PRICE
+2025-01-03,102.00"""
+        path = self._create_csv_file(content)
+        
+        config = CSVConfig(date_column='Date', price_column='Price')
+        reader = CSVReader(config)
+        rows = reader.read_file(path)
+        
+        # Should skip invalid price row
+        self.assertEqual(len(rows), 2)
+    
+    def test_parse_date_with_timestamp(self):
+        """Test parsing date with timestamp."""
+        date = CSVReader._parse_date('2025-01-03 14:30:00', '%Y-%m-%d %H:%M:%S')
+        self.assertEqual(date.year, 2025)
+        self.assertEqual(date.month, 1)
+        self.assertEqual(date.day, 3)
+        self.assertEqual(date.hour, 14)
+    
+    def test_parse_date_iso8601(self):
+        """Test parsing ISO 8601 format with format marker."""
+        date = CSVReader._parse_date('2025-01-03T14:30:00', '%ISO8601')
+        self.assertEqual(date.year, 2025)
+        self.assertEqual(date.month, 1)
+        self.assertEqual(date.day, 3)
+    
+    def test_parse_price_zero(self):
+        """Test parsing zero price."""
+        price = CSVReader._parse_price('0')
+        self.assertEqual(price, 0.0)
+    
+    def test_parse_price_negative(self):
+        """Test parsing negative price."""
+        price = CSVReader._parse_price('-100.50')
+        self.assertEqual(price, -100.50)
+    
+    def test_parse_price_scientific_notation(self):
+        """Test parsing price in scientific notation."""
+        price = CSVReader._parse_price('1.5E3')
+        self.assertEqual(price, 1500.0)
+    
+    def test_get_column_indices_with_names(self):
+        """Test getting column indices from header names."""
+        header = ['Date', 'Price', 'Volume']
+        config = CSVConfig(date_column='Date', price_column='Price')
+        reader = CSVReader(config)
+        
+        date_idx, price_idx = reader._get_column_indices(header)
+        self.assertEqual(date_idx, 0)
+        self.assertEqual(price_idx, 1)
+    
+    def test_get_column_indices_numeric_with_header(self):
+        """Test getting numeric column indices when header exists."""
+        header = ['Date', 'Price', 'Volume']
+        config = CSVConfig(date_column=1, price_column=2)
+        reader = CSVReader(config)
+        
+        date_idx, price_idx = reader._get_column_indices(header)
+        self.assertEqual(date_idx, 1)
+        self.assertEqual(price_idx, 2)
+    
+    def test_get_column_indices_no_header(self):
+        """Test getting column indices without header."""
+        config = CSVConfig(has_header=False, date_column=0, price_column=1)
+        reader = CSVReader(config)
+        
+        date_idx, price_idx = reader._get_column_indices(None)
+        self.assertEqual(date_idx, 0)
+        self.assertEqual(price_idx, 1)
+    
+    def test_read_and_validate(self):
+        """Test read_and_validate function."""
+        content = """Date,Price
+2025-01-01,100.50
+2025-01-02,101.00"""
+        path = self._create_csv_file(content)
+        
+        config = CSVConfig(date_column='Date', price_column='Price')
+        reader = CSVReader(config)
+        rows, warnings = reader.read_and_validate(path)
+        
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(len(warnings), 0)
+    
+    def test_guess_config_delimiter_detection(self):
+        """Test automatic delimiter detection."""
+        content = """Date;Price
+2025-01-01;100.50"""
+        path = self._create_csv_file(content)
+        
+        config = CSVReader.guess_config(path)
+        self.assertEqual(config.delimiter, ';')
+    
+    def test_import_crypto_data_with_default_config(self):
+        """Test import_crypto_data with default config."""
+        content = """Date,Price
+2025-01-01,100.50
+2025-01-02,101.00"""
+        path = self._create_csv_file(content)
+        
+        data = import_crypto_data(path, 'ETH')
+        
+        self.assertEqual(len(data), 2)
+        self.assertEqual(data[0]['symbol'], 'ETH')
+        self.assertEqual(data[0]['name'], 'ETH')
+        self.assertEqual(data[0]['close_eur'], 100.50)
+
+
 if __name__ == '__main__':
     unittest.main()
