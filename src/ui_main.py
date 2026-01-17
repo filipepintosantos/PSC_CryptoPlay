@@ -1089,6 +1089,10 @@ class MainWindow(QMainWindow):
             table = QTableWidget()
             main_layout.addWidget(table)
             
+            # Label de resumo (criar antes para estar sempre visível)
+            summary_label = QLabel()
+            main_layout.addWidget(summary_label)
+            
             # Manter referência ao cursor para uso no callback
             wallet_cursor = db.conn.cursor()
             
@@ -1150,16 +1154,12 @@ class MainWindow(QMainWindow):
                     else:
                         summary_text = "Nenhum lote encontrado com os filtros aplicados."
                     
-                    # Atualizar label de resumo (criar se não existir)
-                    if not hasattr(load_wallet_data, 'summary_label'):
-                        load_wallet_data.summary_label = QLabel()
-                        main_layout.addWidget(load_wallet_data.summary_label)
-                    load_wallet_data.summary_label.setText(summary_text)
+                    # Atualizar label de resumo
+                    summary_label.setText(summary_text)
                     
                 except Exception as e:
                     table.setRowCount(0)
-                    if hasattr(load_wallet_data, 'summary_label'):
-                        load_wallet_data.summary_label.setText(f"Erro ao carregar dados: {str(e)}")
+                    summary_label.setText(f"Erro ao carregar dados: {str(e)}")
             
             # Conectar botão aos filtros
             apply_button.clicked.connect(load_wallet_data)
