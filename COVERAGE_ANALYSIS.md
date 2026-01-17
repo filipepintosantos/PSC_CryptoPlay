@@ -1,22 +1,24 @@
 # Análise de Cobertura de Testes - PSC CryptoPlay
 
-**Versão:** 5.3.0  
+**Versão:** 5.5.0  
 **Data da Análise:** 2026-01-17  
-**Cobertura Total:** 81%  
-**Total de Testes:** 163  
+**Cobertura Total:** 86%  
+**Total de Testes:** 228  
 **Total de Statements:** 4100  
-**Statements Não Testados:** 773
+**Statements Não Testados:** 574
 
 ---
 
 ## 📊 Resumo Executivo
 
-A cobertura de testes do projeto está em **81%**, com 163 testes unitários cobrindo 3327 de 4100 statements.
+A cobertura de testes do projeto está em **86%**, com 228 testes unitários cobrindo 3526 de 4100 statements.
 
 ### Evolução da Cobertura
 - **v5.2.0:** 78% (147 testes)
 - **v5.2.1:** 80% (147 testes)
 - **v5.3.0:** 81% (163 testes) ✅ **+16 testes, +1% coverage**
+- **v5.4.0:** 84% (196 testes) ✅ **+33 testes, +3% coverage**
+- **v5.5.0:** 86% (228 testes) ✅ **+32 testes, +2% coverage**
 
 ---
 
@@ -26,12 +28,14 @@ A cobertura de testes do projeto está em **81%**, com 163 testes unitários cob
 
 | Módulo | Cobertura | Stmts | Miss | Status |
 |--------|-----------|-------|------|--------|
-| **tests/test_main.py** | 100% | 249 | 0 | ⭐ Perfeito |
+| **tests/test_main.py** | 100% | 346 | 0 | ⭐ Perfeito |
+| **tests/test_favorites_helper.py** | 99.6% | 228 | 1 | ⭐ Perfeito |
 | **src/__init__.py** | 100% | 3 | 0 | ⭐ Perfeito |
 | **src/volatility_analysis.py** | 97% | 116 | 4 | ✅ Excelente |
 | **src/excel_reporter.py** | 96% | 402 | 16 | ✅ Excelente |
 | **src/api_binance.py** | 94% | 47 | 3 | ✅ Excelente |
 | **src/analysis.py** | 92% | 103 | 8 | ✅ Excelente |
+| **src/favorites_helper.py** | 100% | 39 | 0 | ⭐ Perfeito |
 
 **Observações:**
 - `test_main.py` atingiu 100% após v5.3.0
@@ -43,6 +47,7 @@ A cobertura de testes do projeto está em **81%**, com 163 testes unitários cob
 
 | Módulo | Cobertura | Stmts | Miss | Linhas Críticas Não Cobertas |
 |--------|-----------|-------|------|-------------------------------|
+| **src/csv_reader.py** | 99% | 97 | 1 | 71 |
 | **src/api_yfinance.py** | 87% | 63 | 8 | 78-80, 119, 136-137, 156-157 |
 | **src/database.py** | 83% | 315 | 55 | 73-81, 147-148, 587-589, 666-669 |
 
@@ -70,9 +75,9 @@ A cobertura de testes do projeto está em **81%**, com 163 testes unitários cob
 
 | Módulo | Cobertura | Stmts | Miss | Prioridade |
 |--------|-----------|-------|------|-----------|
-| **src/csv_reader.py** | 77% | 97 | 22 | 🔶 Média |
 | **src/ui_main.py** | 69% | 808 | 252 | 🔵 Baixa (UI) |
-| **main.py** | 63% | 311 | 114 | 🔴 Alta |
+| **main.py** | 73% | 311 | 84 | 🟡 Média |
+| **scripts/import_binance_csv_cli.py** | 73% | 143 | 38 | 🟡 Média |
 
 #### **main.py** (63%) - Melhorado em v5.3.0
 - **Antes:** 51% (152 miss)
@@ -120,37 +125,27 @@ A cobertura de testes do projeto está em **81%**, com 163 testes unitários cob
 |--------|-----------|-------|------|------|
 | **scripts/seed_large_cryptos_yfinance.py** | 32% | 130 | 88 | Script CLI |
 | **tests/test_schema_version.py** | 28% | 25 | 18 | Legacy test |
-| **scripts/import_binance_csv_cli.py** | 21% | 143 | 113 | Script CLI |
-| **src/favorites_helper.py** | 18% | 39 | 32 | Helper |
 
-#### **src/favorites_helper.py** (18%) - 🔴 ALTA PRIORIDADE
-**Por que alta prioridade?**
-- Módulo pequeno (39 statements)
-- Lógica crítica de favoritos
-- **Quick win:** 5-8 testes cobrem >80%
+#### **src/favorites_helper.py** (100%) - ✅ CONCLUÍDO v5.4.0
+**Status:** Todas as 39 statements cobertas com 24 testes em `tests/test_favorites_helper.py`
 
-**32 Linhas Não Cobertas:**
-- Linhas 19-24: Validation logic
-- Linhas 37-78: Favorite updates e sync
-- Linhas 92-99: Helper functions
+**Testes Implementados:**
+- Validation logic
+- Favorite updates e sync
+- Helper functions
+- Edge cases (invalid classes, empty configs, duplicates)
 
-**Testes Sugeridos:**
-```python
-- test_validate_and_update_favorites_with_config()
-- test_validate_favorites_invalid_class()
-- test_get_all_favorites_list_empty()
-- test_get_all_favorites_list_with_data()
-- test_sync_favorites_from_config()
-```
+#### **scripts/import_binance_csv_cli.py** (73%) - ✅ CONCLUÍDO v5.5.0
+**Status:** 38 linhas não cobertas (up from 113 em v5.3.0)
 
-#### **scripts/import_binance_csv_cli.py** (21%)
-**113 Linhas Não Cobertas:**
-- Linhas 40-41, 56-199: Main import logic
-- Linhas 203-219: Error handling
+**Testes Implementados (v5.5.0):**
+- TestImportCSVFunction (10 testes): empty files, missing UTC, EUR handling, duplicates (skip/replace), multiple rows, scientific notation, zero change, whitespace
+- TestMainFunction (5 testes): no args, file not found, CSV-only, --replace flag, default skip behavior
 
-**Problema:** Script CLI mistura parsing com business logic
-
-**Solução:** Refatorar para extrair funções testáveis
+**Exemplo de melhoria:**
+- **v5.3.0:** 21% (113 linhas não cobertas)
+- **v5.5.0:** 73% (38 linhas não cobertas)
+- **Ganho:** +52% coverage improvement com 15 novos testes
 
 #### **scripts/seed_large_cryptos_yfinance.py** (32%)
 **Status:** Script auxiliar de seeding, usado pontualmente
@@ -168,42 +163,46 @@ A cobertura de testes do projeto está em **81%**, com 163 testes unitários cob
 
 ---
 
-### 🔴 Sprint 1 (v5.4.0) - Target: 83%
+### ✅ Sprint 1 (v5.4.0) - CONCLUÍDO ✅ Target: 83%
 
-#### 1. **favorites_helper.py** (18% → 85%)
-**Esforço:** 1-2 horas | **Impacto:** Alto (quick win)
+#### Resultados Alcançados:
+- [x] **favorites_helper.py:** 18% → 100% (+82%)
+- [x] **main.py helpers:** 63% → 73% (+10%)
+- [x] **+33 testes** (163 → 196)
+- [x] **Cobertura total:** 81% → 84% (+3%)
 
-**Testes a adicionar:** 6-8 testes
-- Validation, sync, get_all, invalid class handling
-
-#### 2. **main.py auxiliares** (63% → 72%)
-**Esforço:** 3-4 horas | **Impacto:** Alto
-
-**Testes a adicionar:** 8-10 testes
-- `_handle_csv_import()` - 3 testes
-- `_fetch_price_data()` - 3 testes
-- `main()` orchestration - 4 testes
-
-**Estimativa Sprint 1:** +15 testes, +2% coverage total
+**Detalhe:** 24 novos testes em test_favorites_helper.py com 99.6% coverage
 
 ---
 
-### 🔶 Sprint 2 (v5.5.0) - Target: 85%
+### ✅ Sprint 2 (v5.5.0) - CONCLUÍDO ✅ Target: 85%
 
-#### 3. **import_binance_csv_cli.py** (21% → 60%)
-**Esforço:** Alto (refatoração) | **Impacto:** Médio
+#### Resultados Alcançados:
+- [x] **csv_reader.py:** 77% → 99% (+22%)
+- [x] **import_binance_csv_cli.py:** 21% → 73% (+52%)
+- [x] **+32 testes** (196 → 228)
+- [x] **Cobertura total:** 84% → 86% (+2%)
 
-**Ações:**
-1. Refatorar: extrair business logic
-2. Separar CLI parsing
-3. Testes: cache, parsing, fallbacks
+**Detalhes:**
+- csv_reader.py: 17 novos testes em TestCSVReaderEdgeCases
+- import_binance_csv_cli.py: 15 novos testes (10 TestImportCSVFunction + 5 TestMainFunction)
 
-#### 4. **csv_reader.py** (77% → 85%)
-**Esforço:** 2-3 horas | **Impacto:** Médio
+#### 4. **csv_reader.py** (99%) - ✅ CONCLUÍDO v5.5.0
+**Esforço:** Realizado | **Impacto:** Alto
 
-**Testes:** CSV malformado, edge cases, error recovery
+**Status anterior (v5.3.0):** 77% (22 linhas não cobertas)
+**Status atual (v5.5.0):** 99% (1 linha não coberta: linha 71)
 
-**Estimativa Sprint 2:** +18 testes, +2% coverage total
+**Testes Implementados (v5.5.0):**
+- TestCSVReaderEdgeCases com 17 novos testes:
+  - CSV headers faltando
+  - Colunas faltando/insuficientes
+  - Datas/preços inválidos
+  - Column index resolution
+  - ISO8601 parsing
+  - Notação científica, preços negativos/zero
+
+**Realizado:** Apenas 1 linha deixada sem testar (linha 71 - edge case raro)
 
 ---
 
@@ -217,29 +216,31 @@ A cobertura de testes do projeto está em **81%**, com 163 testes unitários cob
 
 ---
 
-## 🏆 Conquistas v5.3.0
+## 🏆 Conquistas Acumuladas
 
-### Estatísticas
-- ✅ **+16 testes** (147 → 163)
-- ✅ **+1% cobertura** (80% → 81%)
-- ✅ **database.py:** +13% (70% → 83%)
-- ✅ **main.py:** +12% (51% → 63%)
-- ✅ **test_main.py:** 100% coverage
+### v5.5.0 - Sprint 2 ✅
+- **+32 testes** (196 → 228)
+- **+2% cobertura** (84% → 86%)
+- **csv_reader.py:** +22% (77% → 99%)
+- **import_binance_csv_cli.py:** +52% (21% → 73%)
+- **17 testes CSV edge cases** em TestCSVReaderEdgeCases
+- **15 testes CLI** em TestImportCSVFunction e TestMainFunction
 
-### Testes FIFO Wallet (`test_database_fifo.py`)
-1. Config loading e defaults
-2. Single/multiple entries
-3. FIFO consumption logic
-4. Oversell scenarios
-5. Empty state handling
-6. Data cleanup
+### v5.4.0 - Sprint 1 ✅
+- **+33 testes** (163 → 196)
+- **+3% cobertura** (81% → 84%)
+- **favorites_helper.py:** +82% (18% → 100%)
+- **main.py:** +10% (63% → 73%)
+- **24 testes** com 99.6% coverage em test_favorites_helper.py
+- **12 testes helpers** em test_main.py
 
-### Testes Report Generation (`test_main.py`)
-1. Volatility integration success
-2. Error handling
-3. Missing periods
-4. Report generation paths
-5. No valid data scenario
+### v5.3.0 - Baseline ✅
+- **+16 testes** (147 → 163)
+- **+1% cobertura** (80% → 81%)
+- **database.py FIFO:** +13% (70% → 83%)
+- **main.py:** +12% (51% → 63%)
+- **11 testes FIFO** em test_database_fifo.py
+- **5 testes reporting** em test_main.py
 
 ---
 
@@ -285,38 +286,30 @@ venv\Scripts\python.exe -m coverage xml
 
 ---
 
+---
+
+## 🚀 Próximos Passos (Sprint 3 - v5.6.0)
+
+### Módulos Candidatos
+
+#### 1. **api_yfinance.py** (87% → 95%)
+- Esforço: 1-2 horas
+- Impacto: Alto (8 linhas não cobertas)
+- Testes: API error handling, retry logic
+
+#### 2. **excel_reporter.py** (96% → 99%)
+- Esforço: 1-2 horas  
+- Impacto: Médio (16 linhas não cobertas)
+- Testes: Excel formatting edge cases
+
+#### 3. **main.py** (73% → 85%)
+- Esforço: 3-4 horas
+- Impacto: Alto (84 linhas não cobertas)
+- Testes: CLI flags, argument parsing, main() orchestration
+
+**Meta Sprint 3:** 87-88% cobertura geral
+
+---
+
 **Última Atualização:** 2026-01-17  
-**Versão:** 5.3.0
-
-1. **SonarQube inclui ficheiros de scripts**: `main.py`, `scripts/import_binance_csv_cli.py`, etc., que não têm testes unitários
-2. **SonarQube pode excluir ficheiros de teste**: Dependendo da configuração
-3. **Coverage.xml vs sonar-project.properties**: Possível diferença nas regras de inclusão/exclusão
-
-## Recomendações para Melhorar Cobertura
-
-### Alta Prioridade
-1. **src/database.py** (70%)
-   - Adicionar testes para métodos FIFO: `rebuild_binance_wallet()`, `_load_wallet_ops_config()`
-   - Testar casos edge de transações
-
-2. **src/ui_main.py** (69%)
-   - UI é difícil de testar automaticamente
-   - Considerar separar lógica de negócio da UI
-   - Testar callbacks de FIFO Wallet
-
-3. **main.py** (51%)
-   - Muita lógica não coberta
-   - Refatorar em funções menores testáveis
-
-### Média Prioridade
-4. **scripts/import_binance_csv_cli.py** (21%)
-   - Criar testes de integração para o script CLI
-   - Testar casos de erro e fallbacks
-
-5. **src/favorites_helper.py** (18%)
-   - Adicionar testes básicos para lógica de favoritos
-
-## Ações Imediatas
-- Manter foco em coverage de `src/` > 90% (código principal)
-- Scripts e UI podem ter cobertura menor (ferramentas, difíceis de testar)
-- Próxima meta: 80%+ cobertura geral
+**Versão:** 5.5.0
