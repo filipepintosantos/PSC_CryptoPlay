@@ -1,3 +1,39 @@
+# [5.4.0] - 2026-01-17
+
+### Sprint 1 Complete ✅
+- **Coverage:** 81% → 84% (+3%)
+- **Tests:** 163 → 196 (+33 tests)
+- **Modules with 100% coverage:**
+  - `src/favorites_helper.py` (18% → 100%) ⭐
+  - `test_main.py` (100% maintained)
+  - `src/__init__.py` (100% maintained)
+
+### Added
+- **24 new tests for favorites helper** (`tests/test_favorites_helper.py`)
+  - `TestGetFavoritesFromConfig` (7 tests): Config parsing with various formats
+  - `TestGetAllFavoritesList` (3 tests): Flat list generation
+  - `TestGetFavoriteClass` (7 tests): Symbol to class mapping
+  - `TestValidateAndUpdateFavorites` (8 tests): Database updates
+  - `TestFavoritesHelperIntegration` (2 tests): End-to-end workflows
+  
+- **9 new tests for main.py helpers** (`tests/test_main.py`)
+  - `TestCSVImportHandling` (5 tests): CSV import with various scenarios
+  - `TestPriceDataFetching` (4 tests): Price fetch with different modes
+  
+### Improved
+- **main.py:** 63% → 73% coverage (+10%)
+  - Now covers CSV import logic
+  - Now covers price fetch helper
+  - 85 statements not covered (previously 114)
+  
+- **Bug fixes:**
+  - Fixed `validate_and_update_favorites()` to use correct dictionary key (`favorite` instead of `favorite_class`)
+  
+### Next Steps (Sprint 2)
+- **import_binance_csv_cli.py:** 21% → 60% (refactoring + tests)
+- **csv_reader.py:** 77% → 85% (edge cases)
+- Target: 85% overall coverage
+
 # [5.3.0] - 2026-01-17
 
 ### Added
