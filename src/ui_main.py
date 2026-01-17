@@ -1082,6 +1082,11 @@ class MainWindow(QMainWindow):
             apply_button = QPushButton("Aplicar Filtros")
             filter_layout.addWidget(apply_button)
             
+            # Botão reconstruir wallet
+            rebuild_button = QPushButton("Reconstruir Wallet")
+            rebuild_button.setStyleSheet("background-color: #ff9800; color: white; font-weight: bold;")
+            filter_layout.addWidget(rebuild_button)
+            
             filter_layout.addStretch()
             main_layout.addWidget(filter_widget)
             
@@ -1161,8 +1166,53 @@ class MainWindow(QMainWindow):
                     table.setRowCount(0)
                     summary_label.setText(f"Erro ao carregar dados: {str(e)}")
             
+            # Função para reconstruir wallet
+            def rebuild_wallet():
+                try:
+                    from PyQt6.QtWidgets import QMessageBox
+                    # Confirmar ação
+                    reply = QMessageBox.question(
+                        main_widget, 
+                        'Reconstruir Wallet',
+                        'Reconstruir a carteira FIFO a partir de todas as transações?\n\nIsto irá:\n- Limpar todos os lotes atuais\n- Recalcular os lotes com base nas transações\n- Aplicar as regras do config.ini',
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                        QMessageBox.StandardButton.No
+                    )
+                    
+                    if reply == QMessageBox.StandardButton.Yes:
+                        summary_label.setText("Reconstruindo wallet...")
+                        # Reconstruir
+                        lots_created = db.rebuild_binance_wallet()
+                        
+                        # Recarregar lista de moedas
+                        crypto_combo.clear()
+                        crypto_combo.addItem("Todas")
+                        wallet_cursor.execute("SELECT DISTINCT crypto_id FROM binance_wallet ORDER BY crypto_id")
+                        cryptos = wallet_cursor.fetchall()
+                        for crypto in cryptos:
+                            crypto_combo.addItem(crypto[0])
+                        
+                        # Recarregar dados
+                        load_wallet_data()
+                        
+                        # Mostrar sucesso
+                        QMessageBox.information(
+                            main_widget,
+                            'Sucesso',
+                            f'Wallet reconstruído com sucesso!\n\nLotes criados: {lots_created}'
+                        )
+                except Exception as e:
+                    from PyQt6.QtWidgets import QMessageBox
+                    QMessageBox.critical(
+                        main_widget,
+                        'Erro',
+                        f'Erro ao reconstruir wallet:\n{str(e)}'
+                    )
+                    summary_label.setText(f"Erro ao reconstruir: {str(e)}")
+            
             # Conectar botão aos filtros
             apply_button.clicked.connect(load_wallet_data)
+            rebuild_button.clicked.connect(rebuild_wallet)
             
             # Carregar dados iniciais
             load_wallet_data()
