@@ -62,7 +62,16 @@ jobs:
           coverage xml -o coverage.xml
           coverage report
 
+      - name: Check Sonar token availability
+        run: |
+          if [ -z "${{ secrets.SONAR_TOKEN }}" ]; then
+            echo "SONAR_TOKEN not set; skipping SonarCloud scan.";
+          else
+            echo "SONAR_TOKEN is set; proceeding with SonarCloud scan.";
+          fi
+
       - name: SonarCloud Scan
+        if: ${{ secrets.SONAR_TOKEN != '' }}
         uses: SonarSource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
