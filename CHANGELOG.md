@@ -1,3 +1,23 @@
+# [5.2.1] - 2026-01-17
+
+### Added
+- **FIFO Wallet UI menu** in Binance section
+  - View binance_wallet lots with interactive filters
+  - Filter by crypto_id and amount_remaining status
+  - Rebuild wallet from transactions with confirmation dialog
+  - Summary row showing balances per coin
+  - Calls rebuild_binance_wallet() with config.ini rules
+
+### Fixed
+- FIFO Wallet filter error when database connection was closed
+- Summary label visibility on initial load
+- GitHub Actions workflow to use unittest instead of pytest
+- Coverage report generation for SonarCloud analysis
+
+### Changed
+- Workflow now generates coverage.xml for SonarQube metrics
+- Database connection lifecycle improved for UI operations
+
 # [5.2.0] - 2026-01-17
 
 ### Added
