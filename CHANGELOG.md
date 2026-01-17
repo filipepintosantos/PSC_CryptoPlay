@@ -1,3 +1,20 @@
+# [5.2.0] - 2026-01-17
+
+### Added
+- **Binance Wallet (FIFO) tracking** (`binance_wallet` table)
+  - Manages cryptocurrency holdings using FIFO (First In, First Out) method
+  - Tracks individual lots: `amount_total`, `price_eur`, `amount_remaining`
+  - Automatically rebuilds after each CSV import via `rebuild_binance_wallet()`
+  - Configurable via `[wallet]` section in `config/config.ini`
+  - Entries: Buy, Sell, Convert, Deposit, Redemption, Airdrop, Interest (configurable)
+  - Exits: Buy, Sell, Convert, Subscription (configurable)
+  - Symmetric handling of Buy/Sell operations tracks both crypto and fiat flows
+  - Can be manually rebuilt anytime using database API
+
+### Changed
+- **Schema updated to v1.3.0**: Added `binance_wallet` table with FIFO lot tracking
+- **Import process**: CSV import now automatically rebuilds wallet after importing transactions
+
 # [5.1.1] - 2026-01-17
 
 ### Optimized
