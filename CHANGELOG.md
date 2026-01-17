@@ -1,3 +1,30 @@
+# [5.3.0] - 2026-01-17
+
+### Added
+- **11 new tests for database FIFO wallet functionality** (`tests/test_database_fifo.py`)
+  - Tests for `rebuild_binance_wallet()` covering single/multiple entries, FIFO consumption, oversell scenarios
+  - Tests for `_load_wallet_ops_config()` verifying config.ini loading
+  - Edge case tests: empty transactions, full consumption, multiple coins, clearing old data
+  
+- **5 new tests for main.py reporting functionality** (`tests/test_main.py`)
+  - Tests for `_add_volatility_to_reports()` with success, errors, and missing periods
+  - Tests for `generate_report()` covering success and no-valid-data scenarios
+  - Increased main.py coverage from 51% to 63%
+
+### Improved
+- **Test coverage** increased from 80% to 81% overall
+  - 158 tests → 163 tests total (+5 tests)
+  - main.py: 51% → 63% coverage (-38 uncovered statements)
+  - database.py FIFO methods now fully tested
+  
+- **Code quality** improvements
+  - Better test organization for wallet operations
+  - More comprehensive edge case coverage
+  - Improved validation of configuration loading
+
+### Documentation
+- Updated COVERAGE_ANALYSIS.md with new test implementations
+
 # [5.2.1] - 2026-01-17
 
 ### Added

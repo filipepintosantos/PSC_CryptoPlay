@@ -411,5 +411,133 @@ class TestQuoteOperations(unittest.TestCase):
         db.close()
 
 
-if __name__ == "__main__":
-    unittest.main()
+class TestVolatilityReporting(unittest.TestCase):
+    """Tests for volatility reporting functionality."""
+    
+    def test_add_volatility_to_reports_success(self):
+        """Test adding volatility data to reports."""
+        # Mock volatility analyzer
+        vol_analyzer = Mock()
+        vol_analyzer.get_period_stats = Mock(return_value={
+            'avg_volatility': 15.5,
+            'max_volatility': 25.0,
+            'min_volatility': 5.0
+        })
+        
+        # Sample reports with periods
+        reports = {
+            'BTC': {
+                'periods': {
+                    '12_months': {'avg': 50000},
+                    '6_months': {'avg': 51000}
+                }
+            }
+        }
+        
+        symbols = ['BTC']
+        
+        # Call the function
+        main._add_volatility_to_reports(reports, symbols, vol_analyzer)
+        
+        # Verify volatility data was added
+        self.assertIn('volatility', reports['BTC']['periods']['12_months'])
+        self.assertIn('volatility', reports['BTC']['periods']['6_months'])
+        self.assertEqual(vol_analyzer.get_period_stats.call_count, 2)
+    
+    def test_add_volatility_to_reports_skip_errors(self):
+        """Test that _add_volatility_to_reports skips reports with errors."""
+        vol_analyzer = Mock()
+        
+        reports = {
+            'INVALID': {'error': 'No data found'}
+        }
+        
+        symbols = ['INVALID']
+        
+        # Should not raise exception
+        main._add_volatility_to_reports(reports, symbols, vol_analyzer)
+        
+        # Should not have called get_period_stats
+        vol_analyzer.get_period_stats.assert_not_called()
+    
+    def test_add_volatility_to_reports_missing_periods(self):
+        """Test adding volatility when some periods are missing."""
+        vol_analyzer = Mock()
+        vol_analyzer.get_period_stats = Mock(return_value={'avg_volatility': 10.0})
+        
+        reports = {
+            'ETH': {
+                'periods': {
+                    '3_months': {'avg': 3000}
+                    # Missing 12_months, 6_months, 1_month
+                }
+            }
+        }
+        
+        symbols = ['ETH']
+        
+        main._add_volatility_to_reports(reports, symbols, vol_analyzer)
+        
+        # Only called once for the existing period
+        self.assertEqual(vol_analyzer.get_period_stats.call_count, 1)
+    
+    @patch('main.validate_and_update_favorites')
+    @patch('main.StatisticalAnalyzer')
+    @patch('main.VolatilityAnalyzer')
+    @patch('main.ExcelReporter')
+    def test_generate_report_success(self, mock_reporter_class, mock_vol_class, 
+                                     mock_analyzer_class, mock_validate):
+        """Test successful report generation."""
+        # Mock database
+        db = CryptoDatabase(":memory:")
+        db.add_crypto_info('BTC', 'Bitcoin', market_cap=1000000000000)
+        db.add_crypto_info('ETH', 'Ethereum', market_cap=500000000000)
+        
+        # Mock analyzer
+        mock_analyzer_class.batch_generate_reports = Mock(return_value={
+            'BTC': {'periods': {'12_months': {'avg': 50000}}},
+            'ETH': {'periods': {'12_months': {'avg': 3000}}}
+        })
+        
+        # Mock volatility analyzer
+        mock_vol_instance = Mock()
+        mock_vol_instance.analyze_all_symbols = Mock(return_value={})
+        mock_vol_instance.get_period_stats = Mock(return_value={'avg_volatility': 15.0})
+        mock_vol_class.return_value = mock_vol_instance
+        
+        # Mock reporter
+        mock_reporter_instance = Mock()
+        mock_reporter_class.return_value = mock_reporter_instance
+        
+        config = configparser.ConfigParser()
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            report_path = os.path.join(tmpdir, 'report.xlsx')
+            
+            result = main.generate_report(db, ['BTC', 'ETH'], report_path, ":memory:", config)
+            
+            self.assertEqual(result, 0)
+            mock_reporter_instance.generate_report.assert_called_once()
+        
+        db.close()
+    
+    @patch('main.validate_and_update_favorites')
+    @patch('main.StatisticalAnalyzer')
+    def test_generate_report_no_valid_data(self, mock_analyzer_class, mock_validate):
+        """Test report generation with no valid data."""
+        db = CryptoDatabase(":memory:")
+        
+        # Mock analyzer returns only errors
+        mock_analyzer_class.batch_generate_reports = Mock(return_value={
+            'INVALID': {'error': 'No data found'}
+        })
+        
+        config = configparser.ConfigParser()
+        
+        result = main.generate_report(db, ['INVALID'], 'dummy.xlsx', ":memory:", config)
+        
+        # Should return 1 (error) when no valid reports
+        self.assertEqual(result, 1)
+        db.close()
+
+

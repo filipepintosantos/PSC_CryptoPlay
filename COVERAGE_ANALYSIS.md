@@ -1,10 +1,43 @@
-# Análise de Cobertura de Testes - PSC CryptoPlay
+# Análise de Cobertura de Testes - PSC CryptoPlay (v5.3.0)
 
-## Resumo Geral
-- **Cobertura Local**: 78%
-- **Cobertura SonarQube**: 71.3%
-- **Total de Statements**: 3928
-- **Statements Não Testados**: 851
+## Resumo Geral (Atualizado em 2026-01-17)
+- **Cobertura Local**: 81% (anteriormente 78%)
+- **Cobertura SonarQube**: ~73% estimado (anteriormente 71.3%)
+- **Total de Statements**: 4100 (anteriormente 3928)
+- **Statements Não Testados**: 773 (anteriormente 851)
+- **Total de Testes**: 163 (anteriormente 147)
+
+## ✅ Melhorias Implementadas
+
+### 🎯 Alta Prioridade 1: database.py - COMPLETO
+**Status:** ✅ Resolvido com 11 novos testes  
+**Antes:** 70% coverage (96 statements não cobertos)  
+**Depois:** ~85% coverage estimado
+
+#### Testes Adicionados (`tests/test_database_fifo.py`)
+- `test_load_wallet_ops_config_defaults` - Config loading
+- `test_rebuild_binance_wallet_single_entry` - Single entry
+- `test_rebuild_binance_wallet_fifo_consumption` - FIFO consumption
+- `test_rebuild_binance_wallet_multiple_coins` - Multiple cryptos
+- `test_rebuild_binance_wallet_airdrop_entry` - Airdrops
+- `test_rebuild_binance_wallet_earn_redemption` - Deposits
+- `test_rebuild_binance_wallet_full_consumption` - Full consumption
+- `test_rebuild_binance_wallet_multiple_sells` - Multiple sells
+- `test_rebuild_binance_wallet_oversell` - Oversell scenario
+- `test_rebuild_binance_wallet_empty_transactions` - Empty case
+- `test_rebuild_binance_wallet_clears_old_data` - Data cleanup
+
+### 🎯 Alta Prioridade 3: main.py - MELHORADO SIGNIFICATIVAMENTE
+**Status:** ✅ Melhorado (+12% coverage)  
+**Antes:** 51% coverage (152 statements não cobertos)  
+**Depois:** 63% coverage (114 statements não cobertos)
+
+#### Testes Adicionados (`tests/test_main.py`)
+- `test_add_volatility_to_reports_success` - Add volatility success
+- `test_add_volatility_to_reports_skip_errors` - Skip errors
+- `test_add_volatility_to_reports_missing_periods` - Missing periods
+- `test_generate_report_success` - Report generation success
+- `test_generate_report_no_valid_data` - No valid data scenario
 
 ## Cobertura por Módulo
 
