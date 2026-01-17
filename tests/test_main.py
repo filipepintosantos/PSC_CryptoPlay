@@ -411,6 +411,202 @@ class TestQuoteOperations(unittest.TestCase):
         db.close()
 
 
+class TestCSVImportHandling(unittest.TestCase):
+    """Tests for _handle_csv_import helper function."""
+    
+    def test_handle_csv_import_success(self):
+        """Test successful CSV import."""
+        csv_content = """Date,Price
+2024-01-01,45000.00
+2024-01-02,46000.00"""
+        
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.csv') as f:
+            f.write(csv_content)
+            csv_path = f.name
+        
+        try:
+            db = CryptoDatabase(":memory:")
+            args = Mock(
+                import_csv=csv_path,
+                csv_date_col='Date',
+                csv_price_col='Price',
+                csv_date_format=None,
+                csv_no_header=False
+            )
+            
+            result = main._handle_csv_import(args, db, ['BTC'])
+            
+            # Should return 0 (success)
+            self.assertEqual(result, 0)
+            
+            # Verify data was imported
+            quotes = db.get_quotes('BTC')
+            self.assertEqual(len(quotes), 2)
+            
+            db.close()
+        finally:
+            os.unlink(csv_path)
+    
+    def test_handle_csv_import_file_not_found(self):
+        """Test CSV import with missing file."""
+        db = CryptoDatabase(":memory:")
+        args = Mock(import_csv="/non/existent/file.csv")
+        
+        result = main._handle_csv_import(args, db, ['BTC'])
+        
+        # Should return 1 (error)
+        self.assertEqual(result, 1)
+        db.close()
+    
+    def test_handle_csv_import_multiple_symbols_error(self):
+        """Test CSV import fails with multiple symbols."""
+        csv_path = "/dummy/path.csv"
+        db = CryptoDatabase(":memory:")
+        args = Mock(import_csv=csv_path)
+        
+        with patch('pathlib.Path.exists', return_value=True):
+            result = main._handle_csv_import(args, db, ['BTC', 'ETH'])
+            
+            # Should return 1 (error) - requires single symbol
+            self.assertEqual(result, 1)
+        
+        db.close()
+    
+    def test_handle_csv_import_no_symbols_error(self):
+        """Test CSV import fails with no symbols."""
+        db = CryptoDatabase(":memory:")
+        args = Mock(import_csv="/path/file.csv")
+        
+        result = main._handle_csv_import(args, db, [])
+        
+        # Should return 1 (error)
+        self.assertEqual(result, 1)
+        db.close()
+    
+    def test_handle_csv_import_empty_file(self):
+        """Test CSV import with empty file (no data)."""
+        csv_content = """Date,Price"""
+        
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.csv') as f:
+            f.write(csv_content)
+            csv_path = f.name
+        
+        try:
+            db = CryptoDatabase(":memory:")
+            args = Mock(
+                import_csv=csv_path,
+                csv_date_col='Date',
+                csv_price_col='Price',
+                csv_date_format=None,
+                csv_no_header=False
+            )
+            
+            result = main._handle_csv_import(args, db, ['BTC'])
+            
+            # Should return 1 (error) - no data imported
+            self.assertEqual(result, 1)
+            db.close()
+        finally:
+            os.unlink(csv_path)
+
+
+class TestPriceDataFetching(unittest.TestCase):
+    """Tests for _fetch_price_data helper function."""
+    
+    @patch('main.YFinanceCryptoAPI')
+    @patch('main.fetch_historical_range')
+    def test_fetch_price_data_with_days(self, mock_historical, mock_api_class):
+        """Test fetching price data with explicit days parameter."""
+        mock_api = Mock()
+        mock_api_class.return_value = mock_api
+        mock_historical.return_value = 5
+        
+        db = CryptoDatabase(":memory:")
+        args = Mock(days=30, auto_range=False)
+        
+        result = main._fetch_price_data(
+            args, ['BTC'], db, "incremental", 
+            throttle_seconds=0.1, retries=3, upsert=False
+        )
+        
+        # Should call fetch_historical_range
+        self.assertEqual(result, 0)
+        mock_historical.assert_called_once()
+        
+        db.close()
+    
+    @patch('main.YFinanceCryptoAPI')
+    @patch('main.fetch_historical_range')
+    def test_fetch_price_data_with_auto_range(self, mock_historical, mock_api_class):
+        """Test fetching price data with auto_range mode."""
+        mock_api = Mock()
+        mock_api_class.return_value = mock_api
+        mock_historical.return_value = 3
+        
+        db = CryptoDatabase(":memory:")
+        db.add_crypto_info('BTC', 'Bitcoin')
+        
+        args = Mock(days=None, auto_range=True)
+        
+        result = main._fetch_price_data(
+            args, ['BTC'], db, "incremental",
+            throttle_seconds=0.1, retries=3, upsert=False
+        )
+        
+        # Should call fetch_historical_range with auto_range=True
+        self.assertEqual(result, 0)
+        mock_historical.assert_called_once()
+        # Verify auto_range parameter was passed
+        call_args = mock_historical.call_args[0]  # positional args
+        call_kwargs = mock_historical.call_args[1]  # keyword args
+        self.assertTrue(call_kwargs.get('auto_range') or len(call_args) > 6)
+        
+        db.close()
+    
+    @patch('main.YFinanceCryptoAPI')
+    @patch('main.fetch_quotes_incremental')
+    def test_fetch_price_data_incremental_mode(self, mock_incremental, mock_api_class):
+        """Test fetching price data in incremental mode."""
+        mock_api = Mock()
+        mock_api_class.return_value = mock_api
+        mock_incremental.return_value = [
+            {'symbol': 'BTC', 'close_eur': 45000, 'timestamp': datetime.now()}
+        ]
+        
+        db = CryptoDatabase(":memory:")
+        db.add_crypto_info('BTC', 'Bitcoin')
+        
+        args = Mock(days=None, auto_range=False)
+        
+        result = main._fetch_price_data(
+            args, ['BTC'], db, "incremental",
+            throttle_seconds=0.1, retries=3, upsert=False
+        )
+        
+        # Should use incremental fetch
+        self.assertEqual(result, 0)
+        mock_incremental.assert_called_once()
+        
+        db.close()
+    
+    @patch('main.YFinanceCryptoAPI')
+    def test_fetch_price_data_api_error(self, mock_api_class):
+        """Test fetching price data with API error."""
+        mock_api_class.side_effect = Exception("API Error")
+        
+        db = CryptoDatabase(":memory:")
+        args = Mock(days=30, auto_range=False)
+        
+        result = main._fetch_price_data(
+            args, ['BTC'], db, "incremental",
+            throttle_seconds=0.1, retries=3, upsert=False
+        )
+        
+        # Should return 1 (error)
+        self.assertEqual(result, 1)
+        db.close()
+
+
 class TestVolatilityReporting(unittest.TestCase):
     """Tests for volatility reporting functionality."""
     

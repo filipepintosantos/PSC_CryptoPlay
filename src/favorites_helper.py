@@ -67,7 +67,7 @@ def validate_and_update_favorites(db: CryptoDatabase, config: configparser.Confi
     updated = 0
     for crypto in all_cryptos:
         code = crypto['code']
-        current_class = crypto.get('favorite_class')
+        current_class = crypto.get('favorite')
         expected_class = symbol_to_class.get(code)
 
         # Update if classification doesn't match
