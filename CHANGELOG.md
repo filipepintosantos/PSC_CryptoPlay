@@ -1,3 +1,11 @@
+# [5.1.1] - 2026-01-17
+
+### Optimized
+- **Binance CSV import**: Added cache for missing/invalid trading pairs
+  - First API error for each invalid pair (e.g., USDCEUR, EURIEUR) is logged once
+  - Subsequent occurrences skip the failed pair and jump directly to fallback conversions
+  - Significantly reduces redundant API calls and error log noise during bulk imports
+
 # [5.1.0] - 2026-01-03
 
 ### Added

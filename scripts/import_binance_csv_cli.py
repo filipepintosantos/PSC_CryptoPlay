@@ -59,6 +59,7 @@ def import_csv(csv_path: Path, db_path: Path, on_duplicate: str = "skip") -> tup
     skipped = 0
     replaced = 0
     cache: dict[tuple[str, datetime], tuple[float, int | None]] = {}
+    missing_pairs: set[str] = set()
 
     with csv_path.open("r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -99,12 +100,19 @@ def import_csv(csv_path: Path, db_path: Path, on_duplicate: str = "skip") -> tup
                     price_eur, ts_open = cache[cache_key]
                 else:
                     symbol_pair = f"{coin}EUR"
-                    try:
-                        price_eur, ts_open = get_price_at_second(symbol_pair, dt_utc)
-                    except Exception as e:  # noqa: BLE001
-                        print(f"Skip: API error for {symbol_pair} @ {utc_time_str}: {e}")
+                    # If we already know this pair is invalid, skip straight to fallbacks
+                    if symbol_pair in missing_pairs:
                         price_eur = None
                         ts_open = None
+                    else:
+                        try:
+                            price_eur, ts_open = get_price_at_second(symbol_pair, dt_utc)
+                        except Exception as e:  # noqa: BLE001
+                            # Log once per missing/invalid pair to avoid noisy repeats
+                            print(f"Skip: API error for {symbol_pair} @ {utc_time_str}: {e}")
+                            missing_pairs.add(symbol_pair)
+                            price_eur = None
+                            ts_open = None
                     if price_eur is None:
                         # Fallback 1: coin/USDT * USDT/EUR
                         try:
