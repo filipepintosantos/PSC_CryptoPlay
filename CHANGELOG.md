@@ -1,3 +1,31 @@
+# [5.5.0] - 2026-01-17
+
+### Sprint 2 Complete ✅
+- **Coverage:** 84% → 86% (+2%)
+- **Tests:** 196 → 228 (+32 tests)
+
+### Added
+- **CSV Reader Edge Case Tests** ([tests/test_csv_reader.py](tests/test_csv_reader.py))
+  - Header missing, missing columns, insufficient columns, invalid dates/prices
+  - Date formats: timestamps, ISO8601; prices: negative, zero, scientific notation
+  - Column index resolution: by name, numeric with header/no header
+  - `read_and_validate()` and `guess_config()` covered
+  - `import_crypto_data()` with default and custom config
+
+- **Binance Import CLI Tests** ([tests/test_binance_import_cli.py](tests/test_binance_import_cli.py))
+  - `import_csv()`: empty file, missing/invalid UTC, EUR handling, duplicates (skip/replace), multiple rows,
+    scientific notation, zero change, whitespace
+  - `main()`: no args, file not found, CSV-only, `--replace`, default skip
+
+### Improved
+- **src/csv_reader.py:** 77% → 99% coverage
+- **scripts/import_binance_csv_cli.py:** 21% → 73% coverage
+- **Overall suite:** ≥85% coverage target achieved and exceeded
+
+### Notes
+- Duplicate handling in `import_csv()` with `on_duplicate="replace"` now covered by tests:
+  - First row inserts; second row deletes previous and re-inserts (counts as `inserted=2`, `replaced=1`) while final DB has 1 row.
+
 # [5.4.0] - 2026-01-17
 
 ### Sprint 1 Complete ✅
