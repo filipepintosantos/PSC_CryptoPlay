@@ -1089,6 +1089,9 @@ class MainWindow(QMainWindow):
             table = QTableWidget()
             main_layout.addWidget(table)
             
+            # Manter referência ao cursor para uso no callback
+            wallet_cursor = db.conn.cursor()
+            
             # Função para carregar dados na tabela
             def load_wallet_data():
                 try:
@@ -1111,8 +1114,8 @@ class MainWindow(QMainWindow):
                     
                     query += " ORDER BY crypto_id, utc_time"
                     
-                    cursor.execute(query, params)
-                    rows = cursor.fetchall()
+                    wallet_cursor.execute(query, params)
+                    rows = wallet_cursor.fetchall()
                     
                     # Atualizar tabela
                     column_names = ["ID", "Moeda", "Data/Hora", "Total", "Preço EUR", "Restante"]
@@ -1137,10 +1140,10 @@ class MainWindow(QMainWindow):
                     # Mostrar resumo
                     if rows:
                         # Calcular resumo por moeda
-                        cursor.execute(
+                        wallet_cursor.execute(
                             "SELECT crypto_id, SUM(amount_remaining), COUNT(*) FROM binance_wallet WHERE amount_remaining > 0 GROUP BY crypto_id ORDER BY crypto_id"
                         )
-                        summary = cursor.fetchall()
+                        summary = wallet_cursor.fetchall()
                         summary_text = "Resumo (saldos > 0): " + ", ".join(
                             [f"{row[0]}: {float(row[1]):.8f} ({row[2]} lotes)" for row in summary]
                         )
@@ -1165,7 +1168,8 @@ class MainWindow(QMainWindow):
             load_wallet_data()
             
             self.content_layout.addWidget(main_widget)
-            db.close()
+            # Não fechar db aqui, pois os filtros precisam dele
+            # A conexão será fechada quando a janela for fechada ou outro menu for selecionado
             
         except Exception as e:
             label = QLabel("Erro ao carregar FIFO Wallet:\n" + str(e) + "\n" + traceback.format_exc())
