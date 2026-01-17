@@ -325,7 +325,9 @@ user1,2025-01-10T10:00:00Z,Account1,Transfer,BTC,Test,0"""
         from scripts.import_binance_csv_cli import import_csv
         inserted, skipped, replaced = import_csv(path, self.db_path, "skip")
         
-        self.assertEqual(inserted, 1)
+        self.assertEqual(inserted, 1, f"Expected 1 inserted, got {inserted}")
+        self.assertEqual(skipped, 0, f"Expected 0 skipped, got {skipped}")
+        self.assertEqual(replaced, 0, f"Expected 0 replaced, got {replaced}")
 
 
 class TestMainFunction(unittest.TestCase):
