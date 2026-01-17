@@ -30,6 +30,7 @@ TRANSACOES_BINANCE = "Transações Binance"
 # Binance submenu
 IMPORTAR_TRANSACOES = "Importar Transações"
 ANALISAR_TRANSACOES = "Analisar Transações"
+FIFO_WALLET = "FIFO Wallet"
 
 REPORT_FILENAME = "AnaliseCrypto.xlsx"
 
@@ -157,8 +158,10 @@ class MainWindow(QMainWindow):
             elif group_name == BINANCE:
                 importar_item = QTreeWidgetItem([IMPORTAR_TRANSACOES])
                 analisar_item = QTreeWidgetItem([ANALISAR_TRANSACOES])
+                fifo_wallet_item = QTreeWidgetItem([FIFO_WALLET])
                 group_item.addChild(importar_item)
                 group_item.addChild(analisar_item)
+                group_item.addChild(fifo_wallet_item)
             elif group_name == "Gráficos":
                 graficos_opcoes = [
                     "Candlestick",
@@ -1023,10 +1026,152 @@ class MainWindow(QMainWindow):
             self._import_binance_transactions()
         elif parent_name == BINANCE and sub_name == ANALISAR_TRANSACOES:
             self._analyze_binance_transactions()
+        elif parent_name == BINANCE and sub_name == FIFO_WALLET:
+            self._show_fifo_wallet()
         else:
             label = QLabel(f"Sub-opção '{sub_name}' em '{parent_name}' (dummy)")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.content_layout.addWidget(label)
+    def _show_fifo_wallet(self):
+        """Exibe a carteira FIFO (binance_wallet) com filtros para moeda e amount_remaining."""
+        from PyQt6.QtWidgets import (
+            QTableWidget, QTableWidgetItem, QHBoxLayout, QLineEdit,
+            QPushButton, QLabel, QWidget, QComboBox
+        )
+        import traceback
+        
+        try:
+            from src.database import CryptoDatabase
+            
+            db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "crypto_prices.db"))
+            db = CryptoDatabase(db_path)
+            
+            # Container principal
+            main_widget = QWidget()
+            main_layout = QVBoxLayout()
+            main_widget.setLayout(main_layout)
+            
+            # --- Área de filtros no topo ---
+            filter_widget = QWidget()
+            filter_layout = QHBoxLayout()
+            filter_widget.setLayout(filter_layout)
+            
+            # Filtro: Moeda
+            filter_layout.addWidget(QLabel("Moeda:"))
+            crypto_combo = QComboBox()
+            crypto_combo.addItem("Todas")
+            
+            # Obter lista de moedas distintas
+            cursor = db.conn.cursor()
+            cursor.execute("SELECT DISTINCT crypto_id FROM binance_wallet ORDER BY crypto_id")
+            cryptos = cursor.fetchall()
+            for crypto in cryptos:
+                crypto_combo.addItem(crypto[0])
+            
+            filter_layout.addWidget(crypto_combo)
+            
+            # Filtro: Amount remaining
+            filter_layout.addWidget(QLabel("Amount remaining:"))
+            remaining_combo = QComboBox()
+            remaining_combo.addItem("Todos")
+            remaining_combo.addItem("> 0 (Com saldo)")
+            remaining_combo.addItem("= 0 (Esgotado)")
+            filter_layout.addWidget(remaining_combo)
+            
+            # Botão aplicar filtros
+            apply_button = QPushButton("Aplicar Filtros")
+            filter_layout.addWidget(apply_button)
+            
+            filter_layout.addStretch()
+            main_layout.addWidget(filter_widget)
+            
+            # --- Tabela de resultados ---
+            table = QTableWidget()
+            main_layout.addWidget(table)
+            
+            # Função para carregar dados na tabela
+            def load_wallet_data():
+                try:
+                    # Construir query com filtros
+                    query = "SELECT id, crypto_id, utc_time, amount_total, price_eur, amount_remaining FROM binance_wallet WHERE 1=1"
+                    params = []
+                    
+                    # Filtro moeda
+                    selected_crypto = crypto_combo.currentText()
+                    if selected_crypto != "Todas":
+                        query += " AND crypto_id = ?"
+                        params.append(selected_crypto)
+                    
+                    # Filtro amount_remaining
+                    selected_remaining = remaining_combo.currentText()
+                    if selected_remaining == "> 0 (Com saldo)":
+                        query += " AND amount_remaining > 0"
+                    elif selected_remaining == "= 0 (Esgotado)":
+                        query += " AND amount_remaining = 0"
+                    
+                    query += " ORDER BY crypto_id, utc_time"
+                    
+                    cursor.execute(query, params)
+                    rows = cursor.fetchall()
+                    
+                    # Atualizar tabela
+                    column_names = ["ID", "Moeda", "Data/Hora", "Total", "Preço EUR", "Restante"]
+                    table.setColumnCount(len(column_names))
+                    table.setRowCount(len(rows))
+                    table.setHorizontalHeaderLabels(column_names)
+                    
+                    for i, row in enumerate(rows):
+                        for j, value in enumerate(row):
+                            # Formatar valores numéricos
+                            if j in [3, 4, 5]:  # amount_total, price_eur, amount_remaining
+                                if value is not None:
+                                    item = QTableWidgetItem(f"{float(value):.8f}")
+                                else:
+                                    item = QTableWidgetItem("")
+                            else:
+                                item = QTableWidgetItem(str(value) if value is not None else "")
+                            table.setItem(i, j, item)
+                    
+                    table.resizeColumnsToContents()
+                    
+                    # Mostrar resumo
+                    if rows:
+                        # Calcular resumo por moeda
+                        cursor.execute(
+                            "SELECT crypto_id, SUM(amount_remaining), COUNT(*) FROM binance_wallet WHERE amount_remaining > 0 GROUP BY crypto_id ORDER BY crypto_id"
+                        )
+                        summary = cursor.fetchall()
+                        summary_text = "Resumo (saldos > 0): " + ", ".join(
+                            [f"{row[0]}: {float(row[1]):.8f} ({row[2]} lotes)" for row in summary]
+                        )
+                    else:
+                        summary_text = "Nenhum lote encontrado com os filtros aplicados."
+                    
+                    # Atualizar label de resumo (criar se não existir)
+                    if not hasattr(load_wallet_data, 'summary_label'):
+                        load_wallet_data.summary_label = QLabel()
+                        main_layout.addWidget(load_wallet_data.summary_label)
+                    load_wallet_data.summary_label.setText(summary_text)
+                    
+                except Exception as e:
+                    table.setRowCount(0)
+                    if hasattr(load_wallet_data, 'summary_label'):
+                        load_wallet_data.summary_label.setText(f"Erro ao carregar dados: {str(e)}")
+            
+            # Conectar botão aos filtros
+            apply_button.clicked.connect(load_wallet_data)
+            
+            # Carregar dados iniciais
+            load_wallet_data()
+            
+            self.content_layout.addWidget(main_widget)
+            db.close()
+            
+        except Exception as e:
+            label = QLabel("Erro ao carregar FIFO Wallet:\n" + str(e) + "\n" + traceback.format_exc())
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.content_layout.addWidget(label)
+    
     def on_item_clicked(self, item, column):
         # When a top-level (main) option is clicked, expand its subtree
         try:
