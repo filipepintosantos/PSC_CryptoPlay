@@ -2,10 +2,10 @@
 -- Gerado a partir de src/database.py
 
 -- Schema version variables (update here for new releases)
--- SCHEMA_VERSION = '1.2.0'
--- SCHEMA_VERSION_NUMBER = 10200  -- integer representation (x*10000 + y*100 + z)
+-- SCHEMA_VERSION = '1.3.0'
+-- SCHEMA_VERSION_NUMBER = 10300  -- integer representation (x*10000 + y*100 + z)
 
-PRAGMA user_version = 10200;
+PRAGMA user_version = 10300;
 
 PRAGMA foreign_keys = OFF;
 
@@ -57,6 +57,19 @@ CREATE TABLE IF NOT EXISTS binance_transactions (
     source TEXT
 );
 
+-- Carteira Binance (FIFO): controla lotes comprados e remanescentes
+CREATE TABLE IF NOT EXISTS binance_wallet (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    crypto_id TEXT NOT NULL,        -- Ex: 'ADA', 'BTC'
+    utc_time TEXT NOT NULL,         -- ISO 8601: '2024-01-15T10:32:00'
+    amount_total REAL NOT NULL,     -- Quantidade comprada no lote
+    price_eur REAL NOT NULL,        -- Preço unitário em EUR no momento da compra
+    amount_remaining REAL NOT NULL  -- Quantidade ainda disponível para FIFO
+);
+
+-- Índice auxiliar para buscas FIFO por moeda e tempo
+CREATE INDEX IF NOT EXISTS idx_binance_wallet_crypto_time ON binance_wallet(crypto_id, utc_time);
+
 COMMIT;
 
 PRAGMA foreign_keys = ON;
@@ -105,7 +118,7 @@ CREATE TABLE IF NOT EXISTS schema_info (
 -- Set initial schema version (format: x.y.z). Current schema version: 1.2.0
 -- NOTE: keep the numeric version in sync with the PRAGMA user_version above.
 -- The SQL below formats an integer version (x*10000 + y*100 + z) into 'x.y.z'.
-WITH sv(v) AS (VALUES(10200))
+WITH sv(v) AS (VALUES(10300))
 INSERT INTO schema_info (version)
 SELECT printf('%d.%d.%d', 
               CAST(v/10000 AS INTEGER), 

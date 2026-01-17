@@ -4,6 +4,8 @@ Stores and retrieves cryptocurrency price data.
 """
 
 import sqlite3
+import configparser
+from pathlib import Path
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import os
@@ -623,6 +625,134 @@ class CryptoDatabase:
         """Close the database connection."""
         if self.conn:
             self.conn.close()
+
+    # --- Binance Wallet (FIFO) ---
+    def _load_wallet_ops_config(self) -> tuple[set, set]:
+        """
+        Load wallet operation configuration from config/config.ini.
+
+        Returns:
+            (entries_set, exits_set): sets of operation names considered entries/exits
+        """
+        entries_default = {
+            "Buy Crypto With Fiat",
+            "Sell Crypto To Fiat",
+            "Binance Convert",
+            "Deposit",
+            "Simple Earn Flexible Redemption",
+            "Earn - Airdrop Distribution",
+            "Simple Earn Flexible Interest",
+        }
+        exits_default = {
+            "Buy Crypto With Fiat",
+            "Sell Crypto To Fiat",
+            "Binance Convert",
+            "Simple Earn Flexible Subscription",
+        }
+
+        try:
+            base_dir = Path(__file__).resolve().parent.parent
+            cfg_path = base_dir / "config" / "config.ini"
+            config = configparser.ConfigParser()
+            config.read(cfg_path)
+            if config.has_section("wallet"):
+                entries = set(
+                    s.strip() for s in config.get("wallet", "entries", fallback=",").split(",") if s.strip()
+                ) or entries_default
+                exits = set(
+                    s.strip() for s in config.get("wallet", "exits", fallback=",").split(",") if s.strip()
+                ) or exits_default
+                return entries, exits
+        except Exception:
+            pass
+
+        return entries_default, exits_default
+
+    def rebuild_binance_wallet(self) -> int:
+        """
+        Rebuild the binance_wallet table using FIFO from binance_transactions.
+
+        - Clears binance_wallet
+        - Reads all transactions ordered by UTC time
+        - Applies configurable operation filters for entries/exits
+
+        Returns:
+            Number of wallet lots created/updated
+        """
+        cursor = self.conn.cursor()
+        entries_ops, exits_ops = self._load_wallet_ops_config()
+
+        # Clear existing wallet
+        cursor.execute("DELETE FROM binance_wallet")
+
+        # Load all transactions ordered for deterministic FIFO
+        cursor.execute(
+            """
+            SELECT id, utc_time, coin as crypto_id, change, price_eur, operation
+            FROM binance_transactions
+            WHERE utc_time IS NOT NULL AND coin IS NOT NULL AND change IS NOT NULL
+            ORDER BY utc_time ASC, id ASC
+            """
+        )
+        rows = cursor.fetchall()
+
+        lots_created = 0
+
+        # Process operations and commit at the end
+
+        for row in rows:
+            utc_time = row[1]
+            crypto_id = (row[2] or "").strip()
+            change = float(row[3]) if row[3] is not None else 0.0
+            price_eur = float(row[4]) if row[4] is not None else 0.0
+            operation = (row[5] or "").strip()
+
+            if not crypto_id or change == 0:
+                continue
+
+            # Only consider configured operations
+            if operation not in entries_ops and operation not in exits_ops:
+                continue
+
+            if change > 0 and operation in entries_ops:
+                # Entry lot: add a new lot with full remaining
+                cursor.execute(
+                    """
+                    INSERT INTO binance_wallet (crypto_id, utc_time, amount_total, price_eur, amount_remaining)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (crypto_id, utc_time, change, price_eur, change),
+                )
+                lots_created += 1
+                continue
+
+            if change < 0 and operation in exits_ops:
+                # Exit: consume FIFO lots
+                to_consume = -change
+                # Select oldest lots with remaining
+                cursor.execute(
+                    """
+                    SELECT id, amount_remaining
+                    FROM binance_wallet
+                    WHERE crypto_id = ? AND amount_remaining > 0
+                    ORDER BY utc_time ASC, id ASC
+                    """,
+                    (crypto_id,),
+                )
+                consume_rows = cursor.fetchall()
+                for lot_id, remaining in consume_rows:
+                    if to_consume <= 0:
+                        break
+                    use = min(to_consume, remaining)
+                    cursor.execute(
+                        "UPDATE binance_wallet SET amount_remaining = amount_remaining - ? WHERE id = ?",
+                        (use, lot_id),
+                    )
+                    to_consume -= use
+                # If to_consume > 0 here, not enough inventory; leave as is (could log)
+
+        self.conn.commit()
+        return lots_created
 
     def __enter__(self):
         """Context manager entry."""

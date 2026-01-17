@@ -190,6 +190,11 @@ def import_csv(csv_path: Path, db_path: Path, on_duplicate: str = "skip") -> tup
                 skipped += 1
 
     db.conn.commit()
+    try:
+        # Rebuild FIFO wallet after importing transactions
+        db.rebuild_binance_wallet()
+    except Exception as e:  # noqa: BLE001
+        print(f"Warning: failed to rebuild binance_wallet FIFO: {e}")
     db.close()
     return count, skipped, replaced
 
