@@ -31,6 +31,7 @@ TRANSACOES_BINANCE = "Transações Binance"
 IMPORTAR_TRANSACOES = "Importar Transações"
 ANALISAR_TRANSACOES = "Analisar Transações"
 FIFO_WALLET = "FIFO Wallet"
+RESUMO_FISCAL = "Resumo Fiscal"
 
 REPORT_FILENAME = "AnaliseCrypto.xlsx"
 
@@ -159,9 +160,11 @@ class MainWindow(QMainWindow):
                 importar_item = QTreeWidgetItem([IMPORTAR_TRANSACOES])
                 analisar_item = QTreeWidgetItem([ANALISAR_TRANSACOES])
                 fifo_wallet_item = QTreeWidgetItem([FIFO_WALLET])
+                resumo_fiscal_item = QTreeWidgetItem([RESUMO_FISCAL])
                 group_item.addChild(importar_item)
                 group_item.addChild(analisar_item)
                 group_item.addChild(fifo_wallet_item)
+                group_item.addChild(resumo_fiscal_item)
             elif group_name == "Gráficos":
                 graficos_opcoes = [
                     "Candlestick",
@@ -1028,6 +1031,8 @@ class MainWindow(QMainWindow):
             self._analyze_binance_transactions()
         elif parent_name == BINANCE and sub_name == FIFO_WALLET:
             self._show_fifo_wallet()
+        elif parent_name == BINANCE and sub_name == RESUMO_FISCAL:
+            self._show_resumo_fiscal()
         else:
             label = QLabel(f"Sub-opção '{sub_name}' em '{parent_name}' (dummy)")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -1223,6 +1228,325 @@ class MainWindow(QMainWindow):
             
         except Exception as e:
             label = QLabel("Erro ao carregar FIFO Wallet:\n" + str(e) + "\n" + traceback.format_exc())
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.content_layout.addWidget(label)
+    
+    def _show_resumo_fiscal(self):
+        """Exibe o resumo fiscal (binance_fiscal) com filtros por tipo, data, moeda e modos de visualização."""
+        from PyQt6.QtWidgets import (
+            QTableWidget, QTableWidgetItem, QHBoxLayout, QLineEdit,
+            QPushButton, QLabel, QWidget, QComboBox, QDateEdit, QRadioButton, QButtonGroup
+        )
+        from PyQt6.QtCore import QDate
+        import traceback
+        
+        try:
+            from src.database import CryptoDatabase
+            
+            db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "crypto_prices.db"))
+            db = CryptoDatabase(db_path)
+            
+            # Container principal
+            main_widget = QWidget()
+            main_layout = QVBoxLayout()
+            main_widget.setLayout(main_layout)
+            
+            # --- Título ---
+            title_label = QLabel("Resumo Fiscal - Binance")
+            title_label.setStyleSheet("font-size: 16pt; font-weight: bold;")
+            title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            main_layout.addWidget(title_label)
+            
+            # --- Área de filtros no topo ---
+            filter_widget = QWidget()
+            filter_layout = QVBoxLayout()
+            filter_widget.setLayout(filter_layout)
+            
+            # Linha 1: Tipo e Moeda
+            filter_line1 = QHBoxLayout()
+            
+            filter_line1.addWidget(QLabel("Tipo:"))
+            type_combo = QComboBox()
+            type_combo.addItem("Todos", None)
+            type_combo.addItem("Income (I)", "I")
+            type_combo.addItem("Sales (V)", "V")
+            filter_line1.addWidget(type_combo)
+            
+            filter_line1.addWidget(QLabel("Moeda:"))
+            crypto_combo = QComboBox()
+            crypto_combo.addItem("Todas", None)
+            
+            # Obter lista de moedas distintas
+            cursor = db.conn.cursor()
+            cursor.execute("SELECT DISTINCT crypto_id FROM binance_fiscal ORDER BY crypto_id")
+            cryptos = cursor.fetchall()
+            for crypto in cryptos:
+                crypto_combo.addItem(crypto[0])
+            
+            filter_line1.addWidget(crypto_combo)
+            filter_line1.addStretch()
+            filter_layout.addLayout(filter_line1)
+            
+            # Linha 2: Intervalo de datas
+            filter_line2 = QHBoxLayout()
+            filter_line2.addWidget(QLabel("Data de:"))
+            date_from = QDateEdit()
+            date_from.setCalendarPopup(True)
+            date_from.setDate(QDate.currentDate().addYears(-1))  # Default: 1 ano atrás
+            filter_line2.addWidget(date_from)
+            
+            filter_line2.addWidget(QLabel("até:"))
+            date_to = QDateEdit()
+            date_to.setCalendarPopup(True)
+            date_to.setDate(QDate.currentDate())
+            filter_line2.addWidget(date_to)
+            filter_line2.addStretch()
+            filter_layout.addLayout(filter_line2)
+            
+            # Linha 3: Modo de visualização
+            filter_line3 = QHBoxLayout()
+            filter_line3.addWidget(QLabel("Visualização:"))
+            
+            view_group = QButtonGroup()
+            view_detail = QRadioButton("Linha a linha")
+            view_by_crypto = QRadioButton("Agrupado por moeda")
+            view_by_type = QRadioButton("Agrupado por tipo")
+            view_detail.setChecked(True)
+            
+            view_group.addButton(view_detail)
+            view_group.addButton(view_by_crypto)
+            view_group.addButton(view_by_type)
+            
+            filter_line3.addWidget(view_detail)
+            filter_line3.addWidget(view_by_crypto)
+            filter_line3.addWidget(view_by_type)
+            filter_line3.addStretch()
+            filter_layout.addLayout(filter_line3)
+            
+            # Botão aplicar filtros
+            filter_line4 = QHBoxLayout()
+            apply_button = QPushButton("Aplicar Filtros")
+            apply_button.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; padding: 8px;")
+            filter_line4.addWidget(apply_button)
+            filter_line4.addStretch()
+            filter_layout.addLayout(filter_line4)
+            
+            main_layout.addWidget(filter_widget)
+            
+            # --- Tabela de resultados ---
+            table = QTableWidget()
+            main_layout.addWidget(table)
+            
+            # Label de resumo
+            summary_label = QLabel()
+            summary_label.setStyleSheet("font-weight: bold; padding: 5px;")
+            main_layout.addWidget(summary_label)
+            
+            # Função para carregar dados
+            def load_fiscal_data():
+                try:
+                    cursor = db.conn.cursor()
+                    
+                    # Construir query com base nos filtros
+                    query = "SELECT * FROM binance_fiscal WHERE 1=1"
+                    params = []
+                    
+                    # Filtro por tipo
+                    selected_type = type_combo.currentData()
+                    if selected_type:
+                        query += " AND type = ?"
+                        params.append(selected_type)
+                    
+                    # Filtro por moeda
+                    selected_crypto = crypto_combo.currentData()
+                    if selected_crypto:
+                        query += " AND crypto_id = ?"
+                        params.append(selected_crypto)
+                    
+                    # Filtro por data
+                    date_from_str = date_from.date().toString("yyyy-MM-dd")
+                    date_to_str = date_to.date().toString("yyyy-MM-dd")
+                    query += " AND DATE(trn_date_utc) >= ? AND DATE(trn_date_utc) <= ?"
+                    params.append(date_from_str)
+                    params.append(date_to_str)
+                    
+                    # Determinar modo de visualização
+                    if view_detail.isChecked():
+                        # Linha a linha
+                        query += " ORDER BY trn_date_utc DESC"
+                        cursor.execute(query, params)
+                        rows = cursor.fetchall()
+                        
+                        if not rows:
+                            table.setRowCount(0)
+                            table.setColumnCount(0)
+                            summary_label.setText("Nenhum registo encontrado com os filtros aplicados.")
+                            return
+                        
+                        column_names = [desc[0] for desc in cursor.description]
+                        table.setRowCount(len(rows))
+                        table.setColumnCount(len(column_names))
+                        table.setHorizontalHeaderLabels(column_names)
+                        
+                        total_gain = 0.0
+                        total_tax = 0.0
+                        
+                        for i, row in enumerate(rows):
+                            for j, value in enumerate(row):
+                                table.setItem(i, j, QTableWidgetItem(str(value) if value is not None else ""))
+                            # Somar gain e tax
+                            gain_idx = column_names.index('gain_eur')
+                            tax_idx = column_names.index('tax_eur')
+                            total_gain += row[gain_idx] if row[gain_idx] else 0.0
+                            total_tax += row[tax_idx] if row[tax_idx] else 0.0
+                        
+                        table.resizeColumnsToContents()
+                        summary_label.setText(
+                            f"Total de registos: {len(rows)} | "
+                            f"Ganho total: {total_gain:.2f} EUR | "
+                            f"Imposto total: {total_tax:.2f} EUR"
+                        )
+                    
+                    elif view_by_crypto.isChecked():
+                        # Agrupado por moeda
+                        group_query = """
+                            SELECT 
+                                crypto_id,
+                                COUNT(*) as num_transacoes,
+                                SUM(buy_eur) as total_buy,
+                                SUM(sell_eur) as total_sell,
+                                SUM(gain_eur) as total_gain,
+                                SUM(tax_eur) as total_tax
+                            FROM binance_fiscal
+                            WHERE 1=1
+                        """
+                        
+                        if selected_type:
+                            group_query += " AND type = ?"
+                        if selected_crypto:
+                            group_query += " AND crypto_id = ?"
+                        
+                        group_query += " AND DATE(trn_date_utc) >= ? AND DATE(trn_date_utc) <= ?"
+                        group_query += " GROUP BY crypto_id ORDER BY total_gain DESC"
+                        
+                        cursor.execute(group_query, params)
+                        rows = cursor.fetchall()
+                        
+                        if not rows:
+                            table.setRowCount(0)
+                            table.setColumnCount(0)
+                            summary_label.setText("Nenhum registo encontrado com os filtros aplicados.")
+                            return
+                        
+                        column_names = ["Moeda", "Nº Transações", "Total Buy (EUR)", "Total Sell (EUR)", "Total Gain (EUR)", "Total Tax (EUR)"]
+                        table.setRowCount(len(rows))
+                        table.setColumnCount(len(column_names))
+                        table.setHorizontalHeaderLabels(column_names)
+                        
+                        total_gain = 0.0
+                        total_tax = 0.0
+                        
+                        for i, row in enumerate(rows):
+                            for j, value in enumerate(row):
+                                # Formatar valores numéricos
+                                if j > 0 and value is not None:
+                                    if j == 1:  # Nº transações
+                                        table.setItem(i, j, QTableWidgetItem(str(value)))
+                                    else:  # Valores monetários
+                                        table.setItem(i, j, QTableWidgetItem(f"{value:.2f}"))
+                                else:
+                                    table.setItem(i, j, QTableWidgetItem(str(value) if value is not None else ""))
+                            
+                            total_gain += row[4] if row[4] else 0.0
+                            total_tax += row[5] if row[5] else 0.0
+                        
+                        table.resizeColumnsToContents()
+                        summary_label.setText(
+                            f"Total de moedas: {len(rows)} | "
+                            f"Ganho total: {total_gain:.2f} EUR | "
+                            f"Imposto total: {total_tax:.2f} EUR"
+                        )
+                    
+                    elif view_by_type.isChecked():
+                        # Agrupado por tipo
+                        group_query = """
+                            SELECT 
+                                type,
+                                COUNT(*) as num_transacoes,
+                                SUM(buy_eur) as total_buy,
+                                SUM(sell_eur) as total_sell,
+                                SUM(gain_eur) as total_gain,
+                                SUM(tax_eur) as total_tax
+                            FROM binance_fiscal
+                            WHERE 1=1
+                        """
+                        
+                        if selected_type:
+                            group_query += " AND type = ?"
+                        if selected_crypto:
+                            group_query += " AND crypto_id = ?"
+                        
+                        group_query += " AND DATE(trn_date_utc) >= ? AND DATE(trn_date_utc) <= ?"
+                        group_query += " GROUP BY type ORDER BY type"
+                        
+                        cursor.execute(group_query, params)
+                        rows = cursor.fetchall()
+                        
+                        if not rows:
+                            table.setRowCount(0)
+                            table.setColumnCount(0)
+                            summary_label.setText("Nenhum registo encontrado com os filtros aplicados.")
+                            return
+                        
+                        column_names = ["Tipo", "Nº Transações", "Total Buy (EUR)", "Total Sell (EUR)", "Total Gain (EUR)", "Total Tax (EUR)"]
+                        table.setRowCount(len(rows))
+                        table.setColumnCount(len(column_names))
+                        table.setHorizontalHeaderLabels(column_names)
+                        
+                        total_gain = 0.0
+                        total_tax = 0.0
+                        
+                        for i, row in enumerate(rows):
+                            # Formatar tipo
+                            tipo = row[0]
+                            tipo_desc = "Income (I)" if tipo == "I" else "Sales (V)"
+                            table.setItem(i, 0, QTableWidgetItem(tipo_desc))
+                            
+                            for j in range(1, len(row)):
+                                value = row[j]
+                                if value is not None:
+                                    if j == 1:  # Nº transações
+                                        table.setItem(i, j, QTableWidgetItem(str(value)))
+                                    else:  # Valores monetários
+                                        table.setItem(i, j, QTableWidgetItem(f"{value:.2f}"))
+                                else:
+                                    table.setItem(i, j, QTableWidgetItem(""))
+                            
+                            total_gain += row[4] if row[4] else 0.0
+                            total_tax += row[5] if row[5] else 0.0
+                        
+                        table.resizeColumnsToContents()
+                        summary_label.setText(
+                            f"Total de tipos: {len(rows)} | "
+                            f"Ganho total: {total_gain:.2f} EUR | "
+                            f"Imposto total: {total_tax:.2f} EUR"
+                        )
+                        
+                except Exception as e:
+                    summary_label.setText(f"Erro ao carregar dados: {str(e)}")
+                    import traceback
+                    print(traceback.format_exc())
+            
+            # Conectar botão aos filtros
+            apply_button.clicked.connect(load_fiscal_data)
+            
+            # Carregar dados iniciais
+            load_fiscal_data()
+            
+            self.content_layout.addWidget(main_widget)
+            
+        except Exception as e:
+            label = QLabel("Erro ao carregar Resumo Fiscal:\n" + str(e) + "\n" + traceback.format_exc())
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.content_layout.addWidget(label)
     

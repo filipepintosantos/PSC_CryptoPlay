@@ -83,5 +83,29 @@ class TestUIMain(unittest.TestCase):
                 sidebar.setCurrentItem(child)
         window.close()
 
+    def test_resumo_fiscal_menu_present(self):
+        """Testa se a opção 'Resumo Fiscal' está presente no submenu Binance."""
+        import importlib.util
+        spec = importlib.util.find_spec("src.ui_main")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        from PyQt6.QtWidgets import QApplication, QTreeWidget
+        app = QApplication.instance() or QApplication(sys.argv)
+        window = module.MainWindow()
+        sidebar = window.findChild(QTreeWidget)
+        self.assertIsNotNone(sidebar)
+        found_resumo_fiscal = False
+        for i in range(sidebar.topLevelItemCount()):
+            item = sidebar.topLevelItem(i)
+            if item.text(0) == "Binance":
+                for j in range(item.childCount()):
+                    child = item.child(j)
+                    if child.text(0) == "Resumo Fiscal":
+                        found_resumo_fiscal = True
+                        break
+                break
+        window.close()
+        self.assertTrue(found_resumo_fiscal, "Opção 'Resumo Fiscal' não encontrada no menu Binance.")
+
 if __name__ == "__main__":
     unittest.main()
