@@ -142,7 +142,7 @@ class TestBinanceImportIntegration(unittest.TestCase):
         expected_columns = [
             "id", "user_id", "utc_time", "account", "operation",
             "coin", "change", "remark", "price_eur", "value_eur",
-            "binance_timestamp", "source"
+            "binance_timestamp", "source", "update_date"
         ]
 
         for expected in expected_columns:

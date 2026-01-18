@@ -1,3 +1,32 @@
+# [5.7.0] - 2026-01-18
+
+### Database Schema v1.5.0 Update - Fiscal Tracking 📋
+- **New Table: `binance_fiscal`** for tax reporting
+  - Records all taxable events: Income (Interest/Airdrop), Sales (EUR/Conversions)
+  - Automatic tax calculation: 28% on Income gains, variable on Sales
+  - FIFO matching for sales: links to `binance_wallet` for cost basis
+  
+### Table Structure
+```sql
+binance_fiscal (
+  id, trn_date_utc, type ('I'|'V'), crypto_id,
+  buy_eur, sell_eur, gain_eur, tax_eur, update_date
+)
+```
+
+### Record Types
+- **type='I'** (Income): Interest, Airdrop Distribution
+  - buy_eur=0, sell_eur=0, gain_eur=amount_received, tax_eur=gain_eur*0.28
+- **type='V'** (Venda/Sale): EUR sales or crypto conversions
+  - buy_eur=FIFO cost, sell_eur=proceeds, gain_eur=(sell-buy), tax_eur=gain*(tax_rate)
+
+### Indices
+- `idx_binance_fiscal_date`: Fast queries by date
+- `idx_binance_fiscal_type`: Filter by transaction type
+- `idx_binance_fiscal_crypto`: Filter by cryptocurrency
+
+---
+
 # [5.6.0] - 2026-01-17
 
 ### Database Schema v1.4.0 Update 📊
@@ -6,11 +35,6 @@
   - Auto-updated on every record modification (UPDATE)
   - Enables incremental updates: fetch only records modified after last update
   - Improves wallet rebuild performance for large datasets
-
-### Schema Changes
-- `binance_transactions.update_date`: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-- `binance_wallet.update_date`: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-- **4 Auto-update Triggers**: `trg_binance_transactions_update_date_*` and `trg_binance_wallet_update_date_*`
 
 ---
 

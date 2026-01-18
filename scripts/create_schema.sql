@@ -2,10 +2,10 @@
 -- Gerado a partir de src/database.py
 
 -- Schema version variables (update here for new releases)
--- SCHEMA_VERSION = '1.4.0'
--- SCHEMA_VERSION_NUMBER = 10400  -- integer representation (x*10000 + y*100 + z)
+-- SCHEMA_VERSION = '1.5.0'
+-- SCHEMA_VERSION_NUMBER = 10500  -- integer representation (x*10000 + y*100 + z)
 
-PRAGMA user_version = 10400;
+PRAGMA user_version = 10500;
 
 PRAGMA foreign_keys = OFF;
 
@@ -71,6 +71,27 @@ CREATE TABLE IF NOT EXISTS binance_wallet (
 
 -- Índice auxiliar para buscas FIFO por moeda e tempo
 CREATE INDEX IF NOT EXISTS idx_binance_wallet_crypto_time ON binance_wallet(crypto_id, utc_time);
+
+-- Tabela de Rastreio Fiscal (Binance)
+-- Registra transações para propósitos fiscais
+-- type='I': Income (Interest, Airdrop Distribution) - buy_eur=0, sell_eur=0, gain_eur=valor_recebido
+-- type='V': Venda (para EUR ou conversão para outra moeda) - FIFO matched com binance_wallet
+CREATE TABLE IF NOT EXISTS binance_fiscal (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    trn_date_utc TEXT NOT NULL,     -- Data/hora ISO 8601 da transação
+    type TEXT NOT NULL,              -- 'I' = Income, 'V' = Venda (Sell/Conversion)
+    crypto_id TEXT NOT NULL,         -- Ex: 'BTC', 'ADA'
+    buy_eur REAL NOT NULL,           -- Custo total de aquisição (FIFO matching)
+    sell_eur REAL NOT NULL,          -- Valor recebido na venda (ou 0 para Income)
+    gain_eur REAL NOT NULL,          -- gain_eur = sell_eur - buy_eur (ou valor recebido para Income)
+    tax_eur REAL NOT NULL,           -- tax_eur = gain_eur * tax_rate (28% para Income, variável para Venda)
+    update_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Índices para rastreio fiscal
+CREATE INDEX IF NOT EXISTS idx_binance_fiscal_date ON binance_fiscal(trn_date_utc);
+CREATE INDEX IF NOT EXISTS idx_binance_fiscal_type ON binance_fiscal(type);
+CREATE INDEX IF NOT EXISTS idx_binance_fiscal_crypto ON binance_fiscal(crypto_id);
 
 COMMIT;
 
@@ -151,7 +172,7 @@ CREATE TABLE IF NOT EXISTS schema_info (
     applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Set initial schema version (format: x.y.z). Current schema version: 1.4.0
+-- Set initial schema version (format: x.y.z). Current schema version: 1.5.0
 -- NOTE: keep the numeric version in sync with the PRAGMA user_version above.
 -- The SQL below formats an integer version (x*10000 + y*100 + z) into 'x.y.z'.
 WITH sv(v) AS (VALUES(10300))
