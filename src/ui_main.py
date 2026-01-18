@@ -437,6 +437,7 @@ class MainWindow(QMainWindow):
                         count = 0
                         skipped = 0
                         price_cache = {}
+                        missing_pairs: set[str] = set()
 
                         def fetch_price_eur(coin_symbol, dt_utc):
                             key = (coin_symbol, dt_utc.replace(microsecond=0))
@@ -450,48 +451,62 @@ class MainWindow(QMainWindow):
 
                             # Try direct EUR pair first
                             symbol_pair = f"{coin_symbol}EUR"
-                            try:
-                                price_eur, ts_open = get_price_at_second(symbol_pair, dt_utc)
-                                if price_eur is not None:
-                                    result = (price_eur, ts_open)
-                                    price_cache[key] = result
-                                    return result
-                            except Exception as e:  # noqa: BLE001
-                                output_widget.setPlainText(output_widget.toPlainText() + f"Erro API {symbol_pair}: {e}\n")
+                            if symbol_pair not in missing_pairs:
+                                try:
+                                    price_eur, ts_open = get_price_at_second(symbol_pair, dt_utc)
+                                    if price_eur is not None:
+                                        result = (price_eur, ts_open)
+                                        price_cache[key] = result
+                                        return result
+                                except Exception as e:  # noqa: BLE001
+                                    output_widget.setPlainText(output_widget.toPlainText() + f"Erro API {symbol_pair}: {e}\n")
+                                    missing_pairs.add(symbol_pair)
 
                             # Fallback 1: coin/USDT * USDT/EUR
-                            try:
-                                price_coin_usdt, ts_coin = get_price_at_second(f"{coin_symbol}USDT", dt_utc)
-                                price_eur_usdt, ts_usdt = get_price_at_second("EURUSDT", dt_utc)
-                                if (
-                                    price_coin_usdt is not None
-                                    and price_eur_usdt is not None
-                                    and price_eur_usdt != 0
-                                ):
-                                    price_usdt_eur = 1 / price_eur_usdt
-                                    ts = ts_coin if ts_coin is not None else ts_usdt
-                                    result = (price_coin_usdt * price_usdt_eur, ts)
-                                    price_cache[key] = result
-                                    return result
-                            except Exception as e:  # noqa: BLE001
-                                output_widget.setPlainText(output_widget.toPlainText() + f"Erro API fallback1 {coin_symbol}: {e}\n")
+                            coin_usdt_pair = f"{coin_symbol}USDT"
+                            eurusdt_pair = "EURUSDT"
+                            if coin_usdt_pair not in missing_pairs and eurusdt_pair not in missing_pairs:
+                                try:
+                                    price_coin_usdt, ts_coin = get_price_at_second(coin_usdt_pair, dt_utc)
+                                    price_eur_usdt, ts_usdt = get_price_at_second(eurusdt_pair, dt_utc)
+                                    if (
+                                        price_coin_usdt is not None
+                                        and price_eur_usdt is not None
+                                        and price_eur_usdt != 0
+                                    ):
+                                        price_usdt_eur = 1 / price_eur_usdt
+                                        ts = ts_coin if ts_coin is not None else ts_usdt
+                                        result = (price_coin_usdt * price_usdt_eur, ts)
+                                        price_cache[key] = result
+                                        return result
+                                except Exception as e:  # noqa: BLE001
+                                    output_widget.setPlainText(output_widget.toPlainText() + f"Erro API fallback1 {coin_symbol}: {e}\n")
+                                    missing_pairs.add(coin_usdt_pair)
+                                    if "EURUSDT" in str(e):
+                                        missing_pairs.add(eurusdt_pair)
 
                             # Fallback 2: coin/USDC * USDC/EUR
-                            try:
-                                price_coin_usdc, ts_coin = get_price_at_second(f"{coin_symbol}USDC", dt_utc)
-                                price_eur_usdc, ts_usdc = get_price_at_second("EURUSDC", dt_utc)
-                                if (
-                                    price_coin_usdc is not None
-                                    and price_eur_usdc is not None
-                                    and price_eur_usdc != 0
-                                ):
-                                    price_usdc_eur = 1 / price_eur_usdc
-                                    ts = ts_coin if ts_coin is not None else ts_usdc
-                                    result = (price_coin_usdc * price_usdc_eur, ts)
-                                    price_cache[key] = result
-                                    return result
-                            except Exception as e:  # noqa: BLE001
-                                output_widget.setPlainText(output_widget.toPlainText() + f"Erro API fallback2 {coin_symbol}: {e}\n")
+                            coin_usdc_pair = f"{coin_symbol}USDC"
+                            eurusdc_pair = "EURUSDC"
+                            if coin_usdc_pair not in missing_pairs and eurusdc_pair not in missing_pairs:
+                                try:
+                                    price_coin_usdc, ts_coin = get_price_at_second(coin_usdc_pair, dt_utc)
+                                    price_eur_usdc, ts_usdc = get_price_at_second(eurusdc_pair, dt_utc)
+                                    if (
+                                        price_coin_usdc is not None
+                                        and price_eur_usdc is not None
+                                        and price_eur_usdc != 0
+                                    ):
+                                        price_usdc_eur = 1 / price_eur_usdc
+                                        ts = ts_coin if ts_coin is not None else ts_usdc
+                                        result = (price_coin_usdc * price_usdc_eur, ts)
+                                        price_cache[key] = result
+                                        return result
+                                except Exception as e:  # noqa: BLE001
+                                    output_widget.setPlainText(output_widget.toPlainText() + f"Erro API fallback2 {coin_symbol}: {e}\n")
+                                    missing_pairs.add(coin_usdc_pair)
+                                    if "EURUSDC" in str(e):
+                                        missing_pairs.add(eurusdc_pair)
 
                             return None, None
 
