@@ -115,34 +115,48 @@ def import_csv(csv_path: Path, db_path: Path, on_duplicate: str = "skip") -> tup
                             ts_open = None
                     if price_eur is None:
                         # Fallback 1: coin/USDT * USDT/EUR
-                        try:
-                            price_coin_usdt, ts_coin = get_price_at_second(f"{coin}USDT", dt_utc)
-                            price_eur_usdt, ts_usdt = get_price_at_second("EURUSDT", dt_utc)
-                            if (
-                                price_coin_usdt is not None
-                                and price_eur_usdt is not None
-                                and price_eur_usdt != 0
-                            ):
-                                price_usdt_eur = 1 / price_eur_usdt
-                                ts_open = ts_coin if ts_coin is not None else ts_usdt
-                                price_eur = price_coin_usdt * price_usdt_eur
-                        except Exception as e:  # noqa: BLE001
-                            print(f"Fallback1 error for {coin} @ {utc_time_str}: {e}")
+                        coin_usdt_pair = f"{coin}USDT"
+                        eurusdt_pair = "EURUSDT"
+                        if coin_usdt_pair not in missing_pairs and eurusdt_pair not in missing_pairs:
+                            try:
+                                price_coin_usdt, ts_coin = get_price_at_second(coin_usdt_pair, dt_utc)
+                                price_eur_usdt, ts_usdt = get_price_at_second(eurusdt_pair, dt_utc)
+                                if (
+                                    price_coin_usdt is not None
+                                    and price_eur_usdt is not None
+                                    and price_eur_usdt != 0
+                                ):
+                                    price_usdt_eur = 1 / price_eur_usdt
+                                    ts_open = ts_coin if ts_coin is not None else ts_usdt
+                                    price_eur = price_coin_usdt * price_usdt_eur
+                            except Exception as e:  # noqa: BLE001
+                                print(f"Fallback1 error for {coin} @ {utc_time_str}: {e}")
+                                # Mark both pairs as missing to avoid repeated attempts
+                                missing_pairs.add(coin_usdt_pair)
+                                if "EURUSDT" in str(e):
+                                    missing_pairs.add(eurusdt_pair)
                     if price_eur is None:
                         # Fallback 2: coin/USDC * USDC/EUR
-                        try:
-                            price_coin_usdc, ts_coin = get_price_at_second(f"{coin}USDC", dt_utc)
-                            price_eur_usdc, ts_usdc = get_price_at_second("EURUSDC", dt_utc)
-                            if (
-                                price_coin_usdc is not None
-                                and price_eur_usdc is not None
-                                and price_eur_usdc != 0
-                            ):
-                                price_usdc_eur = 1 / price_eur_usdc
-                                ts_open = ts_coin if ts_coin is not None else ts_usdc
-                                price_eur = price_coin_usdc * price_usdc_eur
-                        except Exception as e:  # noqa: BLE001
-                            print(f"Fallback2 error for {coin} @ {utc_time_str}: {e}")
+                        coin_usdc_pair = f"{coin}USDC"
+                        eurusdc_pair = "EURUSDC"
+                        if coin_usdc_pair not in missing_pairs and eurusdc_pair not in missing_pairs:
+                            try:
+                                price_coin_usdc, ts_coin = get_price_at_second(coin_usdc_pair, dt_utc)
+                                price_eur_usdc, ts_usdc = get_price_at_second(eurusdc_pair, dt_utc)
+                                if (
+                                    price_coin_usdc is not None
+                                    and price_eur_usdc is not None
+                                    and price_eur_usdc != 0
+                                ):
+                                    price_usdc_eur = 1 / price_eur_usdc
+                                    ts_open = ts_coin if ts_coin is not None else ts_usdc
+                                    price_eur = price_coin_usdc * price_usdc_eur
+                            except Exception as e:  # noqa: BLE001
+                                print(f"Fallback2 error for {coin} @ {utc_time_str}: {e}")
+                                # Mark both pairs as missing to avoid repeated attempts
+                                missing_pairs.add(coin_usdc_pair)
+                                if "EURUSDC" in str(e):
+                                    missing_pairs.add(eurusdc_pair)
                     cache[cache_key] = (price_eur, ts_open)
 
                 binance_ts = ts_open if ts_open is not None else int(dt_utc.timestamp() * 1000)
